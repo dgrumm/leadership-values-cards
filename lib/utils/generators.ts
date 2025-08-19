@@ -2,13 +2,27 @@ import { SESSION_CODE_LENGTH } from '../constants';
 
 export function generateSessionCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
   
-  for (let i = 0; i < SESSION_CODE_LENGTH; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // Use crypto.getRandomValues for cryptographically secure random generation
+  const array = new Uint8Array(SESSION_CODE_LENGTH);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(array);
+  } else if (typeof require !== 'undefined') {
+    try {
+      // Node.js environment fallback
+      const nodeCrypto = require('crypto');
+      const bytes = nodeCrypto.randomBytes(SESSION_CODE_LENGTH);
+      for (let i = 0; i < SESSION_CODE_LENGTH; i++) {
+        array[i] = bytes[i];
+      }
+    } catch (error) {
+      throw new Error('Secure random number generation not available');
+    }
+  } else {
+    throw new Error('Secure random number generation not available');
   }
   
-  return result;
+  return Array.from(array, byte => chars[byte % chars.length]).join('');
 }
 
 export function generateCardId(valueName: string, index?: number): string {
