@@ -5,6 +5,7 @@ import {
   validateParticipantName, 
   resolveNameConflict, 
   sanitizeParticipantName,
+  sanitizeSessionCode,
   SESSION_VALIDATION_ERRORS,
   ValidationResult 
 } from './session-validator';
@@ -46,12 +47,13 @@ export class SessionManager {
   }
 
   async getSession(sessionCode: string): Promise<Session | null> {
-    const validation = validateSessionCode(sessionCode);
+    const sanitizedCode = sanitizeSessionCode(sessionCode);
+    const validation = validateSessionCode(sanitizedCode);
     if (!validation.isValid) {
       return null;
     }
     
-    const session = await this.store.getSession(sessionCode);
+    const session = await this.store.getSession(sanitizedCode);
     if (!session) {
       return null;
     }
@@ -65,14 +67,15 @@ export class SessionManager {
   }
 
   async joinSession(sessionCode: string, participantName: string): Promise<JoinSessionResult> {
-    // Validate session code
-    const codeValidation = validateSessionCode(sessionCode);
+    // Sanitize and validate session code
+    const sanitizedCode = sanitizeSessionCode(sessionCode);
+    const codeValidation = validateSessionCode(sanitizedCode);
     if (!codeValidation.isValid) {
       return { success: false, error: codeValidation.error };
     }
 
     // Get session
-    const session = await this.getSession(sessionCode);
+    const session = await this.getSession(sanitizedCode);
     if (!session) {
       return { success: false, error: SESSION_VALIDATION_ERRORS.SESSION_NOT_FOUND };
     }

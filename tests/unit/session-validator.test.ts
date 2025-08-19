@@ -76,16 +76,21 @@ describe('SessionValidator', () => {
       const result = validateParticipantName(longName);
       
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe(SESSION_VALIDATION_ERRORS.INVALID_PARTICIPANT_NAME);
+      expect(result.error).toContain('must be less than 50 characters');
     });
 
     it('should reject names with invalid characters', () => {
-      const invalidNames = ['John@Doe', 'Jane#Smith', 'User!123', 'Test$Name'];
+      const invalidNames = [
+        { name: 'John<script>alert(1)</script>', expectedError: 'HTML tags' },
+        { name: 'Jane"Smith', expectedError: 'invalid characters' },
+        { name: 'User&amp;', expectedError: 'invalid characters' },
+        { name: 'Test\\Name', expectedError: 'invalid characters' }
+      ];
       
-      invalidNames.forEach(name => {
+      invalidNames.forEach(({ name, expectedError }) => {
         const result = validateParticipantName(name);
         expect(result.isValid).toBe(false);
-        expect(result.error).toBe(SESSION_VALIDATION_ERRORS.INVALID_PARTICIPANT_NAME);
+        expect(result.error).toContain(expectedError);
       });
     });
 

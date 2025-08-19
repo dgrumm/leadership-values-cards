@@ -1,16 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionManager } from '@/lib/session/session-manager';
 import { getSessionLifecycle } from '@/lib/session/session-lifecycle';
+import { getRateLimiter, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/utils/rate-limiter';
+import { sanitizeSessionCode, sanitizeParticipantName } from '@/lib/session/session-validator';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { code: string } }
 ) {
   try {
-    const sessionCode = params.code;
-    const { participantName } = await request.json();
+    // Apply rate limiting
+    const clientIP = getClientIP(request);
+    const rateLimiter = getRateLimiter();
+    const limitResult = rateLimiter.checkLimit(clientIP, RATE_LIMIT_CONFIGS.JOIN_SESSION);
+    
+    if (!limitResult.allowed) {
+      return NextResponse.json({
+        error: 'Rate limit exceeded. Too many join requests.',
+        retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000)
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': Math.ceil((limitResult.resetTime - Date.now()) / 1000).toString(),
+          'X-RateLimit-Limit': RATE_LIMIT_CONFIGS.JOIN_SESSION.maxRequests.toString(),
+          'X-RateLimit-Remaining': limitResult.remaining.toString(),
+          'X-RateLimit-Reset': limitResult.resetTime.toString()
+        }
+      });
+    }
+    
+    const sessionCode = sanitizeSessionCode(params.code);
+    const body = await request.json();
+    const participantName = sanitizeParticipantName(body.participantName || '');
 
-    if (!participantName || typeof participantName !== 'string') {
+    if (!participantName) {
       return NextResponse.json({
         error: 'Participant name is required'
       }, { status: 400 });

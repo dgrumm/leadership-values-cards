@@ -42,13 +42,33 @@ export function validateSessionCode(sessionCode: string): ValidationResult {
 }
 
 export function validateParticipantName(name: string): ValidationResult {
-  if (!name || name.length < PARTICIPANT_NAME_MIN_LENGTH || name.length > PARTICIPANT_NAME_MAX_LENGTH) {
+  if (!name || typeof name !== 'string') {
     return { isValid: false, error: SESSION_VALIDATION_ERRORS.INVALID_PARTICIPANT_NAME };
   }
   
-  // Allow alphanumeric, spaces, hyphens, and underscores
-  const namePattern = /^[a-zA-Z0-9\s\-_]+$/;
-  if (!namePattern.test(name)) {
+  const sanitized = sanitizeParticipantName(name);
+  
+  if (sanitized.length < PARTICIPANT_NAME_MIN_LENGTH) {
+    return { isValid: false, error: 'Name must be at least 1 character long' };
+  }
+  
+  if (sanitized.length > PARTICIPANT_NAME_MAX_LENGTH) {
+    return { isValid: false, error: `Name must be less than ${PARTICIPANT_NAME_MAX_LENGTH} characters` };
+  }
+  
+  // Check for HTML tags (basic XSS prevention)
+  if (/<[^>]*>/.test(sanitized)) {
+    return { isValid: false, error: 'Name cannot contain HTML tags' };
+  }
+  
+  // Check for potentially dangerous characters
+  if (/[<>'"&\\]/.test(sanitized)) {
+    return { isValid: false, error: 'Name contains invalid characters' };
+  }
+  
+  // Allow alphanumeric, spaces, hyphens, underscores, and basic punctuation
+  const namePattern = /^[a-zA-Z0-9\s\-_.!?(),]+$/;
+  if (!namePattern.test(sanitized)) {
     return { isValid: false, error: SESSION_VALIDATION_ERRORS.INVALID_PARTICIPANT_NAME };
   }
   
@@ -79,6 +99,60 @@ export function resolveNameConflict(desiredName: string, existingNames: Set<stri
 }
 
 export function sanitizeParticipantName(name: string): string {
-  // Trim whitespace and normalize spaces
-  return name.trim().replace(/\s+/g, ' ');
+  if (!name || typeof name !== 'string') {
+    return '';
+  }
+  
+  // Basic HTML entity decoding for common cases
+  let sanitized = name
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  
+  // Remove control characters and non-printable characters
+  sanitized = sanitized.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+  
+  // Trim whitespace and normalize multiple spaces to single space
+  sanitized = sanitized.trim().replace(/\s+/g, ' ');
+  
+  // Remove leading/trailing punctuation that could be problematic
+  sanitized = sanitized.replace(/^[^\w\s]+|[^\w\s]+$/g, '');
+  
+  return sanitized;
+}
+
+// Additional utility for sanitizing session codes
+export function sanitizeSessionCode(code: string): string {
+  if (!code || typeof code !== 'string') {
+    return '';
+  }
+  
+  // Remove any non-alphanumeric characters and convert to uppercase
+  return code.replace(/[^A-Z0-9]/gi, '').toUpperCase().substring(0, 6);
+}
+
+// Sanitize generic text input
+export function sanitizeTextInput(input: string, maxLength: number = 1000): string {
+  if (!input || typeof input !== 'string') {
+    return '';
+  }
+  
+  // Remove HTML tags
+  let sanitized = input.replace(/<[^>]*>/g, '');
+  
+  // Remove potentially dangerous characters
+  sanitized = sanitized.replace(/[<>'"&\\]/g, '');
+  
+  // Remove control characters
+  sanitized = sanitized.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+  
+  // Trim and limit length
+  sanitized = sanitized.trim().substring(0, maxLength);
+  
+  // Normalize whitespace
+  sanitized = sanitized.replace(/\s+/g, ' ');
+  
+  return sanitized;
 }

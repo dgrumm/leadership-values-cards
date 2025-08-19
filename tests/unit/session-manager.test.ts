@@ -87,10 +87,10 @@ describe('SessionManager', () => {
     });
 
     it('should reject invalid session codes', async () => {
-      const result = await sessionManager.joinSession('INVALID', 'John');
+      const result = await sessionManager.joinSession('IN@VA#LID', 'John');
       
       expect(result.success).toBe(false);
-      expect(result.error).toContain('6 alphanumeric characters');
+      expect(result.error).toContain('Session not found');
     });
 
     it('should reject non-existent sessions', async () => {

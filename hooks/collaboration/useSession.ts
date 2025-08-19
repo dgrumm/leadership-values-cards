@@ -10,14 +10,22 @@ export interface UseSessionOptions {
   autoJoin?: boolean;
 }
 
+export interface SessionError {
+  type: 'network' | 'validation' | 'rate_limit' | 'session_expired' | 'session_full' | 'unknown';
+  message: string;
+  retryAfter?: number;
+  recoverable: boolean;
+}
+
 export interface SessionState {
   session: Session | null;
   participant: Participant | null;
   isLoading: boolean;
-  error: string | null;
+  error: SessionError | null;
   timeRemaining: number | null;
   isWarning: boolean;
   isExpired: boolean;
+  connectionStatus: 'connected' | 'disconnected' | 'reconnecting';
 }
 
 export interface SessionActions {
@@ -27,6 +35,74 @@ export interface SessionActions {
   updateActivity: (currentStep?: number) => Promise<void>;
   extendSession: () => Promise<void>;
   clearError: () => void;
+  retry: () => Promise<void>;
+}
+
+// Error classification utilities
+function classifyError(error: any, response?: Response): SessionError {
+  if (!navigator.onLine) {
+    return {
+      type: 'network',
+      message: 'No internet connection. Please check your network and try again.',
+      recoverable: true
+    };
+  }
+
+  if (response) {
+    switch (response.status) {
+      case 429:
+        return {
+          type: 'rate_limit',
+          message: 'Too many requests. Please wait before trying again.',
+          retryAfter: parseInt(response.headers.get('Retry-After') || '60'),
+          recoverable: true
+        };
+      case 404:
+        return {
+          type: 'validation',
+          message: 'Session not found. Please check the session code.',
+          recoverable: false
+        };
+      case 403:
+        return {
+          type: 'session_full',
+          message: 'Session is full. Please try another session.',
+          recoverable: false
+        };
+      case 410:
+        return {
+          type: 'session_expired',
+          message: 'Session has expired. Please start a new session.',
+          recoverable: false
+        };
+      case 400:
+        return {
+          type: 'validation',
+          message: error?.message || 'Invalid request. Please check your input.',
+          recoverable: true
+        };
+      default:
+        return {
+          type: 'unknown',
+          message: `Server error (${response.status}). Please try again.`,
+          recoverable: true
+        };
+    }
+  }
+
+  if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
+    return {
+      type: 'network',
+      message: 'Network error. Please check your connection and try again.',
+      recoverable: true
+    };
+  }
+
+  return {
+    type: 'unknown',
+    message: error?.message || 'An unexpected error occurred. Please try again.',
+    recoverable: true
+  };
 }
 
 export function useSession(options: UseSessionOptions = {}): [SessionState, SessionActions] {
@@ -37,12 +113,24 @@ export function useSession(options: UseSessionOptions = {}): [SessionState, Sess
     error: null,
     timeRemaining: null,
     isWarning: false,
-    isExpired: false
+    isExpired: false,
+    connectionStatus: 'disconnected'
   });
+
+  // Keep track of the last failed operation for retry functionality
+  const [lastFailedOperation, setLastFailedOperation] = useState<(() => Promise<any>) | null>(null);
 
   // Create a new session
   const createSession = useCallback(async (config?: any): Promise<string | null> => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    const operation = () => createSession(config);
+    setLastFailedOperation(null);
+    
+    setState(prev => ({ 
+      ...prev, 
+      isLoading: true, 
+      error: null, 
+      connectionStatus: 'connected' 
+    }));
 
     try {
       const response = await fetch('/api/sessions', {
@@ -56,24 +144,40 @@ export function useSession(options: UseSessionOptions = {}): [SessionState, Sess
         setState(prev => ({
           ...prev,
           session: data.session,
-          isLoading: false
+          isLoading: false,
+          connectionStatus: 'connected'
         }));
         return data.sessionCode;
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
+        const error = classifyError(errorData, response);
+        
         setState(prev => ({
           ...prev,
-          error: errorData.error || 'Failed to create session',
-          isLoading: false
+          error,
+          isLoading: false,
+          connectionStatus: error.type === 'network' ? 'disconnected' : 'connected'
         }));
+        
+        if (error.recoverable) {
+          setLastFailedOperation(() => operation);
+        }
+        
         return null;
       }
     } catch (error) {
+      const sessionError = classifyError(error);
       setState(prev => ({
         ...prev,
-        error: 'Network error while creating session',
-        isLoading: false
+        error: sessionError,
+        isLoading: false,
+        connectionStatus: 'disconnected'
       }));
+      
+      if (sessionError.recoverable) {
+        setLastFailedOperation(() => operation);
+      }
+      
       return null;
     }
   }, []);
@@ -186,7 +290,22 @@ export function useSession(options: UseSessionOptions = {}): [SessionState, Sess
   // Clear error state
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
+    setLastFailedOperation(null);
   }, []);
+
+  // Retry last failed operation
+  const retry = useCallback(async (): Promise<void> => {
+    if (lastFailedOperation) {
+      setState(prev => ({ ...prev, connectionStatus: 'reconnecting' }));
+      try {
+        await lastFailedOperation();
+        setLastFailedOperation(null);
+      } catch (error) {
+        // Error will be handled by the individual operation
+        console.error('Retry failed:', error);
+      }
+    }
+  }, [lastFailedOperation]);
 
   // Monitor session timeout
   const startTimeoutMonitoring = useCallback((sessionCode: string) => {
@@ -251,7 +370,8 @@ export function useSession(options: UseSessionOptions = {}): [SessionState, Sess
     leaveSession,
     updateActivity,
     extendSession,
-    clearError
+    clearError,
+    retry
   };
 
   return [state, actions];

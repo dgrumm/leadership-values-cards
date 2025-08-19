@@ -1,25 +1,30 @@
 import { SESSION_CODE_LENGTH } from '../constants';
 
+// Secure random number generation for session codes
 export function generateSessionCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  
-  // Use crypto.getRandomValues for cryptographically secure random generation
   const array = new Uint8Array(SESSION_CODE_LENGTH);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(array);
-  } else if (typeof require !== 'undefined') {
+  
+  // Browser environment - use Web Crypto API
+  if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) {
+    globalThis.crypto.getRandomValues(array);
+  }
+  // Node.js environment - use crypto module
+  else if (typeof process !== 'undefined' && process.versions && process.versions.node) {
     try {
-      // Node.js environment fallback
-      const nodeCrypto = require('crypto');
-      const bytes = nodeCrypto.randomBytes(SESSION_CODE_LENGTH);
+      // Dynamic import for Node.js crypto to avoid bundler issues
+      const { randomBytes } = eval('require')('crypto');
+      const bytes = randomBytes(SESSION_CODE_LENGTH);
       for (let i = 0; i < SESSION_CODE_LENGTH; i++) {
         array[i] = bytes[i];
       }
     } catch (error) {
-      throw new Error('Secure random number generation not available');
+      throw new Error('Node.js crypto module not available for secure random generation');
     }
-  } else {
-    throw new Error('Secure random number generation not available');
+  }
+  // Fallback error - no secure random available
+  else {
+    throw new Error('Secure random number generation not available in this environment');
   }
   
   return Array.from(array, byte => chars[byte % chars.length]).join('');

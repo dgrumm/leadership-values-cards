@@ -15,12 +15,20 @@ export interface SessionStore {
 class InMemorySessionStore implements SessionStore {
   private sessions = new Map<string, Session>();
   private cleanupInterval: NodeJS.Timeout | null = null;
+  
+  // Memory protection limits
+  private static readonly MAX_SESSIONS = 1000;
+  private static readonly CLEANUP_THRESHOLD = 900; // Start cleanup at 90%
+  private static readonly CLEANUP_BATCH_SIZE = 100;
 
   constructor() {
     this.startCleanupTimer();
   }
 
   async createSession(config: Partial<SessionConfig> = {}): Promise<Session> {
+    // Check memory limits and cleanup if necessary
+    await this.enforceMemoryLimits();
+    
     const mergedConfig = { ...SESSION_CONFIG, ...config };
     const now = new Date();
     const sessionCode = ensureUniqueSessionCode(new Set(this.sessions.keys()));
@@ -95,9 +103,59 @@ class InMemorySessionStore implements SessionStore {
     return expiredSessions;
   }
 
+  private async enforceMemoryLimits(): Promise<void> {
+    const sessionCount = this.sessions.size;
+    
+    // Reject new sessions if at absolute limit
+    if (sessionCount >= InMemorySessionStore.MAX_SESSIONS) {
+      throw new Error(`Maximum session limit reached (${InMemorySessionStore.MAX_SESSIONS}). Please try again later.`);
+    }
+    
+    // Proactive cleanup when approaching limit
+    if (sessionCount >= InMemorySessionStore.CLEANUP_THRESHOLD) {
+      await this.cleanupOldestSessions();
+    }
+  }
+
+  private async cleanupOldestSessions(): Promise<void> {
+    // First, remove expired sessions
+    await this.cleanupExpiredSessions();
+    
+    // If still over threshold, remove oldest active sessions
+    if (this.sessions.size >= InMemorySessionStore.CLEANUP_THRESHOLD) {
+      const sessions = Array.from(this.sessions.values());
+      
+      // Sort by creation time (oldest first), then by activity (least active first)
+      sessions.sort((a, b) => {
+        const createdAtDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (createdAtDiff !== 0) {
+          return createdAtDiff;
+        }
+        return new Date(a.lastActivity).getTime() - new Date(b.lastActivity).getTime();
+      });
+      
+      // Remove oldest sessions in batches
+      const toRemove = sessions.slice(0, InMemorySessionStore.CLEANUP_BATCH_SIZE);
+      for (const session of toRemove) {
+        this.sessions.delete(session.sessionCode);
+      }
+      
+      console.log(`Cleaned up ${toRemove.length} oldest sessions to prevent memory exhaustion`);
+    }
+  }
+
   private startCleanupTimer(): void {
     this.cleanupInterval = setInterval(async () => {
-      await this.cleanupExpiredSessions();
+      try {
+        await this.cleanupExpiredSessions();
+        
+        // Also check memory limits periodically
+        if (this.sessions.size >= InMemorySessionStore.CLEANUP_THRESHOLD) {
+          await this.cleanupOldestSessions();
+        }
+      } catch (error) {
+        console.error('Error during periodic cleanup:', error);
+      }
     }, 60000); // Run every minute
   }
 

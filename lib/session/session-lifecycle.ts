@@ -8,10 +8,17 @@ export interface SessionTimeoutInfo {
   isExpired: boolean;
 }
 
+interface SessionTimers {
+  warningTimer?: NodeJS.Timeout;
+  expirationTimer?: NodeJS.Timeout;
+  monitoringTimer?: NodeJS.Timeout;
+}
+
 export class SessionLifecycle {
   private store: SessionStore;
   private timeoutCallbacks = new Map<string, () => void>();
   private warningCallbacks = new Map<string, () => void>();
+  private activeTimers = new Map<string, SessionTimers>();
 
   constructor(store?: SessionStore) {
     this.store = store || getSessionStore();
@@ -84,36 +91,101 @@ export class SessionLifecycle {
   unregisterCallbacks(sessionCode: string): void {
     this.timeoutCallbacks.delete(sessionCode);
     this.warningCallbacks.delete(sessionCode);
+    this.clearSessionTimers(sessionCode);
+  }
+
+  private clearSessionTimers(sessionCode: string): void {
+    const timers = this.activeTimers.get(sessionCode);
+    if (timers) {
+      if (timers.warningTimer) {
+        clearTimeout(timers.warningTimer);
+      }
+      if (timers.expirationTimer) {
+        clearTimeout(timers.expirationTimer);
+      }
+      if (timers.monitoringTimer) {
+        clearTimeout(timers.monitoringTimer);
+      }
+      this.activeTimers.delete(sessionCode);
+    }
+  }
+
+  private setSessionTimer(sessionCode: string, timerType: keyof SessionTimers, timer: NodeJS.Timeout): void {
+    if (!this.activeTimers.has(sessionCode)) {
+      this.activeTimers.set(sessionCode, {});
+    }
+    const timers = this.activeTimers.get(sessionCode)!;
+    
+    // Clear existing timer of this type
+    if (timers[timerType]) {
+      clearTimeout(timers[timerType]);
+    }
+    
+    timers[timerType] = timer;
+  }
+
+  // Method to clean up all timers (useful for graceful shutdown)
+  destroy(): void {
+    for (const [sessionCode, timers] of this.activeTimers) {
+      if (timers.warningTimer) clearTimeout(timers.warningTimer);
+      if (timers.expirationTimer) clearTimeout(timers.expirationTimer);
+      if (timers.monitoringTimer) clearTimeout(timers.monitoringTimer);
+    }
+    this.activeTimers.clear();
+    this.timeoutCallbacks.clear();
+    this.warningCallbacks.clear();
   }
 
   async monitorSession(sessionCode: string): Promise<void> {
+    // Clear any existing monitoring timer
+    this.clearSessionTimers(sessionCode);
+    
     const checkTimeout = async () => {
-      const timeoutInfo = await this.checkSessionTimeout(sessionCode);
-      if (!timeoutInfo) {
-        return; // Session doesn't exist or is inactive
-      }
-
-      if (timeoutInfo.isExpired) {
-        await this.expireSession(sessionCode);
-        return;
-      }
-
-      if (timeoutInfo.isWarning) {
-        const warningCallback = this.warningCallbacks.get(sessionCode);
-        if (warningCallback) {
-          warningCallback();
+      try {
+        const timeoutInfo = await this.checkSessionTimeout(sessionCode);
+        if (!timeoutInfo) {
+          // Session doesn't exist or is inactive - stop monitoring
+          this.clearSessionTimers(sessionCode);
+          return;
         }
-      }
 
-      // Continue monitoring if session is still active
-      if (timeoutInfo.timeRemaining > 0) {
-        const checkInterval = timeoutInfo.isWarning ? 30000 : 60000; // Check every 30s in warning, 1min otherwise
-        setTimeout(checkTimeout, checkInterval);
+        if (timeoutInfo.isExpired) {
+          await this.expireSession(sessionCode);
+          this.clearSessionTimers(sessionCode);
+          return;
+        }
+
+        if (timeoutInfo.isWarning) {
+          const warningCallback = this.warningCallbacks.get(sessionCode);
+          if (warningCallback) {
+            try {
+              warningCallback();
+            } catch (error) {
+              console.error('Error in warning callback:', error);
+            }
+          }
+        }
+
+        // Continue monitoring if session is still active
+        if (timeoutInfo.timeRemaining > 0) {
+          const checkInterval = timeoutInfo.isWarning ? 30000 : 60000; // Check every 30s in warning, 1min otherwise
+          const timer = setTimeout(() => {
+            checkTimeout().catch(error => {
+              console.error('Error in session monitoring:', error);
+              this.clearSessionTimers(sessionCode);
+            });
+          }, checkInterval);
+          
+          this.setSessionTimer(sessionCode, 'monitoringTimer', timer);
+        }
+      } catch (error) {
+        console.error('Error checking session timeout:', error);
+        this.clearSessionTimers(sessionCode);
       }
     };
 
     // Start monitoring
-    checkTimeout();
+    await checkTimeout();
   }
 
   formatTimeRemaining(milliseconds: number): string {
