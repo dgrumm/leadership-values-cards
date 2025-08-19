@@ -1,17 +1,27 @@
 import { Card } from './card';
 
-export interface Participant {
+// Cold data - changes infrequently, stable for duration of session
+export interface ParticipantProfile {
   name: string;
   emoji: string;
   color: string;
   joinedAt: string;
+}
+
+// Hot data - changes frequently during active participation  
+export interface ParticipantPresence {
   currentStep: ParticipantStep;
   status: ParticipantStatus;
   cardStates: ParticipantCardStates;
   revealed: ParticipantRevealState;
   isViewing: string | null;
   lastActivity: string;
+  cursor?: { x: number; y: number };
+  isActive: boolean;
 }
+
+// Combined interface for backward compatibility and full participant data
+export interface Participant extends ParticipantProfile, ParticipantPresence {}
 
 export type ParticipantStep = 1 | 2 | 3;
 
@@ -41,12 +51,16 @@ export interface ParticipantRevealState {
   top3: boolean;
 }
 
-export interface ParticipantPresence {
-  name: string;
-  emoji: string;
-  color: string;
-  currentStep: ParticipantStep;
-  status: ParticipantStatus;
+// Lightweight presence data for real-time updates (cursors, status)
+export interface ParticipantRealTimePresence {
+  name: string; // Identifier only
+  cursor: { x: number; y: number };
   lastSeen: string;
   isActive: boolean;
+}
+
+// Full presence including session state (less frequent updates)
+export interface ParticipantSessionPresence extends ParticipantRealTimePresence {
+  currentStep: ParticipantStep;
+  status: ParticipantStatus;
 }

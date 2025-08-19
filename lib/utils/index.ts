@@ -13,5 +13,12 @@ export {
   canAddToPile,
   isValidPosition,
   isDuplicateName,
-  validateCardMovement
+  validateCardMovement,
+  validateGameState
 } from './validators';
+
+export {
+  memoize,
+  memoizeWeak,
+  createHashKey
+} from './memoization';

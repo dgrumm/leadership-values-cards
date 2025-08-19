@@ -1,11 +1,14 @@
 export type { Card, CardPile, CardPosition, CardMovement } from './card';
 export type { 
   Participant, 
+  ParticipantProfile,
+  ParticipantPresence,
+  ParticipantRealTimePresence,
+  ParticipantSessionPresence,
   ParticipantStep, 
   ParticipantStatus, 
   ParticipantCardStates, 
-  ParticipantRevealState,
-  ParticipantPresence 
+  ParticipantRevealState
 } from './participant';
 export type { 
   Session, 
@@ -15,6 +18,7 @@ export type {
 } from './session';
 export type { 
   GameState, 
+  OptimizedGameState,
   PileState, 
   ViewerState, 
   CanvasState, 

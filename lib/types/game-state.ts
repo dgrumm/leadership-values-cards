@@ -1,6 +1,33 @@
 import { Card, CardPile } from './card';
-import { Participant, ParticipantStep } from './participant';
+import { 
+  Participant, 
+  ParticipantProfile, 
+  ParticipantPresence,
+  ParticipantRealTimePresence,
+  ParticipantStep 
+} from './participant';
 
+// Optimized game state with separated hot/cold data
+export interface OptimizedGameState {
+  sessionCode: string;
+  
+  // Cold data - participant profiles (rarely change)
+  participantProfiles: Map<string, ParticipantProfile>;
+  
+  // Hot data - frequently updated presence info
+  participantPresence: Map<string, ParticipantPresence>;
+  
+  // Very hot data - real-time cursors (50ms updates)
+  participantCursors: Map<string, ParticipantRealTimePresence>;
+  
+  deck: Card[];
+  piles: Record<CardPile, PileState>;
+  currentViewers: Record<string, ViewerState>;
+  canvasState: CanvasState;
+  lastUpdated: string;
+}
+
+// Backward compatible interface
 export interface GameState {
   sessionCode: string;
   participants: Record<string, Participant>;
