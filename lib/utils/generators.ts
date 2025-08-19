@@ -25,6 +25,22 @@ export function generateSessionCode(): string {
   return Array.from(array, byte => chars[byte % chars.length]).join('');
 }
 
+export function ensureUniqueSessionCode(existingSessions: Set<string>): string {
+  let code: string;
+  let attempts = 0;
+  const maxAttempts = 100; // Prevent infinite loops
+  
+  do {
+    code = generateSessionCode();
+    attempts++;
+    if (attempts > maxAttempts) {
+      throw new Error('Unable to generate unique session code after maximum attempts');
+    }
+  } while (existingSessions.has(code));
+  
+  return code;
+}
+
 export function generateCardId(valueName: string, index?: number): string {
   const sanitized = valueName.toLowerCase().replace(/[^a-z0-9]/g, '-');
   const suffix = index !== undefined ? `-${index}` : '';
@@ -33,7 +49,7 @@ export function generateCardId(valueName: string, index?: number): string {
 
 export function generateUniqueId(prefix: string = 'id'): string {
   const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 5);
+  const random = Math.random().toString(36).substring(2, 7);
   return `${prefix}-${timestamp}-${random}`;
 }
 
