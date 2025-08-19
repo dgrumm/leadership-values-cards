@@ -1,5 +1,3 @@
-# .claude/commands/debug-websocket.md
-
 ---
 name: debug-websocket
 description: Debug Ably WebSocket connections and message flow
@@ -18,14 +16,14 @@ const ably = new Ably.Realtime({
 });
 ```
 
-2. Add connection state monitoring:
+1. Add connection state monitoring:
 ```javascript
 ably.connection.on('connected', () => console.log('✅ Ably connected'));
 ably.connection.on('disconnected', () => console.log('❌ Ably disconnected'));
 ably.connection.on('suspended', () => console.log('⚠️ Ably suspended'));
 ```
 
-3. Monitor specific channels:
+1. Monitor specific channels:
 ```javascript
 const channel = ably.channels.get(`session:${sessionCode}:presence`);
 channel.subscribe((message) => {
@@ -37,14 +35,14 @@ channel.subscribe((message) => {
 });
 ```
 
-4. Check presence set:
+1. Check presence set:
 ```javascript
 channel.presence.get((err, members) => {
   console.log('Current members:', members?.map(m => m.clientId));
 });
 ```
 
-5. Use Ably's debug dashboard: https://ably.com/accounts/[your-account]/apps/[app-id]/app_stats
+1. Use Ably's debug dashboard: https://ably.com/accounts/[your-account]/apps/[app-id]/app_stats
 
 Common issues to check:
 - API key permissions (publish, subscribe, presence)
