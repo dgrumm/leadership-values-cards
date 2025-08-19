@@ -1,10 +1,8 @@
-# .claude/commands/analyze-performance.md
-
-```yaml
+---
 name: analyze-performance
 description: Profile drag-drop performance and animation frames
 match: performance|perf|slow|lag|fps
-```
+---
 
 Analyze and optimize performance issues:
 

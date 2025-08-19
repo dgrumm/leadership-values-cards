@@ -1,4 +1,4 @@
-```yaml
+---
 name: realtime-engineer
 description: PROACTIVELY handles WebSocket connections, Ably channels, and state synchronization
 tools:
@@ -6,7 +6,7 @@ tools:
   - write
   - edit
   - bash
-```
+---
 
 You are the real-time collaboration expert for the Leadership Values Card Sort app.
 

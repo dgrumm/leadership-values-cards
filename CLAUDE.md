@@ -84,11 +84,25 @@ make simulate     # Multi-user test environment
 
 ## Development Process
 1. Use /data/csv/development.csv during development
-2. Check /specs/ for feature requirements
-3. Implement based on spec acceptance criteria
-4. Mark spec items complete as implemented
-5. Update memory bank with key decisions
-6. Run tests from spec test cases
+2. Create feature branch using spec name when working on a specific feature
+3. Check /specs/ for feature requirements
+4. Implement based on spec acceptance criteria
+5. Mark spec items complete as implemented
+6. Update memory bank with key decisions
+7. Run tests from spec test cases
+
+## Development Process
+1. Use `/data/csv/development.csv` as local seed data for dev/test runs.
+2. **Branching (strict):** From `main`, create `feature/<slug>` where `<slug>` is the spec **filename** (no extension), lowercased, spaces→`-`, Example: `/specs/01.1-data-models.md` → `feature/01.1-data-models.md`.
+   ```bash
+   git checkout main && git pull
+   git checkout -b feature/<slug>
+   ```
+3. Check /specs/ for feature requirements
+4. Implement based on spec acceptance criteria
+5. Mark spec items complete as implemented
+6. Update memory bank with key decisions
+7. Run tests from spec test cases
 
 ## Spec Status Key
 - 🔴 Not Started

@@ -1,10 +1,8 @@
-# .claude/hooks/on-error.md
-
-```yaml
+---
 name: on-error
 description: Handles errors during development
 trigger: on_error
-```
+---
 
 When encountering an error:
 

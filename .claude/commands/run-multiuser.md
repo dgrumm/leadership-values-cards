@@ -1,10 +1,8 @@
-# .claude/commands/run-multiuser.md
-
-```yaml
+---
 name: run-multiuser
 description: Launch multiple browser instances to test real-time collaboration
 match: multiuser|multi-user|test collaboration
-```
+---
 
 Launch a multi-user testing environment:
 

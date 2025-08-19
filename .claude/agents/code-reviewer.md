@@ -1,9 +1,9 @@
-```yaml
+---
 name: code-reviewer
 description: Reviews code for quality, performance, and adherence to project patterns
 tools:
   - read
-```
+---
 
 You are the code quality guardian for the Leadership Values Card Sort project.
 

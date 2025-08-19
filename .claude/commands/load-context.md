@@ -1,10 +1,8 @@
-# .claude/commands/load-context.md
-
-```yaml
+---
 name: load-context
 description: Load context for specific spec or feature
 match: context|load context|resume
-```
+---
 
 ```bash
 #!/bin/bash

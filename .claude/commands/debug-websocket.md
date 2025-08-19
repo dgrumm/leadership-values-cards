@@ -1,10 +1,10 @@
 # .claude/commands/debug-websocket.md
 
-```yaml
+---
 name: debug-websocket
 description: Debug Ably WebSocket connections and message flow
 match: debug ws|websocket|ably issues|sync problems
-```
+---
 
 Debug WebSocket/Ably connection issues:
 

@@ -1,10 +1,8 @@
-# .claude/commands/export-snapshot.md
-
-```yaml
+---
 name: export-snapshot  
 description: Test snapshot export functionality in multiple formats
 match: export|snapshot|pdf|download
-```
+---
 
 Test and debug the snapshot export feature:
 

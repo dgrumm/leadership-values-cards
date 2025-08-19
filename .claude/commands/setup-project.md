@@ -1,10 +1,8 @@
-# .claude/commands/setup-project.md
-
-```yaml
+---
 name: setup-project
 description: Initialize the Leadership Values Card Sort project with all dependencies
 match: setup|init|start project
-```
+---
 
 Set up the complete project structure for the Leadership Values Card Sort app:
 
