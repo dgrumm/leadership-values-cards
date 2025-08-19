@@ -83,26 +83,25 @@ make simulate     # Multi-user test environment
 ```
 
 ## Development Process
-1. Use /data/csv/development.csv during development
-2. Create feature branch using spec name when working on a specific feature
-3. Check /specs/ for feature requirements
-4. Implement based on spec acceptance criteria
-5. Mark spec items complete as implemented
-6. Update memory bank with key decisions
-7. Run tests from spec test cases
-
-## Development Process
 1. Use `/data/csv/development.csv` as local seed data for dev/test runs.
-2. **Branching (strict):** From `main`, create `feature/<slug>` where `<slug>` is the spec **filename** (no extension), lowercased, spaces→`-`, Example: `/specs/01.1-data-models.md` → `feature/01.1-data-models.md`.
+2. **Branching (strict):** ALWAYS create a feature branch BEFORE writing code.
+    Branch: create `feature/<slug>` where `<slug>` is the spec **filename** (no extension), lowercased, spaces→`-`;
+    Example: `/specs/01-foundation/01.1-data-models.md` → `feature/01-1-data-models`
    ```bash
    git checkout main && git pull
    git checkout -b feature/<slug>
    ```
 3. Check /specs/ for feature requirements
-4. Implement based on spec acceptance criteria
-5. Mark spec items complete as implemented
-6. Update memory bank with key decisions
+4. Implement only the active spec’s acceptance criteria (see /specs/)
+5. Mark each acceptance criterion complete in the spec (checkboxes) as implemented
+6. Update the memory bank at .claude/memory/project-decisions.md with key decisions, noting <date>-<slug>.
 7. Run tests from spec test cases
+8. ALWAYS run review before pushing or opening a PR
+9. Open a PR to main titled feat(<slug>): <short description>; include:
+  - Spec link
+	- Acceptance criteria checklist (with ✅)
+	- Test evidence
+	- Notes/decisions (link to memory file)
 
 ## Spec Status Key
 - 🔴 Not Started
