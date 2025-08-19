@@ -13,11 +13,11 @@ This document tracks the development status of all feature specifications for th
 
 | Spec | Feature | Status | Priority | Assignee | Notes |
 |------|---------|--------|----------|----------|--------|
-| 01.1 | [Data Models](01-foundation/01.1-data-models.md) | 🔴 Not Started | High | - | Core data structures needed first |
+| 01.1 | [Data Models](01-foundation/01.1-data-models.md) | 🟢 Complete | High | - | Core data structures implemented |
 | 01.2 | [Session Management](01-foundation/01.2-session-management.md) | 🔴 Not Started | High | - | Depends on 01.1 |
 | 01.3 | [Card Deck Setup](01-foundation/01.3-card-deck-setup.md) | 🔴 Not Started | High | - | CSV loading and shuffling |
 
-**Foundation Progress**: 0% (0/3 complete)
+**Foundation Progress**: 33% (1/3 complete)
 
 ---
 
@@ -166,11 +166,11 @@ To update this status document:
 ## Overall Project Progress
 
 **Total Specifications**: 15  
-**Completed**: 0 (0%)  
+**Completed**: 1 (7%)  
 **In Progress**: 0 (0%)  
-**Not Started**: 15 (100%)  
+**Not Started**: 14 (93%)  
 
-**MVP Ready**: 0% (0/10 core specs complete)  
+**MVP Ready**: 10% (1/10 core specs complete)  
 **Collaboration Ready**: 0% (0/13 with collaboration)  
 **Feature Complete**: 0% (0/15 all specs)
 
