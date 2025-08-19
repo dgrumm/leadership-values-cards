@@ -19,8 +19,25 @@ if [ -z "$CHANGED" ]; then
 fi
 
 echo "Running code review against $BASE..."
-# TODO: replace with your actual reviewer invocation
-# /code-reviewer --paths "$CHANGED"
+# If push is initiated by the push-pr command (which already ran review), skip here.
+if [ -n "${PUSH_PR_RUNNING:-}" ]; then
+  echo "Detected push-pr flow; assuming reviewer already ran. Skipping pre-push review."
+else
+  # Preferred: project script
+  if [ -x "./scripts/review.sh" ]; then
+    ./scripts/review.sh --base "$BASE" --head HEAD --paths "$CHANGED" || REVIEW_EXIT=$?
+  # Fallback: Claude CLI agent named 'code-reviewer'
+  elif command -v claude >/dev/null 2>&1; then
+    claude --agent "code-reviewer" --paths "$CHANGED" || REVIEW_EXIT=$?
+  else
+    echo "❌ No reviewer configured. Provide one of:"
+    echo "   - ./scripts/review.sh (executable) that accepts --base/--head/--paths"
+    echo "   - Claude CLI with an agent named 'code-reviewer'"
+    echo "Aborting push to enforce review. Use PUSH_PR_RUNNING=1 if push-pr already ran review."
+    exit 1
+  fi
+fi
+
 REVIEW_EXIT=0
 
 if [ "$REVIEW_EXIT" -ne 0 ]; then
