@@ -13,6 +13,9 @@ interface CardProps {
   onClick?: () => void;
   className?: string;
   style?: React.CSSProperties;
+  tabIndex?: number;
+  'aria-label'?: string;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(({ 
@@ -23,8 +26,20 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
   onClick, 
   className,
   style,
+  tabIndex,
+  'aria-label': ariaLabel,
+  onKeyDown,
   ...props
 }, ref) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onKeyDown) {
+      onKeyDown(e);
+    } else if ((e.key === 'Enter' || e.key === ' ') && onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <motion.div
       ref={ref}
@@ -32,6 +47,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
         "relative w-56 h-40 cursor-pointer select-none",
         "bg-white rounded-xl shadow-lg border border-gray-200",
         "transition-shadow duration-200",
+        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50",
         isDragging && "rotate-3 scale-105 z-50 shadow-2xl",
         !isDragging && "hover:shadow-xl hover:-translate-y-1",
         isInStaging && "ring-2 ring-blue-300 ring-opacity-50 shadow-2xl",
@@ -39,6 +55,10 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
       )}
       style={style}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={tabIndex}
+      role={onClick ? "button" : "img"}
+      aria-label={ariaLabel || `${card.value_name.replace(/_/g, ' ')} card`}
       whileHover={!isDragging ? { 
         y: -4, 
         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" 

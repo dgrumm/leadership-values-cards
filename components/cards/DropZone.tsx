@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useCallback } from 'react';
 import { Card } from './Card';
 import { DraggableCard } from './DraggableCard';
 import { Card as CardType } from '@/lib/types/card';
@@ -28,30 +29,40 @@ export function DropZone({
   pile
 }: DropZoneProps) {
   // Calculate card layout - arrange from top-left to right-down with scrolling support
-  const getCardPosition = (index: number, containerWidth: number = 350) => {
-    const cardWidth = 56 * 4 * 0.9; // w-56 * scale 0.9 in rem -> px  
-    const cardHeight = 40 * 4 * 0.9; // h-40 * scale 0.9 in rem -> px
-    const cardSpacing = 12; // spacing between cards
-    const cardsPerRow = Math.floor((containerWidth - 32) / (cardWidth * 0.4 + cardSpacing)) || 1; // account for padding
-    
-    const row = Math.floor(index / cardsPerRow);
-    const col = index % cardsPerRow;
-    
-    return {
-      x: col * (cardWidth * 0.4 + cardSpacing),
-      y: row * (cardHeight * 0.5 + 10),
-      zIndex: index + 1
-    };
-  };
+  const getCardPosition = useCallback((index: number, containerWidth: number = 350) => {
+    try {
+      const cardWidth = 56 * 4 * 0.9; // w-56 * scale 0.9 in rem -> px  
+      const cardHeight = 40 * 4 * 0.9; // h-40 * scale 0.9 in rem -> px
+      const cardSpacing = 12; // spacing between cards
+      const cardsPerRow = Math.floor((containerWidth - 32) / (cardWidth * 0.4 + cardSpacing)) || 1; // account for padding
+      
+      const row = Math.floor(index / cardsPerRow);
+      const col = index % cardsPerRow;
+      
+      return {
+        x: col * (cardWidth * 0.4 + cardSpacing),
+        y: row * (cardHeight * 0.5 + 10),
+        zIndex: index + 1
+      };
+    } catch (error) {
+      console.warn('Error calculating card position:', error);
+      return { x: 0, y: index * 20, zIndex: index + 1 }; // Fallback positioning
+    }
+  }, []);
 
   // Calculate total height needed for all cards
-  const getTotalHeight = (cardCount: number, containerWidth: number = 350) => {
-    if (cardCount === 0) return 0;
-    const cardHeight = 40 * 4 * 0.9;
-    const cardsPerRow = Math.floor((containerWidth - 32) / (56 * 4 * 0.9 * 0.4 + 12)) || 1;
-    const rows = Math.ceil(cardCount / cardsPerRow);
-    return rows * (cardHeight * 0.5 + 10) + cardHeight * 0.9; // add extra for last card
-  };
+  const getTotalHeight = useCallback((cardCount: number, containerWidth: number = 350) => {
+    try {
+      if (cardCount === 0) return 0;
+      const cardHeight = 40 * 4 * 0.9;
+      const cardsPerRow = Math.floor((containerWidth - 32) / (56 * 4 * 0.9 * 0.4 + 12)) || 1;
+      const rows = Math.ceil(cardCount / cardsPerRow);
+      return rows * (cardHeight * 0.5 + 10) + cardHeight * 0.9; // add extra for last card
+    } catch (error) {
+      console.warn('Error calculating total height:', error);
+      return cardCount * 100; // Fallback height calculation
+    }
+  }, []);
   
   return (
     <div className={cn("flex flex-col h-full", className)}>
@@ -94,12 +105,20 @@ export function DropZone({
         }}
       >
         {cards.length === 0 ? (
-          <div className="text-center text-gray-400">
+          <div 
+            className="text-center text-gray-400"
+            role="status"
+            aria-label="Empty drop zone"
+          >
             <div className="text-sm font-medium mb-1">Empty pile</div>
             <div className="text-xs">Drag cards here or click the title</div>
           </div>
         ) : (
-          <div className="relative w-full h-full overflow-y-auto overflow-x-hidden">
+          <div 
+            className="relative w-full h-full overflow-y-auto overflow-x-hidden"
+            role="group"
+            aria-label={`${title} pile with ${cards.length} cards`}
+          >
             {/* Cards arranged in grid layout from top-left */}
             <div 
               className="relative p-4" 

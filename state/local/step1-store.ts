@@ -94,56 +94,86 @@ export const useStep1Store = create<Step1State>((set, get) => ({
   
   // Move card from staging to a pile
   moveCardToPile: (cardId: string, pile: 'more' | 'less') => {
-    const { stagingCard, moreImportantPile, lessImportantPile } = get();
+    try {
+      const { stagingCard, moreImportantPile, lessImportantPile } = get();
+      
+      if (!stagingCard || stagingCard.id !== cardId) {
+        console.warn(`Cannot move card ${cardId}: not in staging area or card not found`);
+        return;
+      }
+      
+      // Validate pile parameter
+      if (pile !== 'more' && pile !== 'less') {
+        console.error(`Invalid pile type: ${pile}. Must be 'more' or 'less'`);
+        return;
+      }
     
-    if (!stagingCard || stagingCard.id !== cardId) {
-      return;
+      const updatedCard = { ...stagingCard, pile: pile === 'more' ? 'more' as const : 'less' as const };
+      
+      set({
+        stagingCard: null,
+        moreImportantPile: pile === 'more' 
+          ? [...moreImportantPile, updatedCard]
+          : moreImportantPile,
+        lessImportantPile: pile === 'less' 
+          ? [...lessImportantPile, updatedCard]
+          : lessImportantPile,
+      });
+      
+      // Auto-flip next card if deck has more cards
+      setTimeout(() => {
+        try {
+          get().flipNextCard();
+        } catch (error) {
+          console.error('Error auto-flipping next card:', error);
+        }
+      }, 300); // Small delay for better UX
+    } catch (error) {
+      console.error('Error moving card to pile:', error);
     }
-    
-    const updatedCard = { ...stagingCard, pile: pile === 'more' ? 'more' as const : 'less' as const };
-    
-    set({
-      stagingCard: null,
-      moreImportantPile: pile === 'more' 
-        ? [...moreImportantPile, updatedCard]
-        : moreImportantPile,
-      lessImportantPile: pile === 'less' 
-        ? [...lessImportantPile, updatedCard]
-        : lessImportantPile,
-    });
-    
-    // Auto-flip next card if deck has more cards
-    setTimeout(() => {
-      get().flipNextCard();
-    }, 300); // Small delay for better UX
   },
   
   // Move card between piles
   moveCardBetweenPiles: (cardId: string, fromPile: 'more' | 'less', toPile: 'more' | 'less') => {
-    const { moreImportantPile, lessImportantPile } = get();
-    
-    if (fromPile === toPile) return;
-    
-    const sourcePile = fromPile === 'more' ? moreImportantPile : lessImportantPile;
-    const cardIndex = sourcePile.findIndex(card => card.id === cardId);
-    
-    if (cardIndex === -1) return;
-    
-    const card = sourcePile[cardIndex];
-    const updatedCard = { ...card, pile: toPile === 'more' ? 'more' as const : 'less' as const };
-    
-    set({
-      moreImportantPile: fromPile === 'more' 
-        ? moreImportantPile.filter(c => c.id !== cardId)
-        : toPile === 'more' 
-          ? [...moreImportantPile, updatedCard]
-          : moreImportantPile,
-      lessImportantPile: fromPile === 'less' 
-        ? lessImportantPile.filter(c => c.id !== cardId)
-        : toPile === 'less' 
-          ? [...lessImportantPile, updatedCard]
-          : lessImportantPile,
-    });
+    try {
+      const { moreImportantPile, lessImportantPile } = get();
+      
+      if (fromPile === toPile) {
+        console.warn('Source and target piles are the same');
+        return;
+      }
+      
+      if (!cardId || typeof cardId !== 'string') {
+        console.error('Invalid card ID provided');
+        return;
+      }
+      
+      const sourcePile = fromPile === 'more' ? moreImportantPile : lessImportantPile;
+      const cardIndex = sourcePile.findIndex(card => card.id === cardId);
+      
+      if (cardIndex === -1) {
+        console.warn(`Card ${cardId} not found in ${fromPile} pile`);
+        return;
+      }
+      
+      const card = sourcePile[cardIndex];
+      const updatedCard = { ...card, pile: toPile === 'more' ? 'more' as const : 'less' as const };
+      
+      set({
+        moreImportantPile: fromPile === 'more' 
+          ? moreImportantPile.filter(c => c.id !== cardId)
+          : toPile === 'more' 
+            ? [...moreImportantPile, updatedCard]
+            : moreImportantPile,
+        lessImportantPile: fromPile === 'less' 
+          ? lessImportantPile.filter(c => c.id !== cardId)
+          : toPile === 'less' 
+            ? [...lessImportantPile, updatedCard]
+            : lessImportantPile,
+      });
+    } catch (error) {
+      console.error('Error moving card between piles:', error);
+    }
   },
   
   // Set dragging state
