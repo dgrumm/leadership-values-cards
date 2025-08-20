@@ -1,7 +1,10 @@
-export interface Card {
-  id: string;
+export interface CardDefinition {
   value_name: string;
   description: string;
+}
+
+export interface Card extends CardDefinition {
+  id: string;
   position: {
     x: number;
     y: number;
