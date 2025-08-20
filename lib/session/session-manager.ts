@@ -15,6 +15,7 @@ import { generateUniqueId, createTimestamp } from '../utils/generators';
 export interface CreateSessionResult {
   success: boolean;
   session?: Session;
+  participant?: Participant;
   error?: string;
 }
 
@@ -34,14 +35,116 @@ export interface LeaveSessionResult {
 export class SessionManager {
   private store = getSessionStore();
 
-  async createSession(config?: Partial<SessionConfig>): Promise<CreateSessionResult> {
+  async createSession(config?: Partial<SessionConfig>, customCode?: string): Promise<CreateSessionResult> {
     try {
-      const session = await this.store.createSession(config);
+      const session = await this.store.createSession(config, customCode);
       return { success: true, session };
     } catch (error) {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to create session' 
+      };
+    }
+  }
+
+  /**
+   * Create a new session and immediately add the creator as the first participant
+   */
+  async createSessionWithCreator(
+    creatorName: string, 
+    config?: Partial<SessionConfig>,
+    customCode?: string
+  ): Promise<CreateSessionResult> {
+    try {
+      // Create the session first
+      const sessionResult = await this.createSession(config, customCode);
+      if (!sessionResult.success || !sessionResult.session) {
+        return sessionResult;
+      }
+
+      // Add creator as first participant
+      const joinResult = await this.joinSession(sessionResult.session.sessionCode, creatorName);
+      if (!joinResult.success) {
+        // If join fails, clean up the session
+        await this.store.deleteSession(sessionResult.session.sessionCode);
+        return { 
+          success: false, 
+          error: joinResult.error || 'Failed to add creator to session' 
+        };
+      }
+
+      return {
+        success: true,
+        session: joinResult.session,
+        participant: joinResult.participant
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to create session with creator' 
+      };
+    }
+  }
+
+  /**
+   * Atomically join a session or create it if it doesn't exist
+   * Prevents race conditions where multiple users try to create the same session
+   */
+  async joinOrCreateSession(
+    sessionCode: string, 
+    participantName: string, 
+    config?: Partial<SessionConfig>
+  ): Promise<JoinSessionResult> {
+    // Sanitize and validate inputs
+    const sanitizedCode = sanitizeSessionCode(sessionCode);
+    const codeValidation = validateSessionCode(sanitizedCode);
+    if (!codeValidation.isValid) {
+      return { success: false, error: codeValidation.error };
+    }
+
+    const sanitizedName = sanitizeParticipantName(participantName);
+    const nameValidation = validateParticipantName(sanitizedName);
+    if (!nameValidation.isValid) {
+      return { success: false, error: nameValidation.error };
+    }
+
+    try {
+      // First, try to join existing session
+      const existingSession = await this.getSession(sanitizedCode);
+      if (existingSession) {
+        // Session exists, try to join it
+        return await this.joinSession(sanitizedCode, sanitizedName);
+      }
+
+      // Session doesn't exist, create it atomically
+      const atomicResult = await this.store.createSessionIfNotExists(sanitizedCode, config);
+      
+      if (!atomicResult.created) {
+        // Another user just created the session, try to join it
+        return await this.joinSession(sanitizedCode, sanitizedName);
+      }
+
+      // We successfully created the session, now join it as the first participant
+      const joinResult = await this.joinSession(sanitizedCode, sanitizedName);
+      if (!joinResult.success) {
+        // If join fails, clean up the session we just created
+        await this.store.deleteSession(sanitizedCode);
+        return {
+          success: false,
+          error: joinResult.error || 'Failed to join newly created session'
+        };
+      }
+
+      return {
+        success: true,
+        session: joinResult.session,
+        participant: joinResult.participant
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to join or create session'
       };
     }
   }

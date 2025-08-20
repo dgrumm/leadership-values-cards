@@ -20,12 +20,14 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@tanstack/react-query": "^5.85.5",
     "ably": "^2.11.0",
+    "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "next": "15.4.7",
     "react": "^18",
     "react-dom": "^18",
+    "tailwind-merge": "^3.3.1",
     "zustand": "^5.0.7"
   },
   "devDependencies": {

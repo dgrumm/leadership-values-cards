@@ -34,7 +34,50 @@ export async function POST(request: NextRequest) {
     if (body.timeoutMinutes) config.timeoutMinutes = body.timeoutMinutes;
     if (body.deckType) config.deckType = body.deckType;
 
-    const result = await sessionManager.createSession(config);
+    // Check if this is a join-or-create request (atomic operation to prevent race conditions)
+    if (body.participantName && body.sessionCode) {
+      const result = await sessionManager.joinOrCreateSession(
+        body.sessionCode,
+        body.participantName,
+        config
+      );
+
+      if (result.success && result.session && result.participant) {
+        return NextResponse.json({
+          sessionCode: result.session.sessionCode,
+          session: result.session,
+          participant: result.participant
+        }, { status: 201 });
+      } else {
+        return NextResponse.json({
+          error: result.error || 'Failed to join or create session'
+        }, { status: 400 });
+      }
+    }
+
+    // Check if this is a create-with-creator request (for simplified flow)
+    if (body.creatorName) {
+      const result = await sessionManager.createSessionWithCreator(
+        body.creatorName,
+        config,
+        body.customCode
+      );
+
+      if (result.success && result.session && result.participant) {
+        return NextResponse.json({
+          sessionCode: result.session.sessionCode,
+          session: result.session,
+          participant: result.participant
+        }, { status: 201 });
+      } else {
+        return NextResponse.json({
+          error: result.error || 'Failed to create session'
+        }, { status: 500 });
+      }
+    }
+
+    // Traditional session creation (no immediate participant)
+    const result = await sessionManager.createSession(config, body.customCode);
 
     if (result.success && result.session) {
       return NextResponse.json({
