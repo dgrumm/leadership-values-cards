@@ -38,7 +38,7 @@ else
   fi
 fi
 
-REVIEW_EXIT=0
+lsREVIEW_EXIT=0
 
 if [ "$REVIEW_EXIT" -ne 0 ]; then
   echo "❌ Review failed. Fix issues before pushing."; exit 1
