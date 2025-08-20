@@ -23,6 +23,7 @@ export class CSVLoader {
   private static readonly CSV_DIR = path.join(process.cwd(), 'data', 'csv');
   private static readonly MIN_CARDS = 3;
   private static readonly MAX_CARDS = 100;
+  private static readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 
   /**
    * Load and validate cards from a specific deck type
@@ -40,7 +41,39 @@ export class CSVLoader {
     }
 
     try {
+      // Check file size before reading
+      const stats = fs.statSync(filePath);
+      if (stats.size > this.MAX_FILE_SIZE) {
+        return {
+          success: false,
+          cards: [],
+          errors: [{ 
+            row: 0, 
+            field: 'file_size', 
+            value: stats.size.toString(), 
+            message: `CSV file too large: ${Math.round(stats.size / 1024 / 1024)}MB exceeds ${Math.round(this.MAX_FILE_SIZE / 1024 / 1024)}MB limit` 
+          }],
+          warnings: []
+        };
+      }
+
       const csvContent = fs.readFileSync(filePath, 'utf-8');
+      
+      // Double-check content size (in case of encoding issues)
+      if (csvContent.length > this.MAX_FILE_SIZE) {
+        return {
+          success: false,
+          cards: [],
+          errors: [{ 
+            row: 0, 
+            field: 'content_size', 
+            value: csvContent.length.toString(), 
+            message: `CSV content too large after reading: ${Math.round(csvContent.length / 1024 / 1024)}MB exceeds limit` 
+          }],
+          warnings: []
+        };
+      }
+
       return this.parseCSV(csvContent, deckType);
     } catch (error) {
       return {

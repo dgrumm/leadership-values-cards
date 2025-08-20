@@ -163,17 +163,25 @@ describe('DeckValidator', () => {
     });
 
     it('should detect duplicate card IDs', () => {
-      const duplicateCards = validCards.map(c => ({
-        ...c,
-        position: { ...c.position }
-      }));
-      
-      // Ensure we have valid IDs first
-      expect(duplicateCards[0].id).toBeDefined();
-      expect(duplicateCards[1].id).toBeDefined();
-      
-      // Create duplicate
-      duplicateCards[1].id = duplicateCards[0].id; 
+      // Create cards with explicitly duplicate IDs
+      const duplicateCards: Card[] = [
+        {
+          id: 'duplicate-id',
+          value_name: 'Trust',
+          description: 'Trust description',
+          position: { x: 0, y: 0 },
+          pile: 'deck',
+          owner: 'TestUser'
+        },
+        {
+          id: 'duplicate-id', // Same ID as above
+          value_name: 'Teamwork',
+          description: 'Teamwork description',
+          position: { x: 0, y: 0 },
+          pile: 'deck',
+          owner: 'TestUser'
+        }
+      ];
       
       const result = DeckValidator.validateCards(duplicateCards);
 

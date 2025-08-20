@@ -10,6 +10,12 @@ const mockFs = fs as jest.Mocked<typeof fs>;
 describe('CSVLoader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Default mock setup for normal file operations
+    mockFs.statSync.mockReturnValue({
+      size: 1000,
+      mtime: new Date()
+    } as any);
   });
 
   describe('loadDeck', () => {
@@ -114,6 +120,42 @@ Leadership,"Description 5"`;
 
       expect(result.success).toBe(true);
       expect(result.warnings.some(w => w.includes('has 5 cards, expected 16'))).toBe(true);
+    });
+
+    it('should reject files that are too large', async () => {
+      const mockCSV = `value_name,description
+Trust,"Description 1"
+Teamwork,"Description 2"
+Leadership,"Description 3"`;
+
+      // Mock file stat to return large size
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({
+        size: 6 * 1024 * 1024 // 6MB - exceeds 5MB limit
+      } as any);
+      mockFs.readFileSync.mockReturnValue(mockCSV);
+
+      const result = await CSVLoader.loadDeck('dev');
+
+      expect(result.success).toBe(false);
+      expect(result.errors[0].field).toBe('file_size');
+      expect(result.errors[0].message).toContain('CSV file too large');
+    });
+
+    it('should reject content that is too large after reading', async () => {
+      const largeContent = 'value_name,description\n' + 'A'.repeat(6 * 1024 * 1024);
+
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({
+        size: 1000 // File size looks small
+      } as any);
+      mockFs.readFileSync.mockReturnValue(largeContent);
+
+      const result = await CSVLoader.loadDeck('dev');
+
+      expect(result.success).toBe(false);
+      expect(result.errors[0].field).toBe('content_size');
+      expect(result.errors[0].message).toContain('CSV content too large after reading');
     });
   });
 

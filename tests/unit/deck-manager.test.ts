@@ -1,10 +1,13 @@
 import { DeckManager } from '../../lib/deck-manager';
 import { CSVLoader } from '../../lib/csv-loader';
 import { CardDefinition } from '../../lib/types/card';
+import * as fs from 'fs';
 
-// Mock CSVLoader
+// Mock CSVLoader and fs
 jest.mock('../../lib/csv-loader');
+jest.mock('fs');
 const mockCSVLoader = CSVLoader as jest.Mocked<typeof CSVLoader>;
+const mockFs = fs as jest.Mocked<typeof fs>;
 
 describe('DeckManager', () => {
   let deckManager: DeckManager;
@@ -25,6 +28,12 @@ describe('DeckManager', () => {
     (DeckManager as any).instance = null;
     deckManager = DeckManager.getInstance();
     jest.clearAllMocks();
+    
+    // Mock fs.statSync to return valid timestamps
+    mockFs.statSync.mockReturnValue({
+      mtime: new Date(),
+      size: 1000
+    } as any);
   });
 
   describe('getInstance', () => {
@@ -226,6 +235,41 @@ describe('DeckManager', () => {
       expect(result).toBe(false);
       // Original deck should remain unchanged
       expect(deckManager.getCurrentDeck()).toEqual(mockProfessionalDeck);
+    });
+
+    it('should invalidate cache when CSV file is modified', async () => {
+      // Initialize with original timestamp
+      const originalTime = new Date('2023-01-01').getTime();
+      mockFs.statSync.mockReturnValue({
+        mtime: new Date(originalTime),
+        size: 1000
+      } as any);
+
+      await deckManager.initialize();
+      const originalDeck = deckManager.getDeck('professional');
+
+      // Simulate file modification
+      const newTime = originalTime + 10000;
+      mockFs.statSync.mockReturnValue({
+        mtime: new Date(newTime),
+        size: 1000
+      } as any);
+
+      // Mock reload to return updated deck
+      const updatedDeck = [...mockProfessionalDeck, { value_name: 'New Card', description: 'New description' }];
+      mockCSVLoader.loadDeck.mockResolvedValue({
+        success: true,
+        cards: updatedDeck,
+        errors: [],
+        warnings: []
+      });
+
+      // Getting deck should trigger cache invalidation and reload
+      const reloadedDeck = await deckManager.getDeckAsync('professional');
+      
+      expect(mockCSVLoader.loadDeck).toHaveBeenCalledWith('professional');
+      expect(reloadedDeck).toEqual(updatedDeck);
+      expect(reloadedDeck).not.toEqual(originalDeck);
     });
   });
 

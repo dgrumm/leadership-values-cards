@@ -1,5 +1,7 @@
 import { CSVLoader, DeckType, CSVLoadResult } from './csv-loader';
 import { CardDefinition } from './types/card';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface DeckInfo {
   type: DeckType;
@@ -13,8 +15,36 @@ export class DeckManager {
   private static instance: DeckManager | null = null;
   private loadedDecks: Map<DeckType, CardDefinition[]> = new Map();
   private currentDeck: DeckType = 'professional'; // Default deck type
+  private deckTimestamps: Map<DeckType, number> = new Map(); // Track file modification times
 
   private constructor() {}
+
+  /**
+   * Get CSV file modification time
+   */
+  private getCSVFileTimestamp(deckType: DeckType): number {
+    try {
+      const csvPath = path.join(process.cwd(), 'data', 'csv', `${deckType}.csv`);
+      const stats = fs.statSync(csvPath);
+      return stats.mtime.getTime();
+    } catch {
+      return 0; // Return 0 if file doesn't exist or can't be accessed
+    }
+  }
+
+  /**
+   * Check if deck cache is still valid
+   */
+  private isCacheValid(deckType: DeckType): boolean {
+    if (!this.loadedDecks.has(deckType)) {
+      return false;
+    }
+    
+    const cachedTimestamp = this.deckTimestamps.get(deckType) || 0;
+    const currentTimestamp = this.getCSVFileTimestamp(deckType);
+    
+    return cachedTimestamp >= currentTimestamp;
+  }
 
   /**
    * Get singleton instance of DeckManager
@@ -36,6 +66,8 @@ export class DeckManager {
     for (const [deckType, result] of Object.entries(results)) {
       if (result.success) {
         this.loadedDecks.set(deckType as DeckType, result.cards);
+        // Store the timestamp when we loaded this deck
+        this.deckTimestamps.set(deckType as DeckType, this.getCSVFileTimestamp(deckType as DeckType));
       } else {
         errors.push(`Failed to load ${deckType} deck: ${result.errors.map(e => e.message).join(', ')}`);
       }
@@ -84,6 +116,25 @@ export class DeckManager {
    * Get a specific deck by type
    */
   getDeck(deckType: DeckType): CardDefinition[] | null {
+    // Check if cache is still valid, reload if not
+    if (!this.isCacheValid(deckType)) {
+      // For synchronous access, we'll trigger reload but return existing data
+      // This maintains backward compatibility while ensuring eventual consistency
+      this.reloadDeck(deckType).catch(err => {
+        console.warn(`Failed to reload deck ${deckType}:`, err);
+      });
+    }
+    return this.loadedDecks.get(deckType) || null;
+  }
+
+  /**
+   * Get a specific deck by type (async version for cache invalidation)
+   */
+  async getDeckAsync(deckType: DeckType): Promise<CardDefinition[] | null> {
+    // Check if cache is still valid, reload if not
+    if (!this.isCacheValid(deckType)) {
+      await this.reloadDeck(deckType);
+    }
     return this.loadedDecks.get(deckType) || null;
   }
 
@@ -156,6 +207,8 @@ export class DeckManager {
       const result = await CSVLoader.loadDeck(deckType);
       if (result.success) {
         this.loadedDecks.set(deckType, result.cards);
+        // Update the timestamp after successful reload
+        this.deckTimestamps.set(deckType, this.getCSVFileTimestamp(deckType));
         return true;
       }
       return false;
