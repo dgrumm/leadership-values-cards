@@ -15,6 +15,7 @@ import { generateUniqueId, createTimestamp } from '../utils/generators';
 export interface CreateSessionResult {
   success: boolean;
   session?: Session;
+  participant?: Participant;
   error?: string;
 }
 
@@ -34,14 +35,53 @@ export interface LeaveSessionResult {
 export class SessionManager {
   private store = getSessionStore();
 
-  async createSession(config?: Partial<SessionConfig>): Promise<CreateSessionResult> {
+  async createSession(config?: Partial<SessionConfig>, customCode?: string): Promise<CreateSessionResult> {
     try {
-      const session = await this.store.createSession(config);
+      const session = await this.store.createSession(config, customCode);
       return { success: true, session };
     } catch (error) {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to create session' 
+      };
+    }
+  }
+
+  /**
+   * Create a new session and immediately add the creator as the first participant
+   */
+  async createSessionWithCreator(
+    creatorName: string, 
+    config?: Partial<SessionConfig>,
+    customCode?: string
+  ): Promise<CreateSessionResult> {
+    try {
+      // Create the session first
+      const sessionResult = await this.createSession(config, customCode);
+      if (!sessionResult.success || !sessionResult.session) {
+        return sessionResult;
+      }
+
+      // Add creator as first participant
+      const joinResult = await this.joinSession(sessionResult.session.sessionCode, creatorName);
+      if (!joinResult.success) {
+        // If join fails, clean up the session
+        await this.store.deleteSession(sessionResult.session.sessionCode);
+        return { 
+          success: false, 
+          error: joinResult.error || 'Failed to add creator to session' 
+        };
+      }
+
+      return {
+        success: true,
+        session: joinResult.session,
+        participant: joinResult.participant
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to create session with creator' 
       };
     }
   }

@@ -3,7 +3,7 @@ import { SESSION_CONFIG } from '../constants';
 import { createTimestamp, addMinutes, ensureUniqueSessionCode } from '../utils/generators';
 
 export interface SessionStore {
-  createSession(config?: Partial<SessionConfig>): Promise<Session>;
+  createSession(config?: Partial<SessionConfig>, customCode?: string): Promise<Session>;
   getSession(sessionCode: string): Promise<Session | null>;
   updateSession(sessionCode: string, updates: Partial<Session>): Promise<Session | null>;
   deleteSession(sessionCode: string): Promise<boolean>;
@@ -25,13 +25,30 @@ class InMemorySessionStore implements SessionStore {
     this.startCleanupTimer();
   }
 
-  async createSession(config: Partial<SessionConfig> = {}): Promise<Session> {
+  async createSession(config: Partial<SessionConfig> = {}, customCode?: string): Promise<Session> {
     // Check memory limits and cleanup if necessary
     await this.enforceMemoryLimits();
     
     const mergedConfig = { ...SESSION_CONFIG, ...config };
     const now = new Date();
-    const sessionCode = ensureUniqueSessionCode(new Set(this.sessions.keys()));
+    
+    // Use custom code if provided, otherwise generate unique code
+    let sessionCode: string;
+    if (customCode) {
+      // Validate custom code format
+      if (!/^[A-Z0-9]{6}$/.test(customCode)) {
+        throw new Error('Custom session code must be exactly 6 alphanumeric characters');
+      }
+      
+      // Check if custom code is already taken
+      if (this.sessions.has(customCode)) {
+        throw new Error('Session code already exists');
+      }
+      
+      sessionCode = customCode;
+    } else {
+      sessionCode = ensureUniqueSessionCode(new Set(this.sessions.keys()));
+    }
     
     const session: Session = {
       sessionCode,
