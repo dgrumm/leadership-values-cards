@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
-export function ParticipantsButton() {
-  const [participantCount, setParticipantCount] = useState(5); // TODO: Get from session state
+interface ParticipantsButtonProps {
+  participantCount?: number;
+}
+
+export function ParticipantsButton({ participantCount = 1 }: ParticipantsButtonProps) {
 
   const handleShowParticipants = () => {
     // TODO: Show participants modal/page
