@@ -76,3 +76,49 @@ hooks/collaboration/        # React hooks for session state management
 - 04.1 Ably Setup (can use session infrastructure)
 
 ---
+
+## 2025-08-20-01-3-card-deck-setup
+
+**Spec**: 01.3 Card Deck Setup  
+**Status**: ✅ Complete
+
+### Implementation Decisions
+- **CSV Processing**: Build-time generation via Node.js script with full validation pipeline
+- **Deck Types**: 4 deck variants - dev (16), professional (40), extended (74), development (12)
+- **Shuffling Algorithm**: Fisher-Yates shuffle with deck completeness validation
+- **TypeScript Generation**: Auto-generated constants in `lib/generated/card-decks.ts`
+- **Build Integration**: Comprehensive Makefile with deck switching and validation commands
+- **Card Distribution**: Class-based architecture with participant-specific shuffled decks
+
+### Architecture Components
+```
+scripts/build-csv.js            # Build-time CSV processing and validation
+data/csv/                       # Source CSV files for all deck types
+lib/generated/card-decks.ts     # Generated TypeScript constants (auto-generated)
+lib/game-logic/
+├── shuffle.ts                  # Fisher-Yates shuffle with validation utilities  
+├── card-distribution.ts        # Participant deck management and distribution
+lib/types/card.ts              # Card interfaces and pile types
+Makefile                       # Build commands for deck management
+```
+
+### Key Implementation Details
+- **CSV Validation**: Header validation, duplicate detection, completeness checks
+- **Unique Card IDs**: Format `session_participant_value_index_uniqueId` for global uniqueness
+- **Build Commands**: `make build-csv`, `make deck-dev/professional/extended`, `make validate-csv`
+- **Performance Design**: Handles 50 participants × 40 cards = 2000 card instances
+- **Error Handling**: Comprehensive validation with detailed error messages
+- **Hot Reload**: Development support for CSV changes during development
+
+### Testing & Validation
+- **CSV Validation**: All 4 deck types validate successfully
+- **Build System**: Makefile commands working, TypeScript generation confirmed
+- **Shuffle Quality**: Validation functions for randomness testing
+- **Deck Completeness**: No missing cards, no duplicates validation
+- **All acceptance criteria verified**
+
+### Next Dependencies Unlocked
+- 02.2 Step 1 Initial Sort (depends on deck setup)
+- All core flow specs can now access shuffled participant decks
+
+---
