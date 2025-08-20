@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { validateName, validateSessionCode, ValidationResult } from '@/lib/utils/validation';
 
 export interface FormValidation {
@@ -34,19 +34,56 @@ export function useFormValidation({
     sessionCode: false
   });
 
-  // Validate form whenever inputs change
-  useEffect(() => {
-    const nameValidation = validateName(name);
-    const sessionCodeValidation = validateSessionCode(sessionCode);
+  // Debounced validation to improve performance with proper cleanup
+  const debouncedValidation = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
     
-    const newValidation: FormValidation = {
-      name: nameValidation,
-      sessionCode: sessionCodeValidation,
-      isFormValid: nameValidation.isValid && sessionCodeValidation.isValid
+    const debounced = (currentName: string, currentSessionCode: string) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const nameValidation = validateName(currentName);
+        const sessionCodeValidation = validateSessionCode(currentSessionCode);
+        
+        const newValidation: FormValidation = {
+          name: nameValidation,
+          sessionCode: sessionCodeValidation,
+          isFormValid: nameValidation.isValid && sessionCodeValidation.isValid
+        };
+
+        setValidation(newValidation);
+      }, 300); // 300ms debounce
     };
 
-    setValidation(newValidation);
-  }, [name, sessionCode]);
+    // Return debounced function with cleanup method
+    debounced.cleanup = () => clearTimeout(timeoutId);
+    return debounced;
+  }, []);
+
+  // Validate form whenever inputs change (debounced) with cleanup
+  useEffect(() => {
+    if (realTimeValidation) {
+      debouncedValidation(name, sessionCode);
+    } else {
+      // Immediate validation when not in real-time mode
+      const nameValidation = validateName(name);
+      const sessionCodeValidation = validateSessionCode(sessionCode);
+      
+      const newValidation: FormValidation = {
+        name: nameValidation,
+        sessionCode: sessionCodeValidation,
+        isFormValid: nameValidation.isValid && sessionCodeValidation.isValid
+      };
+
+      setValidation(newValidation);
+    }
+
+    // Cleanup debounced timeouts on unmount or when dependencies change
+    return () => {
+      if (debouncedValidation.cleanup) {
+        debouncedValidation.cleanup();
+      }
+    };
+  }, [name, sessionCode, debouncedValidation, realTimeValidation]);
 
   // Mark field as interacted with for validation display
   const markInteracted = (field: 'name' | 'sessionCode') => {

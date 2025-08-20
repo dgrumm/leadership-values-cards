@@ -21,8 +21,9 @@ export function useSessionStorage() {
   });
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load data from sessionStorage on mount
+  // Load data from sessionStorage on mount and listen for cross-tab changes
   useEffect(() => {
+    // Load initial data
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -33,6 +34,26 @@ export function useSessionStorage() {
       console.warn('Failed to load from sessionStorage:', error);
     }
     setIsLoaded(true);
+
+    // Listen for storage changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsedData = JSON.parse(e.newValue) as LoginFormData;
+          setData(parsedData);
+        } catch (error) {
+          console.warn('Failed to parse storage data:', error);
+        }
+      }
+    };
+
+    // Add event listener for cross-tab synchronization
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup event listener on unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Save data to sessionStorage

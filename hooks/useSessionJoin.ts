@@ -28,64 +28,63 @@ export function useSessionJoin() {
   
   const router = useRouter();
 
-  // Intelligent join/create: try to join existing session, create if not found
+  // Intelligent join/create: atomic operation to prevent race conditions
   const joinOrCreateSession = async ({ name, sessionCode, onSuccess, onError }: JoinSessionProps) => {
     setState({ isLoading: true, error: null, isSuccess: false });
 
+    // Add request timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     try {
-      // First, try to join existing session
-      const joinResponse = await fetch(`/api/sessions/${sessionCode}/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ participantName: name.trim() }),
-      });
-
-      const joinData = await joinResponse.json();
-
-      // If join successful, we're done
-      if (joinResponse.ok) {
-        setState({ isLoading: false, error: null, isSuccess: true });
-        onSuccess?.(sessionCode, joinData.participant.name);
-        router.push(`/canvas?session=${sessionCode}&name=${encodeURIComponent(joinData.participant.name)}`);
-        return { success: true, participant: joinData.participant, action: 'joined' };
-      }
-
-      // If session full or other non-404 error, don't try to create
-      if (joinResponse.status !== 404) {
-        throw new Error(joinData.error || 'Failed to join session');
-      }
-
-      // Session doesn't exist (404), so create new session with this code
-      const createResponse = await fetch('/api/sessions', {
+      // Use atomic join-or-create API to prevent race conditions
+      const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          creatorName: name.trim(),
-          customCode: sessionCode // Request specific session code
+          participantName: name.trim(),
+          sessionCode: sessionCode.trim().toUpperCase()
         }),
+        signal: controller.signal
       });
 
-      const createData = await createResponse.json();
+      const data = await response.json();
 
-      if (!createResponse.ok) {
-        throw new Error(createData.error || 'Failed to create session');
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join or create session');
       }
 
       setState({ isLoading: false, error: null, isSuccess: true });
-      onSuccess?.(sessionCode, createData.participant.name);
-      router.push(`/canvas?session=${sessionCode}&name=${encodeURIComponent(createData.participant.name)}`);
+      onSuccess?.(sessionCode, data.participant.name);
+      router.push(`/canvas?session=${sessionCode}&name=${encodeURIComponent(data.participant.name)}`);
       
-      return { success: true, session: createData.session, participant: createData.participant, action: 'created' };
+      return { 
+        success: true, 
+        session: data.session, 
+        participant: data.participant, 
+        action: 'joined-or-created' 
+      };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      let errorMessage: string;
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Request timeout. Please check your connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = 'An unexpected error occurred';
+      }
+      
       setState({ isLoading: false, error: errorMessage, isSuccess: false });
       onError?.(errorMessage);
       return { success: false, error: errorMessage };
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 

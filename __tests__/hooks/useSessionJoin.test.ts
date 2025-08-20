@@ -20,6 +20,7 @@ describe('useSessionJoin', () => {
   describe('joinOrCreateSession', () => {
     it('joins existing session successfully', async () => {
       const mockJoinResponse = {
+        session: { sessionCode: 'ABC123' },
         participant: { name: 'John' }
       };
 
@@ -39,37 +40,31 @@ describe('useSessionJoin', () => {
         });
 
         expect(response.success).toBe(true);
-        expect(response.action).toBe('joined');
+        expect(response.action).toBe('joined-or-created');
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/sessions/ABC123/join', {
+      expect(fetch).toHaveBeenCalledWith('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantName: 'John' })
+        body: JSON.stringify({ participantName: 'John', sessionCode: 'ABC123' }),
+        signal: expect.any(AbortSignal)
       });
 
       expect(onSuccess).toHaveBeenCalledWith('ABC123', 'John');
       expect(mockPush).toHaveBeenCalledWith('/canvas?session=ABC123&name=John');
     });
 
-    it('creates new session when session not found', async () => {
+    it('creates new session when session not found (atomic operation)', async () => {
       const mockCreateResponse = {
         session: { sessionCode: 'ABC123' },
         participant: { name: 'John' }
       };
 
-      // First call (join) returns 404
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 404,
-          json: () => Promise.resolve({ error: 'Session not found' })
-        })
-        // Second call (create) succeeds
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockCreateResponse)
-        });
+      // Mock atomic join-or-create API
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockCreateResponse)
+      });
 
       const { result } = renderHook(() => useSessionJoin());
       const onSuccess = jest.fn();
@@ -82,23 +77,23 @@ describe('useSessionJoin', () => {
         });
 
         expect(response.success).toBe(true);
-        expect(response.action).toBe('created');
+        expect(response.action).toBe('joined-or-created');
       });
 
-      // Should try join first, then create
-      expect(fetch).toHaveBeenCalledTimes(2);
-      expect(fetch).toHaveBeenNthCalledWith(1, '/api/sessions/ABC123/join', expect.any(Object));
-      expect(fetch).toHaveBeenNthCalledWith(2, '/api/sessions', {
+      // Should use atomic API
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledWith('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creatorName: 'John', customCode: 'ABC123' })
+        body: JSON.stringify({ participantName: 'John', sessionCode: 'ABC123' }),
+        signal: expect.any(AbortSignal)
       });
 
       expect(onSuccess).toHaveBeenCalledWith('ABC123', 'John');
       expect(mockPush).toHaveBeenCalledWith('/canvas?session=ABC123&name=John');
     });
 
-    it('handles session full error without creating new session', async () => {
+    it('handles session full error', async () => {
       const mockErrorResponse = {
         error: 'Session is full (50 participants max)'
       };
@@ -122,7 +117,6 @@ describe('useSessionJoin', () => {
         expect(response.success).toBe(false);
       });
 
-      // Should only try join, not create
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(onError).toHaveBeenCalledWith('Session is full (50 participants max)');
       expect(mockPush).not.toHaveBeenCalled();
@@ -152,7 +146,10 @@ describe('useSessionJoin', () => {
       (global.fetch as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve({
           ok: true,
-          json: () => Promise.resolve({ participant: { name: 'John' } })
+          json: () => Promise.resolve({ 
+            session: { sessionCode: 'ABC123' },
+            participant: { name: 'John' } 
+          })
         }), 100))
       );
 
@@ -177,6 +174,29 @@ describe('useSessionJoin', () => {
 
       // Should not be loading after completion
       expect(result.current.isLoading).toBe(false);
+    });
+
+    it('handles timeout errors', async () => {
+      // Mock AbortError for timeout
+      (global.fetch as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error('Timeout'), { name: 'AbortError' })
+      );
+
+      const { result } = renderHook(() => useSessionJoin());
+      const onError = jest.fn();
+
+      await act(async () => {
+        const response = await result.current.joinOrCreateSession({
+          name: 'John',
+          sessionCode: 'ABC123',
+          onError
+        });
+
+        expect(response.success).toBe(false);
+      });
+
+      expect(onError).toHaveBeenCalledWith('Request timeout. Please check your connection and try again.');
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 

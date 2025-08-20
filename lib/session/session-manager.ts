@@ -86,6 +86,69 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Atomically join a session or create it if it doesn't exist
+   * Prevents race conditions where multiple users try to create the same session
+   */
+  async joinOrCreateSession(
+    sessionCode: string, 
+    participantName: string, 
+    config?: Partial<SessionConfig>
+  ): Promise<JoinSessionResult> {
+    // Sanitize and validate inputs
+    const sanitizedCode = sanitizeSessionCode(sessionCode);
+    const codeValidation = validateSessionCode(sanitizedCode);
+    if (!codeValidation.isValid) {
+      return { success: false, error: codeValidation.error };
+    }
+
+    const sanitizedName = sanitizeParticipantName(participantName);
+    const nameValidation = validateParticipantName(sanitizedName);
+    if (!nameValidation.isValid) {
+      return { success: false, error: nameValidation.error };
+    }
+
+    try {
+      // First, try to join existing session
+      const existingSession = await this.getSession(sanitizedCode);
+      if (existingSession) {
+        // Session exists, try to join it
+        return await this.joinSession(sanitizedCode, sanitizedName);
+      }
+
+      // Session doesn't exist, create it atomically
+      const atomicResult = await this.store.createSessionIfNotExists(sanitizedCode, config);
+      
+      if (!atomicResult.created) {
+        // Another user just created the session, try to join it
+        return await this.joinSession(sanitizedCode, sanitizedName);
+      }
+
+      // We successfully created the session, now join it as the first participant
+      const joinResult = await this.joinSession(sanitizedCode, sanitizedName);
+      if (!joinResult.success) {
+        // If join fails, clean up the session we just created
+        await this.store.deleteSession(sanitizedCode);
+        return {
+          success: false,
+          error: joinResult.error || 'Failed to join newly created session'
+        };
+      }
+
+      return {
+        success: true,
+        session: joinResult.session,
+        participant: joinResult.participant
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to join or create session'
+      };
+    }
+  }
+
   async getSession(sessionCode: string): Promise<Session | null> {
     const sanitizedCode = sanitizeSessionCode(sessionCode);
     const validation = validateSessionCode(sanitizedCode);

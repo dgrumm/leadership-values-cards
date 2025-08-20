@@ -4,6 +4,7 @@ import { createTimestamp, addMinutes, ensureUniqueSessionCode } from '../utils/g
 
 export interface SessionStore {
   createSession(config?: Partial<SessionConfig>, customCode?: string): Promise<Session>;
+  createSessionIfNotExists(sessionCode: string, config?: Partial<SessionConfig>): Promise<{ created: boolean; session: Session }>;
   getSession(sessionCode: string): Promise<Session | null>;
   updateSession(sessionCode: string, updates: Partial<Session>): Promise<Session | null>;
   deleteSession(sessionCode: string): Promise<boolean>;
@@ -63,6 +64,40 @@ class InMemorySessionStore implements SessionStore {
     
     this.sessions.set(sessionCode, session);
     return session;
+  }
+
+  async createSessionIfNotExists(sessionCode: string, config: Partial<SessionConfig> = {}): Promise<{ created: boolean; session: Session }> {
+    // Validate session code format
+    if (!/^[A-Z0-9]{6}$/.test(sessionCode)) {
+      throw new Error('Session code must be exactly 6 alphanumeric characters');
+    }
+
+    // Check if session already exists (atomic check-and-create)
+    const existingSession = this.sessions.get(sessionCode);
+    if (existingSession) {
+      // Session exists, return it without creating a new one
+      return { created: false, session: existingSession };
+    }
+
+    // Session doesn't exist, create it atomically
+    await this.enforceMemoryLimits();
+    
+    const mergedConfig = { ...SESSION_CONFIG, ...config };
+    const now = new Date();
+    
+    const session: Session = {
+      sessionCode,
+      createdAt: createTimestamp(),
+      lastActivity: createTimestamp(),
+      deckType: mergedConfig.deckType,
+      maxParticipants: mergedConfig.maxParticipants,
+      participants: [],
+      isActive: true,
+      expiresAt: addMinutes(now, mergedConfig.timeoutMinutes).toISOString()
+    };
+    
+    this.sessions.set(sessionCode, session);
+    return { created: true, session };
   }
 
   async getSession(sessionCode: string): Promise<Session | null> {
