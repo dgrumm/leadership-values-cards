@@ -83,8 +83,9 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
   useEffect(() => {
     if (top3Pile.length === 3 && remainingCards === 0 && !stagingCard) {
       setShowCelebration(true);
-      // Auto-hide celebration after 3 seconds
-      setTimeout(() => setShowCelebration(false), 3000);
+      // Auto-hide celebration after 3 seconds with proper cleanup
+      const timer = setTimeout(() => setShowCelebration(false), 3000);
+      return () => clearTimeout(timer);
     } else {
       setShowCelebration(false);
     }
@@ -161,12 +162,12 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
   );
 
   // Drag and drop handlers
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
     setDraggedCardId(active.id as string);
-  };
+  }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setDraggedCardId(null);
 
@@ -201,22 +202,22 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
         debouncedMoveCardBetweenPiles(activeCard.id, fromPile, toPile);
       }
     }
-  };
+  }, [top3Pile.length, debouncedMoveCardToPile, debouncedMoveCardBetweenPiles, triggerEnhancedBounceAnimation]);
 
-  const handleCompleteExercise = () => {
+  const handleCompleteExercise = useCallback(() => {
     if (onStepComplete) {
       onStepComplete();
     } else {
       console.log('Exercise completed!');
       alert('Congratulations! You have identified your top 3 leadership values!');
     }
-  };
+  }, [onStepComplete]);
 
-  const handleReveal = () => {
+  const handleReveal = useCallback(() => {
     setIsRevealed(!isRevealed);
     // TODO: Implement actual reveal functionality (send to other participants)
     console.log('Reveal toggled:', !isRevealed);
-  };
+  }, [isRevealed]);
 
   // Get validation message based on current state
   const getValidationMessage = () => {
