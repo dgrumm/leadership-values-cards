@@ -4,9 +4,10 @@ import { getSessionLifecycle } from '@/lib/session/session-lifecycle';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> }
 ) {
   try {
+    const params = await context.params;
     const sessionCode = params.code;
     const sessionManager = getSessionManager();
     
@@ -36,9 +37,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> }
 ) {
   try {
+    const params = await context.params;
     const sessionCode = params.code;
     const body = await request.json();
     const { participantId, currentStep } = body;
@@ -75,9 +77,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> }
 ) {
   try {
+    const params = await context.params;
     const sessionCode = params.code;
     const { participantId } = await request.json();
 

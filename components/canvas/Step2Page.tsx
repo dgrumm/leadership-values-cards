@@ -28,6 +28,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   const [showModal, setShowModal] = useState(false); // Start false, show after transition
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [bounceAnimation, setBounceAnimation] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
   
   const {
     deck,
@@ -150,6 +151,12 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
     }
   };
 
+  const handleReveal = () => {
+    setIsRevealed(!isRevealed);
+    // TODO: Implement actual reveal functionality (send to other participants)
+    console.log('Reveal toggled:', !isRevealed);
+  };
+
   // Get validation message based on current state
   const getValidationMessage = () => {
     if (top8Pile.length < 8) {
@@ -173,6 +180,9 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
         currentStep={2}
         totalSteps={3}
         onStepClick={() => setShowModal(true)}
+        onReveal={handleReveal}
+        isRevealed={isRevealed}
+        showRevealButton={true}
       />
 
       {/* Transition overlay */}
@@ -228,7 +238,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
               onCardClick={handleCardClick}
               onTitleClick={handleTop8Click}
               className={cn(
-                "h-64 transition-all duration-200",
+                "h-[28rem] transition-all duration-200",
                 top8Pile.length >= 8 && !showOverflowWarning && "ring-2 ring-yellow-400 bg-yellow-50/50",
                 showOverflowWarning && "ring-2 ring-red-500 bg-red-50/50 border-red-500",
                 top8Pile.length >= 8 && "border-2",
@@ -245,7 +255,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
               cards={lessImportantPile}
               onCardClick={handleCardClick}
               onTitleClick={handleLessImportantClick}
-              className="h-64"
+              className="h-[28rem]"
               data-pile="less"
             />
           </div>
@@ -278,10 +288,20 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
             )}
           </AnimatePresence>
 
-          {/* Middle section - Staging area positioned right of center */}
-          <div className="flex-1 relative flex items-center justify-center">
+          {/* Bottom section - Deck and staging side by side with fixed positions (same as Step 1) */}
+          <div className="flex-1 flex items-center justify-center gap-8">
+            {/* Deck - fixed size container */}
+            <div className="w-56 h-40">
+              <Deck
+                cardCount={remainingCards}
+                onClick={handleDeckClick}
+                disabled={!!stagingCard}
+              />
+            </div>
+            
+            {/* Staging area - fixed size container with 3D flip animation */}
             <motion.div 
-              className="absolute right-1/3 -translate-y-8"
+              className="w-56 h-40"
               animate={bounceAnimation ? {
                 x: [0, -15, 12, -8, 5, -2, 0],
                 y: [0, -8, 5, -3, 2, -1, 0],
@@ -293,35 +313,26 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                 ease: [0.68, -0.55, 0.265, 1.55] // Elastic ease for more bounce
               }}
             >
-              {stagingCard ? (
-                <DraggableCard
-                  card={stagingCard}
-                  isInStaging={true}
-                />
-              ) : (
-                <StagingArea 
-                  card={null}
-                  isDragging={!!draggedCardId}
-                />
-              )}
+              <StagingArea
+                card={stagingCard}
+                isDragging={draggedCardId === stagingCard?.id}
+              />
             </motion.div>
           </div>
 
-          {/* Bottom section - Deck, discard pile, and controls */}
+          {/* Controls section */}
           <div className="flex flex-col items-center gap-6 relative">
-            <div className="flex items-end justify-center gap-8 w-full">
-              {/* Main deck */}
-              <Deck
-                cardCount={remainingCards}
-                onClick={handleDeckClick}
-                disabled={!!stagingCard}
-              />
-              
-              {/* Discard pile (bottom-right) */}
-              <div className="absolute right-0 bottom-0">
-                <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl w-24 h-32 flex flex-col items-center justify-center text-gray-500 text-xs">
-                  <div className="font-medium">Discarded</div>
-                  <div>({discardedPile.length})</div>
+            {/* Discard pile (bottom-right) - Same visual as main deck */}
+            <div className="absolute right-8 bottom-0">
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-2 font-medium">Discarded</div>
+                <Deck
+                  cardCount={discardedPile.length}
+                  onClick={() => {}} // Not clickable
+                  disabled={true}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  ({discardedPile.length} cards)
                 </div>
               </div>
             </div>
@@ -341,27 +352,43 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
               )}
             </div>
 
-            {/* Review Top 8 button */}
+            {/* Action buttons - Show different options based on card count */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: canProceed ? 1 : 0.5,
-                y: 0
-              }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
+              className="flex gap-4 flex-wrap justify-center"
             >
-              <Button
-                onClick={handleReviewClick}
-                className={cn(
-                  "px-8 py-3 font-semibold rounded-xl shadow-lg transition-all",
-                  canProceed 
-                    ? "bg-green-600 hover:bg-green-700 text-white" 
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                )}
-                disabled={!canProceed}
-              >
-                Review Top 8 ➜
-              </Button>
+              {/* Edge case: If fewer than 8 cards available, show Keep All option */}
+              {deck.length < 8 && remainingCards === 0 && !stagingCard ? (
+                <>
+                  <Button
+                    onClick={handleReviewClick}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl shadow-lg"
+                  >
+                    Keep All & Continue to Step 3 ➜
+                  </Button>
+                  <Button
+                    onClick={handleReveal}
+                    className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg"
+                  >
+                    Reveal My Choices
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={handleReviewClick}
+                  className={cn(
+                    "px-8 py-3 font-semibold rounded-xl shadow-lg transition-all",
+                    canProceed 
+                      ? "bg-green-600 hover:bg-green-700 text-white" 
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  )}
+                  disabled={!canProceed}
+                >
+                  Review Top 8 ➜
+                </Button>
+              )}
             </motion.div>
           </div>
         </div>

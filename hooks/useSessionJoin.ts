@@ -58,7 +58,11 @@ export function useSessionJoin() {
 
       setState({ isLoading: false, error: null, isSuccess: true });
       onSuccess?.(sessionCode, data.participant.name);
-      router.push(`/canvas?session=${sessionCode}&name=${encodeURIComponent(data.participant.name)}`);
+      
+      // Brief delay to show success state, then redirect
+      setTimeout(() => {
+        router.push(`/canvas?session=${sessionCode}&name=${encodeURIComponent(data.participant.name)}`);
+      }, 200);
       
       return { 
         success: true, 

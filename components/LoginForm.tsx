@@ -17,12 +17,12 @@ export function LoginForm() {
     sessionCode: ''
   });
   
-  const { validation, markInteracted, getFieldError, getFieldState, validateAll } = useFormValidation({
+  const { validation, markInteracted, getFieldError, getFieldState, validateAll, resetValidationState } = useFormValidation({
     name: formData.name,
     sessionCode: formData.sessionCode
   });
   
-  const { isLoading, error, joinOrCreateSession, clearError } = useSessionJoin();
+  const { isLoading, error, isSuccess, joinOrCreateSession, clearError } = useSessionJoin();
 
   // Load stored data once available
   useEffect(() => {
@@ -60,12 +60,13 @@ export function LoginForm() {
       name,
       sessionCode,
       onSuccess: (code, participantName) => {
-        // Clear stored data on successful join/create
-        clearData();
+        // No need to clear form data - user is being redirected away
+        // The session storage can be useful if user returns to login page
       },
       onError: (error) => {
         // Only genuine errors (session full, network issues, etc.)
         console.warn('Join/create failed:', error);
+        resetValidationState();
       }
     });
   };
@@ -107,8 +108,8 @@ export function LoginForm() {
               onChange={handleNameChange}
               onBlur={() => markInteracted('name')}
               placeholder="Enter your name"
-              error={getFieldError('name')}
-              validationState={getFieldState('name')}
+              error={isSuccess ? undefined : getFieldError('name')}
+              validationState={isSuccess ? 'neutral' : getFieldState('name')}
               maxLength={50}
               required
               autoComplete="given-name"
@@ -118,8 +119,8 @@ export function LoginForm() {
               value={formData.sessionCode}
               onChange={handleSessionCodeChange}
               onBlur={() => markInteracted('sessionCode')}
-              error={getFieldError('sessionCode')}
-              validationState={getFieldState('sessionCode')}
+              error={isSuccess ? undefined : getFieldError('sessionCode')}
+              validationState={isSuccess ? 'neutral' : getFieldState('sessionCode')}
               disabled={isLoading}
             />
 
@@ -133,10 +134,10 @@ export function LoginForm() {
               type="submit"
               className="w-full"
               isLoading={isLoading}
-              loadingText="Joining Session..."
-              disabled={!validation.isFormValid}
+              loadingText={isSuccess ? "Success! Redirecting..." : "Joining Session..."}
+              disabled={!validation.isFormValid || isLoading}
             >
-              Join Session ➜
+              {isSuccess ? "✓ Success!" : "Join Session ➜"}
             </Button>
           </form>
         </CardContent>

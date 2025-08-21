@@ -241,7 +241,7 @@ state/local/step1-store.ts     # Zustand state management for deck, staging, and
 ## 2025-08-21-02-3-step2-top-eight
 
 **Spec**: 02.3 Step 2 Top Eight  
-**Status**: ✅ Complete
+**Status**: 🔄 Enhancement Phase - Layout & Edge Cases
 
 ### Current State Analysis
 - **Core Functionality**: ✅ All acceptance criteria met - 8-card limit enforcement, counter updates, bounce animation, review progression
@@ -281,5 +281,13 @@ state/local/step2-store.ts          # ✅ Complete pile management & validation
 - **Visual Feedback**: Red border warnings, counter highlighting (8/8), improved bounce animation with rotation/scale
 - **Drag Prevention**: Visual feedback for invalid drop zones when Top 8 pile is full
 - **Accessibility**: Clickable step counter with clear visual indicator for side panel functionality
+
+### Enhancement Requirements (Phase 2)
+- **Layout Consistency**: Match Step 1 positioning for deck/staging (side-by-side bottom-center)
+- **Drop Zone Standardization**: Use exact 28rem height and card scaling from Step 1
+- **Edge Case Handling**: Support <8 cards scenario with "Keep All & Continue" option
+- **Reveal Feature**: Add header "Reveal" button for sharing participant choices
+- **Discard Deck Visual**: Replace placeholder with actual face-down deck + descriptive counter
+- **Cross-Step Consistency**: Ensure identical styling across all steps
 
 ---
