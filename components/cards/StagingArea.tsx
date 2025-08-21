@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, forwardRef } from 'react';
 import { DraggableCard } from './DraggableCard';
 import { Card as CardType } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
@@ -10,9 +10,22 @@ interface StagingAreaProps {
   card: CardType | null;
   isDragging?: boolean;
   className?: string;
+  // Accessibility props
+  tabIndex?: number;
+  role?: string;
+  'aria-label'?: string;
+  'aria-describedby'?: string;
 }
 
-export function StagingArea({ card, isDragging = false, className }: StagingAreaProps) {
+export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function StagingArea({ 
+  card, 
+  isDragging = false, 
+  className,
+  tabIndex,
+  role,
+  'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedby
+}, ref) {
   // Memoize animation configurations to prevent recreation on every render
   const animationConfig = useMemo(() => ({
     initial: { 
@@ -67,9 +80,12 @@ export function StagingArea({ card, isDragging = false, className }: StagingArea
 
   return (
     <div 
+      ref={ref}
       className={cn("relative w-56 h-40", className)}
-      role="region"
-      aria-label="Card staging area"
+      tabIndex={tabIndex}
+      role={role || "region"}
+      aria-label={ariaLabel || "Card staging area"}
+      aria-describedby={ariaDescribedby}
       aria-live="polite"
     >
       {/* Invisible staging area - no visual placeholder */}
@@ -105,4 +121,4 @@ export function StagingArea({ card, isDragging = false, className }: StagingArea
       </AnimatePresence>
     </div>
   );
-}
+});

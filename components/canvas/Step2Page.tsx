@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStep2Store } from '@/state/local/step2-store';
@@ -11,8 +11,9 @@ import { DraggableCard } from '@/components/cards/DraggableCard';
 import { Step2Modal } from '@/components/ui/Step2Modal';
 import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
+import { DragErrorBoundary } from '@/components/ui/DragErrorBoundary';
 import { Card } from '@/lib/types/card';
-import { cn } from '@/lib/utils';
+import { cn, debounce } from '@/lib/utils';
 
 interface Step2PageProps {
   sessionCode: string;
@@ -29,6 +30,12 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [bounceAnimation, setBounceAnimation] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
+  
+  // Refs for focus management
+  const deckRef = useRef<HTMLButtonElement>(null);
+  const stagingRef = useRef<HTMLDivElement>(null);
+  const top8Ref = useRef<HTMLDivElement>(null);
+  const lessImportantRef = useRef<HTMLDivElement>(null);
   
   const {
     deck,
@@ -66,6 +73,10 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   // Handle deck click - flip next card
   const handleDeckClick = () => {
     flipNextCard();
+    // Focus management - focus staging area after flipping
+    setTimeout(() => {
+      stagingRef.current?.focus();
+    }, 300); // Match card flip animation timing
   };
 
   // Handle pile title clicks - move staging card to pile
@@ -73,15 +84,30 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
     if (stagingCard) {
       if (top8Pile.length >= 8) {
         triggerBounceAnimation();
+        // Announce to screen readers
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.textContent = 'Top 8 pile is full. Remove a card to add another.';
+        announcement.className = 'sr-only';
+        document.body.appendChild(announcement);
+        setTimeout(() => document.body.removeChild(announcement), 3000);
         return;
       }
       moveCardToPile(stagingCard.id, 'top8');
+      // Focus the target pile
+      setTimeout(() => {
+        top8Ref.current?.focus();
+      }, 100);
     }
   };
 
   const handleLessImportantClick = () => {
     if (stagingCard) {
       moveCardToPile(stagingCard.id, 'less');
+      // Focus the target pile
+      setTimeout(() => {
+        lessImportantRef.current?.focus();
+      }, 100);
     }
   };
 
@@ -98,6 +124,21 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
       setBounceAnimation(false);
     }, 400); // Match spec: 400ms elastic bounce
   };
+
+  // Debounced card movement for better performance
+  const debouncedMoveCardToPile = useMemo(
+    () => debounce((cardId: string, pile: 'top8' | 'less') => {
+      moveCardToPile(cardId, pile);
+    }, 200),
+    [moveCardToPile]
+  );
+  
+  const debouncedMoveCardBetweenPiles = useMemo(
+    () => debounce((cardId: string, fromPile: 'top8' | 'less', toPile: 'top8' | 'less') => {
+      moveCardBetweenPiles(cardId, fromPile, toPile);
+    }, 200),
+    [moveCardBetweenPiles]
+  );
 
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -124,7 +165,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
         triggerBounceAnimation();
         return;
       }
-      moveCardToPile(activeCard.id, targetPile);
+      debouncedMoveCardToPile(activeCard.id, targetPile);
     }
     
     // Moving between piles
@@ -137,7 +178,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
           triggerBounceAnimation();
           return;
         }
-        moveCardBetweenPiles(activeCard.id, fromPile, toPile);
+        debouncedMoveCardBetweenPiles(activeCard.id, fromPile, toPile);
       }
     }
   };
@@ -172,7 +213,11 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100"
+      role="main"
+      aria-label="Step 2: Select Top 8 Leadership Values"
+    >
       {/* Header */}
       <SessionHeader
         sessionCode={sessionCode}
@@ -216,13 +261,34 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
       )}
 
       {/* Main content */}
-      <DndContext
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+      <DragErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Step 2 drag error:', error, errorInfo);
+          // Could integrate with error tracking service here
+        }}
       >
+        <DndContext
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
         <div className="container mx-auto px-4 pt-20 pb-8 min-h-screen flex flex-col">
+          {/* Screen reader announcements */}
+          <div 
+            aria-live="polite" 
+            aria-atomic="true"
+            className="sr-only"
+            id="step2-announcements"
+          >
+            {stagingCard && `Current card: ${stagingCard.value_name.replace(/_/g, ' ')}`}
+            {canProceed && "Ready to proceed - all 8 cards selected and deck is empty"}
+          </div>
+
           {/* Top section - Drop zones side by side */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
+          <div 
+            className="grid grid-cols-2 gap-8 mb-8"
+            role="region"
+            aria-label="Card sorting piles"
+          >
             <DroppableZone
               id="top8-pile"
               title="Top 8 Most Important"
@@ -246,7 +312,15 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                 draggedCardId && top8Pile.length >= 8 && "opacity-60 ring-2 ring-red-300 pointer-events-none"
               )}
               data-pile="top8"
+              ref={top8Ref}
+              tabIndex={0}
+              role="group"
+              aria-label={`Top 8 most important values pile, contains ${top8Pile.length} of 8 cards`}
+              aria-describedby="top8-description"
             />
+            <div id="top8-description" className="sr-only">
+              Drop zone for your 8 most important leadership values. Maximum 8 cards allowed.
+            </div>
             
             <DroppableZone
               id="less-important"
@@ -257,7 +331,15 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
               onTitleClick={handleLessImportantClick}
               className="h-[28rem]"
               data-pile="less"
+              ref={lessImportantRef}
+              tabIndex={0}
+              role="group"
+              aria-label={`Less important values pile, contains ${lessImportantPile.length} cards`}
+              aria-describedby="less-important-description"
             />
+            <div id="less-important-description" className="sr-only">
+              Drop zone for values that are less important to your leadership style.
+            </div>
           </div>
 
           {/* Overflow warning message */}
@@ -289,14 +371,24 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
           </AnimatePresence>
 
           {/* Bottom section - Deck and staging side by side with fixed positions (same as Step 1) */}
-          <div className="flex-1 flex items-center justify-center gap-8">
+          <div 
+            className="flex-1 flex items-center justify-center gap-8"
+            role="region"
+            aria-label="Deck and staging area"
+          >
             {/* Deck - fixed size container */}
             <div className="w-56 h-40">
               <Deck
                 cardCount={remainingCards}
                 onClick={handleDeckClick}
                 disabled={!!stagingCard}
+                ref={deckRef}
+                aria-label={`Card deck with ${remainingCards} cards remaining. Click to flip next card.`}
+                aria-describedby="deck-instructions"
               />
+              <div id="deck-instructions" className="sr-only">
+                Click the deck to flip cards from your More Important pile. You can then sort them into piles.
+              </div>
             </div>
             
             {/* Staging area - fixed size container with 3D flip animation */}
@@ -316,7 +408,19 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
               <StagingArea
                 card={stagingCard}
                 isDragging={draggedCardId === stagingCard?.id}
+                ref={stagingRef}
+                tabIndex={stagingCard ? 0 : -1}
+                role="group"
+                aria-label={
+                  stagingCard 
+                    ? `Current card: ${stagingCard.value_name.replace(/_/g, ' ')}. Drag to sort into piles.`
+                    : "Staging area - empty. Click deck to flip next card."
+                }
+                aria-describedby="staging-instructions"
               />
+              <div id="staging-instructions" className="sr-only">
+                Cards appear here when flipped from the deck. Drag cards to the Top 8 or Less Important piles.
+              </div>
             </motion.div>
           </div>
 
@@ -392,7 +496,8 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
             </motion.div>
           </div>
         </div>
-      </DndContext>
+        </DndContext>
+      </DragErrorBoundary>
 
       {/* Instructions modal */}
       <Step2Modal

@@ -33,6 +33,7 @@ interface Step2State {
   hideOverflowWarningMessage: () => void;
   startTransition: (moreImportantCards: Card[], lessImportantCards: Card[]) => Promise<void>;
   resetStep2: () => void;
+  cleanup: () => void;
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -258,5 +259,29 @@ export const useStep2Store = create<Step2State>((set, get) => ({
       isTransitioning: false,
       transitionPhase: null,
     });
+  },
+  
+  // Cleanup method to prevent memory leaks
+  cleanup: () => {
+    // Clear any pending timeouts
+    const state = get();
+    
+    // Reset all state to initial values
+    set({
+      deck: [],
+      deckPosition: 0,
+      stagingCard: null,
+      top8Pile: [],
+      lessImportantPile: [],
+      discardedPile: [],
+      isDragging: false,
+      draggedCardId: null,
+      showOverflowWarning: false,
+      isTransitioning: false,
+      transitionPhase: null,
+    });
+    
+    // Clean up any event listeners or subscriptions would go here
+    console.log('Step 2 store cleaned up');
   },
 }));

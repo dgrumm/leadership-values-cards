@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
+import { Loading } from './Loading';
 import { cn } from '@/lib/utils';
 
 interface Step2ModalProps {
@@ -13,6 +14,9 @@ interface Step2ModalProps {
   lessImportantCount?: number;
   cardsInDeck?: number;
   totalCards?: number;
+  // Loading states
+  isLoading?: boolean;
+  loadingText?: string;
 }
 
 export function Step2Modal({ 
@@ -22,7 +26,9 @@ export function Step2Modal({
   top8Count = 0,
   lessImportantCount = 0,
   cardsInDeck = 0,
-  totalCards = 0
+  totalCards = 0,
+  isLoading = false,
+  loadingText = "Loading..."
 }: Step2ModalProps) {
   return (
     <AnimatePresence>
@@ -48,7 +54,21 @@ export function Step2Modal({
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
           >
-            <div className="h-full flex flex-col p-6">
+            <div className="h-full flex flex-col p-6 relative">
+              {/* Loading overlay */}
+              {isLoading && (
+                <motion.div
+                  className="absolute inset-0 bg-white/90 flex items-center justify-center z-10 rounded-lg"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="text-center">
+                    <Loading size="lg" text={loadingText} />
+                  </div>
+                </motion.div>
+              )}
+
               {/* Header with close button */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
@@ -57,6 +77,7 @@ export function Step2Modal({
                 <button 
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-600 p-1"
+                  disabled={isLoading}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -76,7 +97,10 @@ export function Step2Modal({
               </div>
               
               {/* Instructions */}
-              <div className="flex-1 space-y-4">
+              <div className={cn(
+                "flex-1 space-y-4 transition-opacity",
+                isLoading && "opacity-50 pointer-events-none"
+              )}>
                 <div className="text-sm text-gray-700 mb-4">
                   Now narrow down to your <strong>Top 8 most important</strong> leadership values.
                 </div>
@@ -139,9 +163,22 @@ export function Step2Modal({
               <div className="mt-6">
                 <Button
                   onClick={onClose}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={isLoading}
+                  className={cn(
+                    "w-full transition-all",
+                    isLoading 
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                  )}
                 >
-                  Got it
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loading size="sm" />
+                      <span>Please wait...</span>
+                    </div>
+                  ) : (
+                    "Got it"
+                  )}
                 </Button>
               </div>
             </div>
