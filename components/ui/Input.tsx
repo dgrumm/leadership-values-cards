@@ -51,6 +51,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
           ref={ref}
           id={inputId}
+          data-testid={inputId}
+          autoComplete={props.autoComplete || (type === 'text' && props.name === 'name' ? 'name' : 'off')}
           {...props}
         />
         

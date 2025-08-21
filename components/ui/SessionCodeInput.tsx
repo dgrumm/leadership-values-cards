@@ -79,6 +79,8 @@ export function SessionCodeInput({
           disabled={disabled}
           autoComplete="off"
           spellCheck={false}
+          data-autofill="false"
+          data-lpignore="true"
         />
         
         <Button

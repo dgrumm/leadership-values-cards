@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useCallback } from 'react';
+import { useCallback, ReactNode } from 'react';
 import { Card } from './Card';
 import { DraggableCard } from './DraggableCard';
 import { Card as CardType } from '@/lib/types/card';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface DropZoneProps {
   title: string;
-  subtitle?: string;
+  subtitle?: string | ReactNode;
   cards: CardType[];
   onCardClick?: (cardId: string) => void;
   onTitleClick?: () => void;

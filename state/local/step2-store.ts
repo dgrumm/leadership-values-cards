@@ -19,6 +19,10 @@ interface Step2State {
   draggedCardId: string | null;
   showOverflowWarning: boolean;
   
+  // Transition state
+  isTransitioning: boolean;
+  transitionPhase: 'clearing' | 'complete' | null;
+  
   // Actions
   initializeFromStep1: (moreImportantCards: Card[], lessImportantCards: Card[]) => void;
   flipNextCard: () => void;
@@ -27,7 +31,9 @@ interface Step2State {
   setDragging: (isDragging: boolean, cardId?: string) => void;
   showOverflowWarningMessage: () => void;
   hideOverflowWarningMessage: () => void;
+  startTransition: (moreImportantCards: Card[], lessImportantCards: Card[]) => Promise<void>;
   resetStep2: () => void;
+  cleanup: () => void;
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -50,8 +56,10 @@ export const useStep2Store = create<Step2State>((set, get) => ({
   isDragging: false,
   draggedCardId: null,
   showOverflowWarning: false,
+  isTransitioning: false,
+  transitionPhase: null,
   
-  // Initialize Step 2 with cards from Step 1
+  // Initialize Step 2 with cards from Step 1 (used for direct initialization without transition)
   initializeFromStep1: (moreImportantCards: Card[], lessImportantCards: Card[]) => {
     // Shuffle the "More Important" cards to become the new deck
     const shuffledDeck = shuffleArray([...moreImportantCards]).map(card => ({
@@ -75,7 +83,52 @@ export const useStep2Store = create<Step2State>((set, get) => ({
       isDragging: false,
       draggedCardId: null,
       showOverflowWarning: false,
+      isTransitioning: false,
+      transitionPhase: null,
     });
+  },
+  
+  // Start transition from Step 1 with clearing animation
+  startTransition: async (moreImportantCards: Card[], lessImportantCards: Card[]) => {
+    // Start the transition phase
+    set({
+      isTransitioning: true,
+      transitionPhase: 'clearing',
+    });
+    
+    // Wait for clearing animation to complete (500ms)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Initialize the actual game state
+    const shuffledDeck = shuffleArray([...moreImportantCards]).map(card => ({
+      ...card,
+      pile: 'deck' as const
+    }));
+    
+    const discarded = lessImportantCards.map(card => ({
+      ...card,
+      pile: 'discard' as const
+    }));
+    
+    // Complete the transition
+    set({
+      deck: shuffledDeck,
+      deckPosition: 0,
+      stagingCard: null,
+      top8Pile: [],
+      lessImportantPile: [],
+      discardedPile: discarded,
+      isDragging: false,
+      draggedCardId: null,
+      showOverflowWarning: false,
+      isTransitioning: false,
+      transitionPhase: 'complete',
+    });
+    
+    // Clear the completed phase after a short delay
+    setTimeout(() => {
+      set({ transitionPhase: null });
+    }, 100);
   },
   
   // Flip the next card from deck to staging
@@ -203,6 +256,32 @@ export const useStep2Store = create<Step2State>((set, get) => ({
       isDragging: false,
       draggedCardId: null,
       showOverflowWarning: false,
+      isTransitioning: false,
+      transitionPhase: null,
     });
+  },
+  
+  // Cleanup method to prevent memory leaks
+  cleanup: () => {
+    // Clear any pending timeouts
+    const state = get();
+    
+    // Reset all state to initial values
+    set({
+      deck: [],
+      deckPosition: 0,
+      stagingCard: null,
+      top8Pile: [],
+      lessImportantPile: [],
+      discardedPile: [],
+      isDragging: false,
+      draggedCardId: null,
+      showOverflowWarning: false,
+      isTransitioning: false,
+      transitionPhase: null,
+    });
+    
+    // Clean up any event listeners or subscriptions would go here
+    console.log('Step 2 store cleaned up');
   },
 }));

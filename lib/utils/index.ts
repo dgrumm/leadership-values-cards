@@ -22,3 +22,10 @@ export {
   memoizeWeak,
   createHashKey
 } from './memoization';
+
+export { cn } from './cn';
+
+export {
+  debounce,
+  throttle
+} from './debounce';

@@ -1,5 +1,5 @@
 // Generated at build time - DO NOT EDIT
-// Generated on: 2025-08-20T06:01:47.274Z
+// Generated on: 2025-08-21T01:46:46.912Z
 
 import { CardDefinition } from '../types/card';
 
@@ -526,14 +526,6 @@ export const EXTENDED_DECK: CardDefinition[] = [
   {
     "value_name": "Adaptability",
     "description": "Flexibility in adjusting to new conditions and challenges"
-  },
-  {
-    "value_name": "Compassion",
-    "description": "Deep awareness of suffering and desire to alleviate it"
-  },
-  {
-    "value_name": "Dedication",
-    "description": "Complete commitment to a task, cause, or relationship"
   }
 ];
 
@@ -609,7 +601,7 @@ export const DECK_INFO = {
   },
   extended: {
     name: 'Extended',
-    cardCount: 74,
+    cardCount: 72,
     type: 'extended' as DeckType
   },
   development: {

@@ -34,6 +34,8 @@ export function useFormValidation({
     sessionCode: false
   });
 
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+
   // Debounced validation to improve performance with proper cleanup
   const debouncedValidation = useMemo(() => {
     let timeoutId: NodeJS.Timeout;
@@ -51,7 +53,7 @@ export function useFormValidation({
         };
 
         setValidation(newValidation);
-      }, 300); // 300ms debounce
+      }, 200); // Reduced to 200ms for better responsiveness
     };
 
     // Return debounced function with cleanup method
@@ -92,7 +94,7 @@ export function useFormValidation({
 
   // Get validation error to display (only show if field has been interacted with)
   const getFieldError = (field: 'name' | 'sessionCode'): string | undefined => {
-    if (!realTimeValidation || !hasInteracted[field]) {
+    if (!realTimeValidation || !hasInteracted[field] || isSubmittingForm) {
       return undefined;
     }
     
@@ -101,7 +103,7 @@ export function useFormValidation({
 
   // Get field validation state for styling
   const getFieldState = (field: 'name' | 'sessionCode'): 'valid' | 'invalid' | 'neutral' => {
-    if (!hasInteracted[field]) {
+    if (!hasInteracted[field] || isSubmittingForm) {
       return 'neutral';
     }
     
@@ -110,8 +112,42 @@ export function useFormValidation({
 
   // Force validation of all fields (for form submission)
   const validateAll = (): FormValidation => {
-    setHasInteracted({ name: true, sessionCode: true });
-    return validation;
+    // Set submitting flag to suppress error display
+    setIsSubmittingForm(true);
+    
+    // Calculate fresh validation without setting hasInteracted
+    const nameValidation = validateName(name);
+    const sessionCodeValidation = validateSessionCode(sessionCode);
+    
+    const freshValidation: FormValidation = {
+      name: nameValidation,
+      sessionCode: sessionCodeValidation,
+      isFormValid: nameValidation.isValid && sessionCodeValidation.isValid
+    };
+
+    // Only mark as interacted if validation fails (to show errors)
+    if (!freshValidation.isFormValid) {
+      setHasInteracted({ name: true, sessionCode: true });
+      setIsSubmittingForm(false); // Allow errors to show for failed validation
+    }
+
+    return freshValidation;
+  };
+
+  // Method to clear submission state (called after successful submission)
+  const clearSubmissionState = () => {
+    setIsSubmittingForm(false);
+  };
+
+  // Method to reset all validation state (called on successful form submission)
+  const resetValidationState = () => {
+    setIsSubmittingForm(false);
+    setHasInteracted({ name: false, sessionCode: false });
+    setValidation({
+      name: { isValid: true },
+      sessionCode: { isValid: true },
+      isFormValid: false
+    });
   };
 
   return {
@@ -120,6 +156,8 @@ export function useFormValidation({
     getFieldError,
     getFieldState,
     validateAll,
+    clearSubmissionState,
+    resetValidationState,
     hasInteracted
   };
 }

@@ -6,7 +6,7 @@ import { sanitizeSessionCode, sanitizeParticipantName } from '@/lib/session/sess
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> }
 ) {
   try {
     // Apply rate limiting
@@ -29,6 +29,7 @@ export async function POST(
       });
     }
     
+    const params = await context.params;
     const sessionCode = sanitizeSessionCode(params.code);
     const body = await request.json();
     const participantName = sanitizeParticipantName(body.participantName || '');
