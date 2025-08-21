@@ -3,11 +3,12 @@
 import { useDroppable } from '@dnd-kit/core';
 import { DropZone } from './DropZone';
 import { Card } from '@/lib/types/card';
+import { ReactNode } from 'react';
 
 interface DroppableZoneProps {
   id: string;
   title: string;
-  subtitle?: string;
+  subtitle?: string | ReactNode;
   cards: Card[];
   onCardClick?: (cardId: string) => void;
   onTitleClick?: () => void;
