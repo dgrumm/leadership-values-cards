@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Step1Page } from '@/components/canvas/Step1Page';
 import { Step2Page } from '@/components/canvas/Step2Page';
+import { Step3Page } from '@/components/canvas/Step3Page';
 import { useStep1Store } from '@/state/local/step1-store';
+import { useStep2Store } from '@/state/local/step2-store';
 
 export default function CanvasPage() {
   const searchParams = useSearchParams();
@@ -17,6 +19,7 @@ export default function CanvasPage() {
   } | null>(null);
   
   const { moreImportantPile, lessImportantPile } = useStep1Store();
+  const { top8Pile, lessImportantPile: step2LessImportant, discardedPile: step2Discarded } = useStep2Store();
 
   useEffect(() => {
     const sessionCode = searchParams.get('session');
@@ -105,12 +108,49 @@ export default function CanvasPage() {
     );
   }
 
-  // Step 3 placeholder
+  // Step 3 - Final selection of Top 3 values
+  if (currentStep === 3) {
+    // If Step 2 data is empty, redirect back to Step 2 to complete it first
+    if (top8Pile.length === 0) {
+      return (
+        <Step2Page
+          participantName={sessionData.participantName}
+          sessionCode={sessionData.sessionCode}
+          step1Data={{
+            moreImportantPile,
+            lessImportantPile
+          }}
+          onStepComplete={() => handleStepNavigation(3)}
+        />
+      );
+    }
+    
+    return (
+      <Step3Page
+        participantName={sessionData.participantName}
+        sessionCode={sessionData.sessionCode}
+        step2Data={{
+          top8Pile,
+          lessImportantPile: step2LessImportant,
+          discardedPile: step2Discarded
+        }}
+        step1Data={{
+          lessImportantPile
+        }}
+        onStepComplete={() => {
+          console.log('Exercise completed!');
+          // TODO: Navigate to results/review page
+        }}
+      />
+    );
+  }
+
+  // Fallback - should never reach here
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Step 3: Final Review</h1>
-        <p className="text-gray-600">Coming soon...</p>
+        <h1 className="text-2xl font-bold mb-4">Invalid Step</h1>
+        <p className="text-gray-600">Please start from Step 1</p>
         <button 
           onClick={() => handleStepNavigation(1)}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
