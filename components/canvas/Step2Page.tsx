@@ -56,7 +56,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
       setTimeout(() => setShowModal(true), 200);
     };
     initializeStep2();
-  }, [startTransition, step1Data]);
+  }, []); // Run only once on mount
 
   const remainingCards = deck.length - deckPosition;
   const canProceed = remainingCards === 0 && !stagingCard && top8Pile.length === 8;

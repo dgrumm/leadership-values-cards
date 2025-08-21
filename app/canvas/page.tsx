@@ -2,20 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { WelcomeScreen } from '@/components/WelcomeScreen';
+import { Step1Page } from '@/components/canvas/Step1Page';
+import { Step2Page } from '@/components/canvas/Step2Page';
+import { useStep1Store } from '@/state/local/step1-store';
 
 export default function CanvasPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [sessionData, setSessionData] = useState<{
     sessionCode: string;
     participantName: string;
   } | null>(null);
+  
+  const { moreImportantPile, lessImportantPile } = useStep1Store();
 
   useEffect(() => {
     const sessionCode = searchParams.get('session');
     const participantName = searchParams.get('name');
+    const step = searchParams.get('step');
 
     if (!sessionCode || !participantName) {
       // Redirect to login if missing session data
@@ -27,8 +33,26 @@ export default function CanvasPage() {
       sessionCode,
       participantName: decodeURIComponent(participantName)
     });
+    
+    // Set current step from URL or default to 1
+    if (step === '2') {
+      setCurrentStep(2);
+    } else if (step === '3') {
+      setCurrentStep(3);
+    } else {
+      setCurrentStep(1);
+    }
+    
     setIsLoading(false);
   }, [searchParams, router]);
+
+  const handleStepNavigation = (step: 1 | 2 | 3) => {
+    setCurrentStep(step);
+    // Update URL to reflect the current step
+    const params = new URLSearchParams(searchParams);
+    params.set('step', step.toString());
+    router.replace(`/canvas?${params.toString()}`);
+  };
 
   if (isLoading) {
     return (
@@ -45,10 +69,55 @@ export default function CanvasPage() {
     return null; // Will redirect to login
   }
 
+  // Render appropriate step component
+  if (currentStep === 1) {
+    return (
+      <Step1Page
+        participantName={sessionData.participantName}
+        sessionCode={sessionData.sessionCode}
+        onStepComplete={() => handleStepNavigation(2)}
+      />
+    );
+  }
+
+  if (currentStep === 2) {
+    // If Step 1 data is empty, redirect back to Step 1 to complete it first
+    if (moreImportantPile.length === 0 && lessImportantPile.length === 0) {
+      return (
+        <Step1Page
+          participantName={sessionData.participantName}
+          sessionCode={sessionData.sessionCode}
+          onStepComplete={() => handleStepNavigation(2)}
+        />
+      );
+    }
+    
+    return (
+      <Step2Page
+        participantName={sessionData.participantName}
+        sessionCode={sessionData.sessionCode}
+        step1Data={{
+          moreImportantPile,
+          lessImportantPile
+        }}
+        onStepComplete={() => handleStepNavigation(3)}
+      />
+    );
+  }
+
+  // Step 3 placeholder
   return (
-    <WelcomeScreen
-      participantName={sessionData.participantName}
-      sessionCode={sessionData.sessionCode}
-    />
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Step 3: Final Review</h1>
+        <p className="text-gray-600">Coming soon...</p>
+        <button 
+          onClick={() => handleStepNavigation(1)}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          Back to Step 1
+        </button>
+      </div>
+    </div>
   );
 }
