@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useCallback, ReactNode } from 'react';
 import { Card } from './Card';
 import { DraggableCard } from './DraggableCard';
-import { Card as CardType } from '@/lib/types/card';
+import { Card as CardType, CardPile } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
 
 interface DropZoneProps {
@@ -15,7 +15,7 @@ interface DropZoneProps {
   onTitleClick?: () => void;
   isHovered?: boolean;
   className?: string;
-  pile?: 'more' | 'less';
+  pile?: CardPile;
 }
 
 export function DropZone({ 
@@ -115,7 +115,7 @@ export function DropZone({
           </div>
         ) : (
           <div 
-            className="relative w-full h-full overflow-y-auto overflow-x-hidden"
+            className="relative w-full h-full overflow-y-auto overflow-x-visible drop-zone-container"
             role="group"
             aria-label={`${title} pile with ${cards.length} cards`}
           >
@@ -143,7 +143,7 @@ export function DropZone({
                       stiffness: 300, 
                       damping: 25 
                     }}
-                    whileHover={{ scale: 0.95, zIndex: cards.length + 10 }}
+                    whileHover={{ scale: 0.95, zIndex: 999 }}
                     onClick={() => onCardClick?.(card.id)}
                   >
                     <DraggableCard

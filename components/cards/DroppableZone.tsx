@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { DropZone } from './DropZone';
 import { Card } from '@/lib/types/card';
 import { ReactNode, forwardRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface DroppableZoneProps {
   id: string;
@@ -14,6 +15,7 @@ interface DroppableZoneProps {
   onTitleClick?: () => void;
   className?: string;
   'data-pile'?: string;
+  maxCards?: number;
   // Accessibility props
   tabIndex?: number;
   role?: string;
@@ -30,6 +32,7 @@ export const DroppableZone = forwardRef<HTMLDivElement, DroppableZoneProps>(func
   onTitleClick,
   className,
   'data-pile': dataPile,
+  maxCards,
   tabIndex,
   role,
   'aria-label': ariaLabel,
@@ -44,13 +47,26 @@ export const DroppableZone = forwardRef<HTMLDivElement, DroppableZoneProps>(func
     return 'less'; // default
   };
 
-  const { isOver, setNodeRef } = useDroppable({
+  const { isOver, setNodeRef, active } = useDroppable({
     id,
     data: {
       type: 'pile',
       pile: getPileType(id, dataPile),
     },
   });
+
+  // Determine drop zone state
+  const isValidDrop = isOver && active?.data.current?.type === 'card';
+  const isPileFull = maxCards && cards.length >= maxCards;
+  const isInvalidDrop = isOver && isPileFull;
+  
+  // Get highlight class based on state
+  const getHighlightClass = () => {
+    if (isInvalidDrop) return 'pile-highlight-invalid';
+    if (isValidDrop && !isPileFull) return 'pile-highlight-valid';
+    if (isOver) return 'pile-highlight';
+    return '';
+  };
 
   return (
     <div 
@@ -64,7 +80,7 @@ export const DroppableZone = forwardRef<HTMLDivElement, DroppableZoneProps>(func
           }
         }
       }}
-      className={className}
+      className={cn(className, getHighlightClass())}
       tabIndex={tabIndex}
       role={role}
       aria-label={ariaLabel}

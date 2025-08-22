@@ -3,13 +3,14 @@
 import { motion } from 'framer-motion';
 import { Card as CardType } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 
 interface CardProps {
   card: CardType;
   isFlipped?: boolean;
   isInStaging?: boolean;
   isDragging?: boolean;
+  isDragStart?: boolean;
   onClick?: () => void;
   className?: string;
   style?: React.CSSProperties;
@@ -18,11 +19,12 @@ interface CardProps {
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
-export const Card = forwardRef<HTMLDivElement, CardProps>(({ 
+const CardComponent = forwardRef<HTMLDivElement, CardProps>(({ 
   card, 
   isFlipped = true, 
   isInStaging = false,
   isDragging = false,
+  isDragStart = false,
   onClick, 
   className,
   style,
@@ -48,8 +50,10 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
         "bg-white rounded-xl shadow-lg border border-gray-200",
         "transition-shadow duration-200",
         "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50",
-        isDragging && "rotate-3 scale-105 z-50 shadow-2xl",
-        !isDragging && "hover:shadow-xl hover:-translate-y-1",
+        "touch-drag-handle",
+        isDragStart && "card-drag-start",
+        isDragging && "card-dragging",
+        !isDragging && !isDragStart && "hover:shadow-xl hover:-translate-y-1",
         isInStaging && "ring-2 ring-blue-300 ring-opacity-50 shadow-2xl",
         className
       )}
@@ -94,3 +98,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
     </motion.div>
   );
 });
+
+CardComponent.displayName = 'Card';
+
+// Memoize component to prevent unnecessary re-renders during drag operations
+export const Card = memo(CardComponent);
