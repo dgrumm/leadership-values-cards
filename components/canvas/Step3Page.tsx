@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, DragCancelEvent } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStep3Store } from '@/state/local/step3-store';
 import { Deck } from '@/components/cards/Deck';
@@ -35,6 +35,9 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
   const [bounceAnimation, setBounceAnimation] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [activeCard, setActiveCard] = useState<Card | null>(null);
+  const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
+  const isDraggingRef = useRef(false);
   
   // Refs for focus management
   const deckRef = useRef<HTMLButtonElement>(null);
@@ -60,6 +63,18 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
     showOverflowWarningMessage,
     hideOverflowWarningMessage,
   } = useStep3Store();
+
+  // Comprehensive drag state clearing function
+  const clearDragState = useCallback(() => {
+    setDraggedCardId(null);
+    setActiveCard(null);
+    isDraggingRef.current = false;
+    
+    if (dragTimeout) {
+      clearTimeout(dragTimeout);
+      setDragTimeout(null);
+    }
+  }, [dragTimeout]);
 
   // Initialize Step 3 with transition animation from Step 2
   useEffect(() => {
@@ -90,6 +105,52 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
       setShowCelebration(false);
     }
   }, [top3Pile.length, remainingCards, stagingCard]);
+
+  // Error recovery: ESC key cancellation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isDraggingRef.current) {
+        event.preventDefault();
+        clearDragState();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [clearDragState]);
+
+  // Error recovery: Window focus/blur handling
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      if (isDraggingRef.current) {
+        clearDragState();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      // Clear any stale drag state on focus
+      if (isDraggingRef.current && !activeCard) {
+        clearDragState();
+      }
+    };
+
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+    
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [clearDragState, activeCard]);
+
+  // Cleanup drag timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (dragTimeout) {
+        clearTimeout(dragTimeout);
+      }
+    };
+  }, [dragTimeout]);
 
   // Handle deck click - flip next card
   const handleDeckClick = () => {
@@ -164,12 +225,37 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
-    setDraggedCardId(active.id as string);
-  }, []);
+    const cardId = active.id as string;
+    setDraggedCardId(cardId);
+    isDraggingRef.current = true;
+
+    // Find the active card for DragOverlay
+    let card = null;
+    if (stagingCard?.id === cardId) {
+      card = stagingCard;
+    } else {
+      card = [...top3Pile, ...lessImportantPile].find(c => c.id === cardId);
+    }
+    
+    setActiveCard(card || null);
+    
+    // Set timeout for drag protection (10 seconds)
+    const timeout = setTimeout(() => {
+      console.warn('Drag operation timed out, clearing state');
+      clearDragState();
+    }, 10000);
+    
+    setDragTimeout(timeout);
+    
+    // Touch haptic feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+  }, [stagingCard, top3Pile, lessImportantPile, clearDragState]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    setDraggedCardId(null);
+    clearDragState();
 
     if (!over) return;
 
@@ -187,6 +273,11 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
         return;
       }
       debouncedMoveCardToPile(activeCard.id, targetPile);
+      
+      // Success haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 50, 50]);
+      }
     }
     
     // Moving between piles
@@ -200,9 +291,19 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
           return;
         }
         debouncedMoveCardBetweenPiles(activeCard.id, fromPile, toPile);
+        
+        // Success haptic feedback
+        if ('vibrate' in navigator) {
+          navigator.vibrate([50, 50, 50]);
+        }
       }
     }
-  }, [top3Pile.length, debouncedMoveCardToPile, debouncedMoveCardBetweenPiles, triggerEnhancedBounceAnimation]);
+  }, [top3Pile.length, debouncedMoveCardToPile, debouncedMoveCardBetweenPiles, triggerEnhancedBounceAnimation, clearDragState]);
+
+  // Handle drag cancellation
+  const handleDragCancel = useCallback((event: DragCancelEvent) => {
+    clearDragState();
+  }, [clearDragState]);
 
   const handleCompleteExercise = useCallback(() => {
     if (onStepComplete) {
@@ -315,6 +416,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
         <DndContext
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
         <div className="container mx-auto px-4 pt-20 pb-8 min-h-screen flex flex-col">
           {/* Screen reader announcements */}
@@ -533,6 +635,35 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
             </motion.div>
           </div>
         </div>
+
+        {/* Drag Overlay - This fixes z-index issues */}
+        <DragOverlay
+          style={{
+            zIndex: 10000,
+          }}
+        >
+          {activeCard ? (
+            <motion.div
+              initial={{ scale: 1 }}
+              animate={{ 
+                scale: 1.05,
+                rotate: 5,
+              }}
+              style={{
+                cursor: 'grabbing',
+                transformOrigin: 'center',
+                transform: 'translateZ(0)', // Hardware acceleration
+              }}
+              className="relative will-change-transform"
+            >
+              <DraggableCard
+                card={activeCard}
+                isInStaging={false}
+                pile={activeCard.pile === 'top3' ? 'more' : (activeCard.pile === 'staging' ? 'staging' : 'less')}
+              />
+            </motion.div>
+          ) : null}
+        </DragOverlay>
         </DndContext>
       </DragErrorBoundary>
 

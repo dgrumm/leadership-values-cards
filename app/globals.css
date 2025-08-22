@@ -14,3 +14,49 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Drag and Drop Animation Classes */
+.card-drag-start {
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+  transform: scale(1.05) translateZ(0);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-snap {
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+
+.pile-highlight {
+  border: 2px solid #4A90E2;
+  background-color: rgba(74, 144, 226, 0.1);
+  transition: all 150ms ease-out;
+}
+
+.pile-highlight-valid {
+  border: 2px solid #22C55E;
+  background-color: rgba(34, 197, 94, 0.1);
+  transition: all 150ms ease-out;
+}
+
+.pile-highlight-invalid {
+  border: 2px solid #EF4444;
+  background-color: rgba(239, 68, 68, 0.1);
+  transition: all 150ms ease-out;
+}
+
+/* Touch support enhancements */
+.touch-drag-handle {
+  touch-action: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Ensure drop zones don't create stacking context issues */
+.drop-zone-container {
+  /* Remove any potential stacking context issues */
+  isolation: auto;
+  transform: none;
+  will-change: auto;
+}
