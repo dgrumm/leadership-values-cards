@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useCallback, ReactNode } from 'react';
 import { Card } from './Card';
 import { DraggableCard } from './DraggableCard';
-import { Card as CardType } from '@/lib/types/card';
+import { Card as CardType, CardPile } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
 
 interface DropZoneProps {
@@ -15,7 +15,7 @@ interface DropZoneProps {
   onTitleClick?: () => void;
   isHovered?: boolean;
   className?: string;
-  pile?: 'more' | 'less';
+  pile?: CardPile;
 }
 
 export function DropZone({ 

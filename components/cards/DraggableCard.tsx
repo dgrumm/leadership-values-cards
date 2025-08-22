@@ -3,13 +3,13 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Card } from './Card';
-import { Card as CardType } from '@/lib/types/card';
+import { Card as CardType, CardPile } from '@/lib/types/card';
 import { useState, useEffect, useRef } from 'react';
 
 interface DraggableCardProps {
   card: CardType;
   isInStaging?: boolean;
-  pile?: 'more' | 'less' | 'staging';
+  pile?: CardPile;
 }
 
 export function DraggableCard({ card, isInStaging = false, pile }: DraggableCardProps) {

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Card as CardType } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 
 interface CardProps {
   card: CardType;
@@ -19,7 +19,7 @@ interface CardProps {
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
-export const Card = forwardRef<HTMLDivElement, CardProps>(({ 
+const CardComponent = forwardRef<HTMLDivElement, CardProps>(({ 
   card, 
   isFlipped = true, 
   isInStaging = false,
@@ -98,3 +98,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
     </motion.div>
   );
 });
+
+CardComponent.displayName = 'Card';
+
+// Memoize component to prevent unnecessary re-renders during drag operations
+export const Card = memo(CardComponent);
