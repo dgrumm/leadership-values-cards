@@ -12,6 +12,7 @@ interface DeckProps {
   // Accessibility props
   'aria-label'?: string;
   'aria-describedby'?: string;
+  'data-testid'?: string;
 }
 
 export const Deck = forwardRef<HTMLButtonElement, DeckProps>(function Deck({ 
@@ -20,7 +21,8 @@ export const Deck = forwardRef<HTMLButtonElement, DeckProps>(function Deck({
   disabled = false, 
   className, 
   'aria-label': ariaLabel,
-  'aria-describedby': ariaDescribedby
+  'aria-describedby': ariaDescribedby,
+  'data-testid': dataTestId
 }, ref) {
   const stackCards = Math.min(cardCount, 5); // Show max 5 cards in stack for visual effect
   const isEmpty = cardCount === 0;
@@ -81,6 +83,7 @@ export const Deck = forwardRef<HTMLButtonElement, DeckProps>(function Deck({
         disabled={disabled}
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedby}
+        data-testid={dataTestId}
         whileHover={!disabled ? { 
           y: -4, 
           boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" 

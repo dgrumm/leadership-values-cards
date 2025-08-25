@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { LoginPage } from './page-objects/LoginPage';
 
 /**
  * Quick smoke test to verify E2E setup works
@@ -6,38 +7,28 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Quick Smoke Test', () => {
   test('should load homepage and show login form', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    
     // Navigate to homepage
-    await page.goto('/');
+    await loginPage.goto();
     
-    // Check that the page loads
-    await expect(page).toHaveTitle(/Leadership Values/);
-    
-    // Check that login form elements are present
-    await expect(page.locator('text=Welcome to Leadership Values')).toBeVisible();
-    await expect(page.locator('text=Your Name')).toBeVisible();
-    await expect(page.locator('text=Session Code')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    // Check that the page loads with login form
+    await loginPage.expectPageLoaded();
+    await loginPage.expectFormElementsVisible();
   });
 
   test('should fill form and attempt submission', async ({ page }) => {
-    await page.goto('/');
+    const loginPage = new LoginPage(page);
     
-    // Find inputs by label text instead of name attribute
-    await page.getByLabel('Your Name:').fill('Test User');
-    await page.getByLabel('Session Code:').fill('TEST01');
+    await loginPage.goto();
     
-    // Submit the form
-    await page.click('button[type="submit"]');
+    // Submit form with test data
+    await loginPage.submitForm('Test User', 'TEST01');
     
     // Should navigate or show some response
     await page.waitForTimeout(2000);
     
-    // Check that we either navigated to canvas or have some feedback
-    const currentUrl = page.url();
-    const hasCanvas = currentUrl.includes('/canvas');
-    const hasError = await page.locator('text=/error|Error/').isVisible();
-    
-    // One of these should be true (either success navigation or error feedback)
-    expect(hasCanvas || hasError).toBe(true);
+    // Verify we get appropriate feedback
+    await loginPage.expectFormSubmissionResult();
   });
 });
