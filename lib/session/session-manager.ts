@@ -313,3 +313,7 @@ export function getSessionManager(): SessionManager {
   }
   return sessionManager;
 }
+
+export function resetSessionManager(): void {
+  sessionManager = null;
+}

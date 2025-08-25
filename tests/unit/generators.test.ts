@@ -82,7 +82,7 @@ describe('generators', () => {
         return originalRequire(module);
       });
       
-      expect(() => generateSessionCode()).toThrow('Secure random number generation not available');
+      expect(() => generateSessionCode()).toThrow('Node.js crypto module not available for secure random generation');
       
       // Restore environment
       (global as any).require = originalRequire;
