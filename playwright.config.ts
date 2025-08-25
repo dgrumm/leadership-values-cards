@@ -25,7 +25,13 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     /* Record video on failure */
     video: 'retain-on-failure',
+    /* Increase timeout for slow operations like animations */
+    actionTimeout: 10000,
+    navigationTimeout: 30000,
   },
+  
+  /* Global test timeout */
+  timeout: 30000,
 
   /* Configure projects for major browsers */
   projects: [
@@ -68,8 +74,10 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:3000/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });
