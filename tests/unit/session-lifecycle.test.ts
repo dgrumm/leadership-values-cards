@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { SessionLifecycle } from '@/lib/session/session-lifecycle';
-import { getSessionManager } from '@/lib/session/session-manager';
+import { SessionLifecycle, resetSessionLifecycle } from '@/lib/session/session-lifecycle';
+import { getSessionManager, resetSessionManager } from '@/lib/session/session-manager';
 import { resetSessionStore, getSessionStore } from '@/lib/session/session-store';
 
 describe('SessionLifecycle', () => {
@@ -8,20 +8,24 @@ describe('SessionLifecycle', () => {
   let sessionCode: string;
 
   beforeEach(async () => {
+    // Reset all singletons to ensure fresh instances
     resetSessionStore();
+    resetSessionManager();
+    resetSessionLifecycle();
     
-    // Use the same store instance for both manager and lifecycle
-    const store = getSessionStore();
-    sessionLifecycle = new SessionLifecycle(store);
+    // Get fresh instances after reset
+    const sessionManager = getSessionManager();
+    sessionLifecycle = new SessionLifecycle(); // Will use fresh store
     
     // Create a test session
-    const sessionManager = getSessionManager();
     const result = await sessionManager.createSession({ timeoutMinutes: 60 }); // Use default 60 minutes
     sessionCode = result.session!.sessionCode;
   });
 
   afterEach(() => {
     resetSessionStore();
+    resetSessionManager();
+    resetSessionLifecycle();
   });
 
   describe('checkSessionTimeout', () => {

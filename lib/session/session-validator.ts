@@ -46,6 +46,16 @@ export function validateParticipantName(name: string): ValidationResult {
     return { isValid: false, error: SESSION_VALIDATION_ERRORS.INVALID_PARTICIPANT_NAME };
   }
   
+  // Check for HTML tags BEFORE sanitization (basic XSS prevention)
+  if (/<[^>]*>/.test(name)) {
+    return { isValid: false, error: 'Name cannot contain HTML tags' };
+  }
+  
+  // Check for potentially dangerous characters BEFORE sanitization
+  if (/[<>'"&\\]/.test(name)) {
+    return { isValid: false, error: 'Name contains invalid characters' };
+  }
+  
   const sanitized = sanitizeParticipantName(name);
   
   if (sanitized.length < PARTICIPANT_NAME_MIN_LENGTH) {
@@ -54,16 +64,6 @@ export function validateParticipantName(name: string): ValidationResult {
   
   if (sanitized.length > PARTICIPANT_NAME_MAX_LENGTH) {
     return { isValid: false, error: `Name must be less than ${PARTICIPANT_NAME_MAX_LENGTH} characters` };
-  }
-  
-  // Check for HTML tags (basic XSS prevention)
-  if (/<[^>]*>/.test(sanitized)) {
-    return { isValid: false, error: 'Name cannot contain HTML tags' };
-  }
-  
-  // Check for potentially dangerous characters
-  if (/[<>'"&\\]/.test(sanitized)) {
-    return { isValid: false, error: 'Name contains invalid characters' };
   }
   
   // Allow alphanumeric, spaces, hyphens, underscores, and basic punctuation

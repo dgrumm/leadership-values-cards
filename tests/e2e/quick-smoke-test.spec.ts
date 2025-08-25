@@ -1,43 +1,48 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test-fixtures';
 
 /**
  * Quick smoke test to verify E2E setup works
+ * Now with proper test isolation and semantic waits
  */
 
 test.describe('Quick Smoke Test', () => {
-  test('should load homepage and show login form', async ({ page }) => {
-    // Navigate to homepage
-    await page.goto('/');
+  test('should load homepage and show login form', async ({ loginPage }) => {
+    // Navigate to homepage (clean state guaranteed by isolatedTest fixture)
+    await loginPage.goto();
     
-    // Check that the page loads
-    await expect(page).toHaveTitle(/Leadership Values/);
-    
-    // Check that login form elements are present
-    await expect(page.locator('text=Welcome to Leadership Values')).toBeVisible();
-    await expect(page.locator('text=Your Name')).toBeVisible();
-    await expect(page.locator('text=Session Code')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    // Check that the page loads with login form
+    await loginPage.expectPageLoaded();
+    await loginPage.expectFormElementsVisible();
   });
 
-  test('should fill form and attempt submission', async ({ page }) => {
-    await page.goto('/');
+  test('should fill form and attempt submission', async ({ loginPage, sessionManager }) => {
+    // Create a unique test session
+    const session = await sessionManager.createTestSession('TestUser');
     
-    // Find inputs by label text instead of name attribute
-    await page.getByLabel('Your Name:').fill('Test User');
-    await page.getByLabel('Session Code:').fill('TEST01');
+    await loginPage.goto();
     
-    // Submit the form
-    await page.click('button[type="submit"]');
+    // Submit form with test data (includes loading state detection)
+    await loginPage.submitForm(session.participantName, session.sessionCode);
     
-    // Should navigate or show some response
-    await page.waitForTimeout(2000);
+    // Wait for and verify appropriate response (semantic waits, no arbitrary timeout!)
+    await loginPage.expectFormSubmissionResult();
+  });
+
+  test('should handle form submission with proper loading states', async ({ loginPage, sessionManager }) => {
+    const session = await sessionManager.createTestSession('LoadingTestUser');
     
-    // Check that we either navigated to canvas or have some feedback
-    const currentUrl = page.url();
-    const hasCanvas = currentUrl.includes('/canvas');
-    const hasError = await page.locator('text=/error|Error/').isVisible();
+    await loginPage.goto();
     
-    // One of these should be true (either success navigation or error feedback)
-    expect(hasCanvas || hasError).toBe(true);
+    // Fill form but don't submit yet
+    await loginPage.fillName(session.participantName);
+    await loginPage.fillSessionCode(session.sessionCode);
+    
+    // Click submit and verify loading state starts
+    await loginPage.clickSubmit();
+    await loginPage.waitForFormSubmissionStart();
+    
+    // Wait for completion and verify result
+    await loginPage.waitForFormSubmissionComplete();
+    await loginPage.expectFormSubmissionResult();
   });
 });

@@ -113,6 +113,7 @@ export function LoginForm() {
               maxLength={50}
               required
               autoComplete="given-name"
+              data-testid="name-input"
             />
 
             <SessionCodeInput
@@ -125,7 +126,7 @@ export function LoginForm() {
             />
 
             {error && (
-              <div className="p-3 rounded-md bg-red-50 border border-red-200">
+              <div className="p-3 rounded-md bg-red-50 border border-red-200" data-testid="error-message">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
@@ -136,6 +137,7 @@ export function LoginForm() {
               isLoading={isLoading}
               loadingText={isSuccess ? "Success! Redirecting..." : "Joining Session..."}
               disabled={!validation.isFormValid || isLoading}
+              data-testid="submit-button"
             >
               {isSuccess ? "✓ Success!" : "Join Session ➜"}
             </Button>

@@ -193,7 +193,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" data-testid="step1-page">
       {/* Header */}
       <SessionHeader
         sessionCode={sessionCode}
@@ -240,6 +240,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
                 cardCount={remainingCards}
                 onClick={handleDeckClick}
                 disabled={!!stagingCard}
+                data-testid="deck"
               />
             </div>
             

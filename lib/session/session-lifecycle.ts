@@ -67,6 +67,8 @@ export class SessionLifecycle {
       expiresAt: new Date().toISOString()
     });
 
+    // updatedSession should be a valid session object if update was successful
+    // It only returns null if the session doesn't exist (which we already checked)
     if (updatedSession) {
       // Trigger timeout callback if registered
       const callback = this.timeoutCallbacks.get(sessionCode);
@@ -77,6 +79,7 @@ export class SessionLifecycle {
       return true;
     }
 
+    // This should not happen since we verified session exists above
     return false;
   }
 
@@ -220,4 +223,11 @@ export function getSessionLifecycle(): SessionLifecycle {
     sessionLifecycle = new SessionLifecycle();
   }
   return sessionLifecycle;
+}
+
+export function resetSessionLifecycle(): void {
+  if (sessionLifecycle) {
+    sessionLifecycle.destroy();
+  }
+  sessionLifecycle = null;
 }

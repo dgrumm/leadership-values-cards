@@ -81,6 +81,7 @@ export function SessionCodeInput({
           spellCheck={false}
           data-autofill="false"
           data-lpignore="true"
+          data-testid="session-code-input"
         />
         
         <Button
@@ -91,6 +92,7 @@ export function SessionCodeInput({
           onClick={handleGenerateCode}
           disabled={disabled || isGenerating}
           title="Generate new session code"
+          data-testid="generate-code-button"
         >
           <svg
             className={cn(
