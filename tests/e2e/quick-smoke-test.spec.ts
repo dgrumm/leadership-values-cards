@@ -1,15 +1,13 @@
-import { test, expect } from '@playwright/test';
-import { LoginPage } from './page-objects/LoginPage';
+import { test, expect } from './fixtures/test-fixtures';
 
 /**
  * Quick smoke test to verify E2E setup works
+ * Now with proper test isolation and semantic waits
  */
 
 test.describe('Quick Smoke Test', () => {
-  test('should load homepage and show login form', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    
-    // Navigate to homepage
+  test('should load homepage and show login form', async ({ loginPage }) => {
+    // Navigate to homepage (clean state guaranteed by isolatedTest fixture)
     await loginPage.goto();
     
     // Check that the page loads with login form
@@ -17,18 +15,34 @@ test.describe('Quick Smoke Test', () => {
     await loginPage.expectFormElementsVisible();
   });
 
-  test('should fill form and attempt submission', async ({ page }) => {
-    const loginPage = new LoginPage(page);
+  test('should fill form and attempt submission', async ({ loginPage, sessionManager }) => {
+    // Create a unique test session
+    const session = await sessionManager.createTestSession('TestUser');
     
     await loginPage.goto();
     
-    // Submit form with test data
-    await loginPage.submitForm('Test User', 'TEST01');
+    // Submit form with test data (includes loading state detection)
+    await loginPage.submitForm(session.participantName, session.sessionCode);
     
-    // Should navigate or show some response
-    await page.waitForTimeout(2000);
+    // Wait for and verify appropriate response (semantic waits, no arbitrary timeout!)
+    await loginPage.expectFormSubmissionResult();
+  });
+
+  test('should handle form submission with proper loading states', async ({ loginPage, sessionManager }) => {
+    const session = await sessionManager.createTestSession('LoadingTestUser');
     
-    // Verify we get appropriate feedback
+    await loginPage.goto();
+    
+    // Fill form but don't submit yet
+    await loginPage.fillName(session.participantName);
+    await loginPage.fillSessionCode(session.sessionCode);
+    
+    // Click submit and verify loading state starts
+    await loginPage.clickSubmit();
+    await loginPage.waitForFormSubmissionStart();
+    
+    // Wait for completion and verify result
+    await loginPage.waitForFormSubmissionComplete();
     await loginPage.expectFormSubmissionResult();
   });
 });
