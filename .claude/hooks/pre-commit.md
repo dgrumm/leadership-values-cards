@@ -1,37 +1,61 @@
 ---
 name: pre-commit
-description: Runs before any code changes to ensure quality
+description: Comprehensive quality checks before any commit
 trigger: before_commit
 ---
 
-Before committing changes, ensure:
+**MANDATORY PRE-COMMIT TESTING PIPELINE**
 
-1. **Type Safety**: No TypeScript errors
+Before committing changes, ALL checks must pass:
+
+## 1. Type Safety & Code Quality
 ```bash
+echo "🔍 Checking TypeScript compilation..."
 npx tsc --noEmit
-```
+if [ $? -ne 0 ]; then echo "❌ TypeScript errors found"; exit 1; fi
 
-1. **Linting**: Code follows standards
-```bash
+echo "🧹 Running ESLint with auto-fix..."
 npx eslint . --fix
+if [ $? -ne 0 ]; then echo "❌ Linting errors found"; exit 1; fi
 ```
 
-1. **Critical Tests**: Core functionality works
+## 2. Comprehensive Test Suite
 ```bash
-npm run test:e2e -- --grep="@critical"
+echo "🧪 Running unit tests..."
+npm run test:unit
+if [ $? -ne 0 ]; then echo "❌ Unit tests failed"; exit 1; fi
+
+echo "🎭 Running E2E tests..."
+npm run test:e2e
+if [ $? -ne 0 ]; then echo "❌ E2E tests failed"; exit 1; fi
+
+echo "📊 Checking test coverage..."
+npm run test:coverage -- --passWithNoTests
+if [ $? -ne 0 ]; then echo "❌ Coverage threshold not met"; exit 1; fi
 ```
 
-1. **Performance**: Check bundle size
+## 3. Security & Performance
 ```bash
-npx next build
-npx @next/bundle-analyzer
+echo "🔐 Checking for exposed secrets..."
+grep -r "ABLY_KEY\|localhost:3000\|sk_\|pk_" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.next . && {
+  echo "❌ Secrets detected in code"
+  exit 1
+}
+
+echo "📦 Validating build..."
+npm run build
+if [ $? -ne 0 ]; then echo "❌ Build failed"; exit 1; fi
 ```
 
-1. **Security**: No exposed keys
+## 4. Test Quality Checks  
 ```bash
-grep -r "ABLY_KEY\|localhost:3000" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules
+echo "🎯 Checking for test-only/skip statements..."
+grep -r "test\.only\|test\.skip\|describe\.only\|describe\.skip" tests/ && {
+  echo "❌ Found focused or skipped tests"
+  exit 1
+}
 ```
 
-Abort commit if any check fails.
+**All checks passed! ✅ Safe to commit.**
 
 ---

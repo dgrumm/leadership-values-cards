@@ -2,6 +2,48 @@
 
 Initial decisions to remember:
 
+## 2025-08-26 - 03-2-animations-transitions
+
+**Spec**: 03.2 Animations & Transitions
+
+**Implementation Decision**: Comprehensive animation system built with Framer Motion
+
+**Key Components Created**:
+- `/lib/animations/constants.ts` - Centralized timing and performance constants
+- `/lib/animations/variants.ts` - Framer Motion animation variants library
+- `/lib/animations/utils.ts` - Animation utilities, error recovery, and debug tools
+- `/hooks/useReducedMotion.ts` - Accessibility-first motion preference handling
+- `/hooks/useAnimations.ts` - Animation state management hooks
+- `/components/canvas/StepTransitionManager.tsx` - Complex step transition orchestration
+- `/components/canvas/ReviewFrameExpansion.tsx` - Review state frame expansion
+
+**Performance Optimizations**:
+- 60fps target with frame rate monitoring
+- Hardware acceleration via transform3d
+- Animation batching to prevent overload
+- Graceful error recovery with fallback states
+- Timeout protection for long-running animations
+
+**Accessibility Features**:
+- `prefers-reduced-motion` respect with instant fallbacks
+- Focus management during transitions
+- Screen reader state announcements
+- High contrast mode compatibility
+
+**Debug Tools**:
+- Development console commands for slow motion, boundaries
+- Performance monitoring and logging
+- Animation interruption testing
+- Cross-browser compatibility verification
+
+**Testing Strategy**:
+- Unit tests for constants, utilities, and hooks
+- E2E tests for animation timing, performance, and accessibility
+- Visual regression testing for animation states
+- Error recovery and cancellation testing
+
+**Memory**: Animation system provides smooth, accessible, and performant transitions throughout the card sorting experience. All components are reusable and follow established performance patterns.
+
 ## Architecture Choices
 - **Next.js over Vite**: Chosen for integrated API routes and better session management
 - **@dnd-kit over react-beautiful-dnd**: Better performance and accessibility

@@ -73,6 +73,9 @@ sharedCardPositions: { cardId: { pile, index, owner } }
 - Use localStorage/sessionStorage in components (memory only)
 - Allow >8 cards in Top 8 pile (enforce in drop handler)
 - Send card positions on every drag (only on drop)
+- **NEVER skip testing** - all implementations must pass unit & E2E tests
+- Modify existing tests to make them pass (fix implementation instead)
+- Deploy or merge code with failing tests
 
 ## Key Commands
 ```bash
@@ -80,6 +83,12 @@ make dev          # Start Next.js + WebSocket server
 make test:e2e     # Run Playwright tests
 make build:csv    # Load new card deck CSV
 make simulate     # Multi-user test environment
+
+# Testing Commands (MANDATORY for all development)
+npm run test:unit       # Jest unit tests
+npm run test:e2e        # Playwright E2E tests  
+npm run test:all        # All tests (unit + E2E)
+npm run test:coverage   # Unit tests with coverage report
 ```
 
 ## Development Process
@@ -92,15 +101,20 @@ make simulate     # Multi-user test environment
    git checkout -b feature/<slug>
    ```
 3. Check /specs/ for feature requirements
-4. Implement only the active spec’s acceptance criteria (see /specs/)
+4. Implement only the active spec's acceptance criteria (see /specs/)
 5. Mark each acceptance criterion complete in the spec (checkboxes) as implemented
 6. Update the memory bank at .claude/memory/project-decisions.md with key decisions, noting <date>-<slug>.
-7. Run tests from spec test cases
+7. **MANDATORY TESTING PHASE**:
+   - Run unit tests: `npm run test:unit`
+   - Run E2E tests: `npm run test:e2e`
+   - All tests MUST pass before proceeding
+   - Fix any broken tests (implementation, not tests)
+   - Use test-runner agent for complex test failures
 8. ALWAYS run review before pushing or opening a PR
 9. Open a PR to main titled feat(<slug>): <short description>; include:
   - Spec link
 	- Acceptance criteria checklist (with ✅)
-	- Test evidence
+	- Test evidence (passing test runs)
 	- Notes/decisions (link to memory file)
 
 ## Spec Status Key

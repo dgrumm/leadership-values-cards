@@ -4,7 +4,7 @@
 This document tracks the development status of all feature specifications for the Leadership Values Card Sort application.
 
 **Last Updated**: 2025-08-26  
-**Total Specifications**: 15  
+**Total Specifications**: 16 (15 MVP + 1 v2.0)  
 **Status Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⏸️ Blocked | ⚠️ Needs Review
 
 ---
@@ -68,6 +68,16 @@ This document tracks the development status of all feature specifications for th
 | 05.3 | [Session Timeout](05-export-polish/05.3-session-timeout.md) | 🔴 Not Started | Medium | - | 60-minute timeout system |
 
 **Export & Polish Progress**: 0% (0/3 complete)
+
+---
+
+## 06. Layout Redesign (1/1 specs)
+
+| Spec | Feature | Status | Priority | Assignee | Notes |
+|------|---------|--------|----------|----------|--------|
+| 06.1 | [Revised Layout Specs](06-layout-redesign/01.1-revised-layout-specs.md) | 🔴 Deferred v2.0 | Medium | - | Horizontal layout with fixed positioning - analysis complete |
+
+**Layout Redesign Progress**: 0% (0/1 complete - deferred to v2.0)
 
 ---
 
@@ -168,19 +178,23 @@ To update this status document:
 | 2025-08-21 | 03.1-03.3 | 🔴 Not Started | 🟢 Complete | Interactions integrated into all steps 1-3 |
 | 2025-08-26 | 03.1 | 🔴 Not Started | 🟢 Complete | Core drag-drop verified with E2E tests |
 | 2025-08-26 | 03.2 | 🟢 Complete | 🟡 Partial | Basic animations working, minor spec differences |
+| 2025-08-26 | 06.1 | - | 🔴 Deferred v2.0 | Layout redesign moved to /specs/06-layout-redesign/ with comprehensive analysis |
 
 ---
 
 ## Overall Project Progress
 
-**Total Specifications**: 15  
-**Completed**: 9.5 (63%)  
-**In Progress**: 0.5 (3%)  
-**Not Started**: 5 (33%)  
+**MVP Specifications**: 15  
+**MVP Completed**: 9.5 (63%)  
+**MVP In Progress**: 0.5 (3%)  
+**MVP Not Started**: 5 (33%)  
+
+**v2.0 Specifications**: 1 (Layout Redesign)
+**v2.0 Status**: Deferred - comprehensive analysis complete
 
 **MVP Ready**: 95% (9.5/10 core specs complete) - Core functionality verified with E2E tests 🎉  
 **Collaboration Ready**: 0% (0/4 collaboration specs complete)  
-**Feature Complete**: 63% (9.5/15 all specs)
+**v2.0 Layout Ready**: Planning complete - implementation deferred
 
 **🚀 MAJOR MILESTONE**: Core single-user flow complete and E2E tested! Step 1 drag-drop fully verified (10/10 tests passing).
 
