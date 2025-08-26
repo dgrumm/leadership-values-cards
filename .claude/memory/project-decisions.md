@@ -2,6 +2,39 @@
 
 Initial decisions to remember:
 
+## 2025-08-26 - 04-1-ably-setup
+
+**Spec**: 04.1 Ably Setup  
+**Status**: ✅ **COMPLETE** - Real-time Infrastructure Foundation Delivered
+
+**Implementation Decision**: Built comprehensive Ably WebSocket infrastructure with production-ready error handling, performance optimizations, and complete test coverage.
+
+### **Key Components Delivered**:
+- `/lib/ably/ably-service.ts` - Core AblyService class with singleton pattern, 5-channel architecture (session, presence, reveals, viewers, status), connection management with exponential backoff, message throttling (50ms cursors, 200ms positions), and graceful degradation
+- `/lib/ably/config.ts` - Environment validation, connection quality monitoring, error classification system with 7 error types, automatic recovery strategies with jittered backoff
+- `/hooks/collaboration/useAbly.ts` - React integration with useAbly, useAblySession, useAblyConnectionStatus hooks for state management and real-time subscriptions
+- `/components/collaboration/ConnectionStatus.tsx` - UI components for connection state display: minimal indicators, detailed status panels, floating notifications, error banners
+- `/components/collaboration/AblyErrorBoundary.tsx` - Error boundary with intelligent error classification, recovery suggestions, and graceful fallback experiences
+
+### **Architecture Decisions**:
+1. **Singleton Service Pattern**: Single AblyService instance prevents duplicate connections, shared across components
+2. **Channel Isolation**: `{channelType}:{sessionCode}` naming ensures complete session separation 
+3. **Dual State Management**: Local Zustand for optimistic UI, Ably sync for real-time collaboration
+4. **Performance-First**: Built-in throttling prevents network flooding, connection quality monitoring
+5. **Error Recovery**: 7-tier error classification with automated retry strategies and user-friendly messaging
+6. **Test Coverage**: 23 comprehensive unit tests covering initialization, channels, messages, errors, cleanup
+
+### **Production Ready Features**:
+- Environment validation with API key format checking
+- Connection state monitoring with UI feedback
+- Message throttling: 50ms cursor updates, 200ms card positions  
+- Automatic reconnection with exponential backoff + jitter
+- Session cleanup prevents memory leaks
+- Graceful degradation when real-time features fail
+- Development debugging tools and console integration
+
+**Next Phase**: Ready for 04.2 Presence System implementation - foundation infrastructure complete and tested.
+
 ## 2025-08-26 - 03-2-animations-transitions
 
 **Spec**: 03.2 Animations & Transitions  
