@@ -19,4 +19,37 @@ module.exports = {
     '!lib/**/*.d.ts',
     '!lib/**/*.test.ts',
   ],
+  // Use jsdom for React hook/component tests
+  projects: [
+    {
+      displayName: 'node',
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      testMatch: [
+        '<rootDir>/tests/unit/{utils,stores,session}/**/*.test.ts',
+        '<rootDir>/lib/**/*.test.ts',
+      ],
+      transform: {
+        '^.+\\.ts$': 'ts-jest',
+      },
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+      },
+    },
+    {
+      displayName: 'jsdom',
+      preset: 'ts-jest',
+      testEnvironment: 'jsdom',
+      testMatch: [
+        '<rootDir>/tests/unit/{hooks,components}/**/*.test.ts',
+      ],
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+      transform: {
+        '^.+\\.ts$': 'ts-jest',
+      },
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+      },
+    },
+  ],
 };
