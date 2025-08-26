@@ -118,7 +118,7 @@ export class AblyService {
       this.setupConnectionListeners();
       this.isInitialized = true;
 
-      // Wait for initial connection
+      // Wait for initial connection with proper state verification
       await new Promise<void>((resolve, reject) => {
         if (this.client?.connection.state === 'connected') {
           resolve();
@@ -129,15 +129,45 @@ export class AblyService {
           reject(new Error('Ably connection timeout after 10 seconds'));
         }, 10000);
 
-        this.client?.connection.on('connected', () => {
+        // Handle successful connection
+        const handleConnected = () => {
           clearTimeout(timeout);
-          resolve();
-        });
+          // Verify connection is actually established
+          if (this.client?.connection.state === 'connected') {
+            resolve();
+          } else {
+            reject(new Error('Connection established but state verification failed'));
+          }
+        };
 
-        this.client?.connection.on('failed', (error) => {
+        // Handle connection failure
+        const handleFailed = (error: any) => {
           clearTimeout(timeout);
-          reject(new Error(`Ably connection failed: ${error.message}`));
-        });
+          reject(new Error(`Ably connection failed: ${error?.message || 'Unknown error'}`));
+        };
+
+        // Handle unexpected disconnection during setup
+        const handleDisconnected = () => {
+          clearTimeout(timeout);
+          reject(new Error('Connection lost during initialization'));
+        };
+
+        this.client?.connection.on('connected', handleConnected);
+        this.client?.connection.on('failed', handleFailed);
+        this.client?.connection.on('disconnected', handleDisconnected);
+
+        // Cleanup listeners after resolution
+        const cleanup = () => {
+          this.client?.connection.off('connected', handleConnected);
+          this.client?.connection.off('failed', handleFailed);
+          this.client?.connection.off('disconnected', handleDisconnected);
+        };
+
+        // Clean up on both success and failure
+        const originalResolve = resolve;
+        const originalReject = reject;
+        resolve = (...args) => { cleanup(); originalResolve(...args); };
+        reject = (...args) => { cleanup(); originalReject(...args); };
       });
 
     } catch (error) {

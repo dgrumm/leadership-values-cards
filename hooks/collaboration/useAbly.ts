@@ -92,30 +92,24 @@ export function useAbly(options: UseAblyOptions = {}): UseAblyReturn {
     if (autoInit && !isInitialized) {
       init();
     }
-  }, [autoInit, isInitialized, init]);
+    
+    // Cleanup on unmount
+    return () => {
+      if (serviceRef.current && sessionCode) {
+        serviceRef.current.leaveSession(sessionCode).catch(console.error);
+      }
+    };
+  }, [autoInit, isInitialized, init, sessionCode]);
 
-  // Cleanup on unmount
+  // Cleanup connection state listener on unmount
   useEffect(() => {
     return () => {
       if (cleanupRef.current) {
         cleanupRef.current();
         cleanupRef.current = null;
       }
-      
-      // Note: We don't destroy the service here since it's a singleton
-      // and might be used by other components. The service will be cleaned
-      // up when the user leaves the session or the app is closed.
     };
   }, []);
-
-  // Leave session when sessionCode changes or component unmounts
-  useEffect(() => {
-    return () => {
-      if (serviceRef.current && sessionCode) {
-        serviceRef.current.leaveSession(sessionCode).catch(console.error);
-      }
-    };
-  }, [sessionCode]);
 
   // Derived state
   const isConnected = connectionState === 'connected';

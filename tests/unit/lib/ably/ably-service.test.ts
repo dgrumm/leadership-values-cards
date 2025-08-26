@@ -14,7 +14,13 @@ const mockChannel = {
 
 const mockConnection = {
   state: 'connected',
-  on: jest.fn(),
+  on: jest.fn((event, callback) => {
+    // Simulate immediate connection for most tests
+    if (event === 'connected' && mockConnection.state === 'connected') {
+      setTimeout(callback, 0);
+    }
+  }),
+  off: jest.fn(),
   ping: jest.fn().mockResolvedValue(undefined)
 };
 
@@ -35,8 +41,8 @@ describe('AblyService', () => {
     resetAblyService();
     jest.clearAllMocks();
     
-    // Mock environment variables
-    process.env.NEXT_PUBLIC_ABLY_KEY = 'xVLyHw.test:mock-api-key-for-testing';
+    // Mock environment variables with valid format
+    process.env.NEXT_PUBLIC_ABLY_KEY = 'xVLyHw.test:mock-api-key-for-testing-with-sufficient-length';
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
   });
 
@@ -71,16 +77,30 @@ describe('AblyService', () => {
   describe('Configuration', () => {
     it('should get valid Ably configuration', () => {
       const config = getAblyConfig();
-      expect(config.apiKey).toBe('xVLyHw.test:mock-api-key-for-testing');
+      expect(config.apiKey).toBe('xVLyHw.test:mock-api-key-for-testing-with-sufficient-length');
       expect(config.environment).toBe('sandbox');
       expect(config.connectionOptions.heartbeatInterval).toBe(30000);
     });
 
     it('should detect production environment from key', () => {
-      process.env.NEXT_PUBLIC_ABLY_KEY = 'xVNyHw.test:production-key';
+      process.env.NEXT_PUBLIC_ABLY_KEY = 'xVNyHw.test:production-key-with-sufficient-length';
       
       const config = getAblyConfig();
       expect(config.environment).toBe('production');
+    });
+
+    it('should validate API key format strictly', () => {
+      // Invalid format - missing colon (caught by env validation)
+      process.env.NEXT_PUBLIC_ABLY_KEY = 'invalid-key-format';
+      expect(() => getAblyConfig()).toThrow('NEXT_PUBLIC_ABLY_KEY appears to be in invalid format');
+
+      // Valid format but invalid parts - empty secret
+      process.env.NEXT_PUBLIC_ABLY_KEY = 'xVLyHw.test:';
+      expect(() => getAblyConfig()).toThrow('must contain both keyName and keySecret parts');
+
+      // Valid format but invalid parts - secret too short
+      process.env.NEXT_PUBLIC_ABLY_KEY = 'xVLyHw.test:short';
+      expect(() => getAblyConfig()).toThrow('secret appears to be too short');
     });
   });
 
@@ -109,6 +129,41 @@ describe('AblyService', () => {
       
       // Should only create one client
       expect(require('ably').Realtime).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle connection timeout', async () => {
+      // Create a new mock connection that doesn't connect
+      const timeoutMockConnection = {
+        state: 'connecting',
+        on: jest.fn(),
+        off: jest.fn()
+      };
+      
+      const timeoutMockClient = {
+        connection: timeoutMockConnection,
+        channels: { get: jest.fn() },
+        close: jest.fn()
+      };
+      
+      // Mock Ably to return our timeout client
+      const OriginalAbly = require('ably').Realtime;
+      require('ably').Realtime = jest.fn().mockImplementation(() => timeoutMockClient);
+      
+      const service = getAblyService();
+      
+      jest.useFakeTimers();
+      
+      const initPromise = service.init();
+      
+      // Fast-forward past timeout
+      jest.advanceTimersByTime(15000);
+      
+      await expect(initPromise).rejects.toThrow('Ably connection timeout');
+      
+      jest.useRealTimers();
+      
+      // Restore original mock
+      require('ably').Realtime = OriginalAbly;
     });
   });
 

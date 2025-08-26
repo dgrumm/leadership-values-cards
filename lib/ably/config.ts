@@ -58,6 +58,31 @@ export function getAblyConfig(overrides?: Partial<AblyConfig>): AblyConfig {
   }
 
   const apiKey = process.env.NEXT_PUBLIC_ABLY_KEY!;
+  
+  // Additional runtime validation
+  if (!apiKey) {
+    throw new Error('NEXT_PUBLIC_ABLY_KEY is required but not provided');
+  }
+  
+  if (typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+    throw new Error('NEXT_PUBLIC_ABLY_KEY must be a non-empty string');
+  }
+  
+  // Validate API key format more strictly
+  const keyParts = apiKey.split(':');
+  if (keyParts.length !== 2) {
+    throw new Error('NEXT_PUBLIC_ABLY_KEY must be in format "keyName:keySecret"');
+  }
+  
+  const [keyName, keySecret] = keyParts;
+  if (!keyName || !keySecret) {
+    throw new Error('NEXT_PUBLIC_ABLY_KEY must contain both keyName and keySecret parts');
+  }
+  
+  if (keySecret.length < 16) {
+    throw new Error('NEXT_PUBLIC_ABLY_KEY secret appears to be too short (minimum 16 characters)');
+  }
+
   const config: AblyConfig = {
     ...DEFAULT_CONFIG,
     apiKey,
@@ -66,7 +91,27 @@ export function getAblyConfig(overrides?: Partial<AblyConfig>): AblyConfig {
     ...overrides
   };
 
+  // Validate final config
+  validateFinalConfig(config);
+
   return config;
+}
+
+// Additional validation for the final config
+function validateFinalConfig(config: AblyConfig): void {
+  if (!config.clientId || config.clientId.length < 5) {
+    throw new Error('Generated clientId is invalid');
+  }
+  
+  if (config.connectionOptions.heartbeatInterval < 10000) {
+    throw new Error('Heartbeat interval must be at least 10 seconds');
+  }
+  
+  if (config.connectionOptions.realtimeRequestTimeout < 5000) {
+    throw new Error('Request timeout must be at least 5 seconds');
+  }
+  
+  console.log(`✅ Ably config validated: ${config.environment} environment, client: ${config.clientId}`);
 }
 
 // Connection quality monitoring
