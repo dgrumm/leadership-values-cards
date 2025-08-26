@@ -10,6 +10,7 @@ interface StagingAreaProps {
   card: CardType | null;
   isDragging?: boolean;
   className?: string;
+  'data-testid'?: string;
   // Accessibility props
   tabIndex?: number;
   role?: string;
@@ -21,6 +22,7 @@ export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function
   card, 
   isDragging = false, 
   className,
+  'data-testid': dataTestId,
   tabIndex,
   role,
   'aria-label': ariaLabel,
@@ -82,6 +84,7 @@ export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function
     <div 
       ref={ref}
       className={cn("relative w-56 h-40", className)}
+      data-testid={dataTestId}
       tabIndex={tabIndex}
       role={role || "region"}
       aria-label={ariaLabel || "Card staging area"}

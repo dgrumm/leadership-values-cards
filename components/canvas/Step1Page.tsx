@@ -220,6 +220,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
               onCardClick={handleCardClick}
               onTitleClick={handleMoreImportantClick}
               className="h-[28rem]"
+              data-testid="more-important-pile"
             />
             
             <DroppableZone
@@ -229,6 +230,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
               onCardClick={handleCardClick}
               onTitleClick={handleLessImportantClick}
               className="h-[28rem]"
+              data-testid="less-important-pile"
             />
           </div>
 
@@ -249,6 +251,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
               <StagingArea
                 card={stagingCard}
                 isDragging={draggedCardId === stagingCard?.id}
+                data-testid="staging-area"
               />
             </div>
           </div>
