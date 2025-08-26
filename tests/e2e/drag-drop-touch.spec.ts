@@ -28,9 +28,11 @@ test.describe('Touch Drag and Drop Interactions', () => {
     await expect(page).toHaveURL(/\/canvas/);
     
     // Close Step 1 modal
-    const modalCloseButton = page.locator('button:has-text("Start Sorting")');
+    const modalCloseButton = page.locator('button:has-text("Got it!")');
     if (await modalCloseButton.isVisible()) {
       await modalCloseButton.click();
+      await expect(modalCloseButton).not.toBeVisible();
+      await page.waitForTimeout(300);
     }
     
     await expect(page.locator('[data-testid="step1-page"], .step-1-container, h1:has-text("Step 1")')).toBeVisible();

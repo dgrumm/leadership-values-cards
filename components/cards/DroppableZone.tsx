@@ -15,6 +15,7 @@ interface DroppableZoneProps {
   onTitleClick?: () => void;
   className?: string;
   'data-pile'?: string;
+  'data-testid'?: string;
   maxCards?: number;
   // Accessibility props
   tabIndex?: number;
@@ -32,6 +33,7 @@ export const DroppableZone = forwardRef<HTMLDivElement, DroppableZoneProps>(func
   onTitleClick,
   className,
   'data-pile': dataPile,
+  'data-testid': dataTestId,
   maxCards,
   tabIndex,
   role,
@@ -81,6 +83,7 @@ export const DroppableZone = forwardRef<HTMLDivElement, DroppableZoneProps>(func
         }
       }}
       className={cn(className, getHighlightClass())}
+      data-testid={dataTestId}
       tabIndex={tabIndex}
       role={role}
       aria-label={ariaLabel}

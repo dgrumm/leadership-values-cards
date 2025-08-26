@@ -122,27 +122,27 @@ export function getClientIP(request: Request): string {
 
 // Pre-configured rate limit configurations
 export const RATE_LIMIT_CONFIGS = {
-  // Session creation - 10 per minute
+  // Session creation - 10 per minute (1000 for E2E tests)
   CREATE_SESSION: {
-    maxRequests: 10,
+    maxRequests: process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === 'true' ? 1000 : 10,
     windowMs: 60 * 1000
   },
   
-  // Session joining - 20 per minute
+  // Session joining - 20 per minute (2000 for E2E tests)
   JOIN_SESSION: {
-    maxRequests: 20,
+    maxRequests: process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === 'true' ? 2000 : 20,
     windowMs: 60 * 1000
   },
   
-  // General API - 100 per minute
+  // General API - 100 per minute (1000 for E2E tests)
   GENERAL: {
-    maxRequests: 100,
+    maxRequests: process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === 'true' ? 1000 : 100,
     windowMs: 60 * 1000
   },
   
   // Aggressive limit for unknown/suspicious activity
   STRICT: {
-    maxRequests: 5,
+    maxRequests: process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === 'true' ? 50 : 5,
     windowMs: 60 * 1000
   }
 } as const;

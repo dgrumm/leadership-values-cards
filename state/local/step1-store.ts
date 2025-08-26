@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Card, CardDefinition } from '@/lib/types/card';
-import { DEVELOPMENT_DECK } from '@/lib/generated/card-decks';
+import { DEV_DECK } from '@/lib/generated/card-decks';
 
 interface Step1State {
   // Deck state
@@ -58,7 +58,7 @@ export const useStep1Store = create<Step1State>((set, get) => ({
   
   // Initialize deck with shuffled cards
   initializeDeck: () => {
-    const shuffledDefinitions = shuffleArray(DEVELOPMENT_DECK);
+    const shuffledDefinitions = shuffleArray(DEV_DECK);
     const initialDeck = shuffledDefinitions.map((def, index) => 
       createCardFromDefinition(def, index)
     );

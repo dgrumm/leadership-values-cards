@@ -82,7 +82,23 @@ export async function DELETE(
   try {
     const params = await context.params;
     const sessionCode = params.code;
-    const { participantId } = await request.json();
+    
+    let participantId: string;
+    try {
+      const body = await request.json();
+      participantId = body.participantId;
+    } catch (jsonError) {
+      // Handle empty or malformed JSON body
+      return NextResponse.json({
+        error: 'Request body must contain participantId'
+      }, { status: 400 });
+    }
+    
+    if (!participantId) {
+      return NextResponse.json({
+        error: 'participantId is required'
+      }, { status: 400 });
+    }
 
     const sessionManager = getSessionManager();
     const result = await sessionManager.leaveSession(sessionCode, participantId);

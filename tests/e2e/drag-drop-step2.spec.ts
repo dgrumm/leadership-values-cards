@@ -21,9 +21,11 @@ test.describe('Step 2 - Drag and Drop with Pile Constraints', () => {
     await expect(page).toHaveURL(/\/canvas/);
     
     // Complete Step 1 quickly by sorting some cards
-    const modalCloseButton = page.locator('button:has-text("Start Sorting")');
+    const modalCloseButton = page.locator('button:has-text("Got it!")');
     if (await modalCloseButton.isVisible()) {
       await modalCloseButton.click();
+      await expect(modalCloseButton).not.toBeVisible();
+      await page.waitForTimeout(300);
     }
     
     // Sort at least 8 cards in Step 1 to enable Step 2

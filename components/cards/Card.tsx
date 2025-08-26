@@ -46,6 +46,7 @@ const CardComponent = forwardRef<HTMLDivElement, CardProps>(({
     <motion.div
       ref={ref}
       className={cn(
+        "card", // Base card class for test selectors
         "relative w-56 h-40 cursor-pointer select-none",
         "bg-white rounded-xl shadow-lg border border-gray-200",
         "transition-shadow duration-200",

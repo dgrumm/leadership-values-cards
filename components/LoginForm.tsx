@@ -103,6 +103,7 @@ export function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
               label="Your Name:"
+              name="name"
               type="text"
               value={formData.name}
               onChange={handleNameChange}

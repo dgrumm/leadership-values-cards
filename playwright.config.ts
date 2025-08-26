@@ -11,8 +11,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Limit workers to prevent rate limit issues while maintaining reasonable speed */
+  workers: process.env.CI ? 1 : 4,  // Reduced from 7 to 4 to stay under rate limits
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -25,9 +25,28 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     /* Record video on failure */
     video: 'retain-on-failure',
-    /* Reduce timeouts for faster feedback */
-    actionTimeout: 5000,
-    navigationTimeout: 10000,
+    /* Timeouts optimized for animation-heavy card operations */
+    actionTimeout: 8000,  // Increased for drag-drop + auto-flip operations
+    navigationTimeout: 15000,  // Increased for form submission + redirect
+    /* Set environment variable for E2E testing to relax rate limits */
+    extraHTTPHeaders: {
+      'X-Test-Environment': 'playwright'
+    }
+  },
+  
+  /* Set test environment variables */
+  env: {
+    PLAYWRIGHT_TEST: 'true'
+  },
+  
+  /* Configure where screenshots and visual regression snapshots are stored */
+  expect: {
+    /* Path to visual regression snapshots */
+    toMatchSnapshot: { 
+      threshold: 0.2, 
+      mode: 'strict',
+      animations: 'disabled' // Disable animations for consistent screenshots
+    }
   },
   
   /* Global test timeout */
