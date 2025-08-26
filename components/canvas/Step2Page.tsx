@@ -402,6 +402,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                   ({top8Pile.length}/8)
                 </span>
               }
+              data-testid="top8-pile"
               cards={top8Pile}
               onCardClick={handleCardClick}
               onTitleClick={handleTop8Click}
@@ -487,6 +488,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                 ref={deckRef}
                 aria-label={`Card deck with ${remainingCards} cards remaining. Click to flip next card.`}
                 aria-describedby="deck-instructions"
+                data-testid="deck"
               />
               <div id="deck-instructions" className="sr-only">
                 Click the deck to flip cards from your More Important pile. You can then sort them into piles.
@@ -518,6 +520,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                     ? `Current card: ${stagingCard.value_name.replace(/_/g, ' ')}. Drag to sort into piles.`
                     : "Staging area - empty. Click deck to flip next card."
                 }
+                data-testid="staging-area"
                 aria-describedby="staging-instructions"
               />
               <div id="staging-instructions" className="sr-only">
@@ -571,6 +574,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                   <Button
                     onClick={handleReviewClick}
                     className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl shadow-lg"
+                    data-testid="continue-to-step3-button"
                   >
                     Keep All & Continue to Step 3 ➜
                   </Button>

@@ -42,6 +42,20 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
     initializeDeck();
   }, [initializeDeck]);
 
+  // Test-only: Listen for state injection events to force re-render
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.PLAYWRIGHT_TEST === 'true')) {
+      const handleStateInjection = () => {
+        // Force component to re-evaluate state by triggering a micro re-render
+        setActiveCard(null);
+        console.log('🔄 Component re-rendered after state injection');
+      };
+
+      window.addEventListener('state-injection-complete', handleStateInjection);
+      return () => window.removeEventListener('state-injection-complete', handleStateInjection);
+    }
+  }, []);
+
   // Clear drag state function
   const clearDragState = useCallback(() => {
     setDraggedCardId(null);
@@ -283,6 +297,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
                   onClick={handleStep2Click}
                   className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl shadow-lg"
                   disabled={!canProceed}
+                  data-testid="continue-to-step2-button"
                 >
                   Step 2 ➜
                 </Button>

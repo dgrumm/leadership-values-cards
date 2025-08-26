@@ -170,6 +170,7 @@ export function Step2Modal({
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700 text-white"
                   )}
+                  data-testid="step2-modal-got-it-button"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
