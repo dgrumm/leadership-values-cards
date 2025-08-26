@@ -65,6 +65,7 @@ export function SessionCodeInput({
       <div className="relative flex">
         <Input
           id="session-code"
+          name="sessionCode"
           type="text"
           value={value}
           onChange={handleInputChange}

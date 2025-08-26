@@ -21,9 +21,11 @@ test.describe('Step 3 - Drag and Drop Final Selection', () => {
     await expect(page).toHaveURL(/\/canvas/);
     
     // Complete Step 1 quickly
-    const modalCloseButton = page.locator('button:has-text("Start Sorting")');
+    const modalCloseButton = page.locator('button:has-text("Got it!")');
     if (await modalCloseButton.isVisible()) {
       await modalCloseButton.click();
+      await expect(modalCloseButton).not.toBeVisible();
+      await page.waitForTimeout(300);
     }
     
     // Complete Step 1 - sort 8+ cards

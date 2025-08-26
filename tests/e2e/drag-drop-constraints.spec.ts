@@ -21,9 +21,11 @@ test.describe('Drag and Drop Constraint Enforcement', () => {
     await expect(page).toHaveURL(/\/canvas/);
     
     // Close initial modal
-    const modalCloseButton = page.locator('button:has-text("Start Sorting")');
+    const modalCloseButton = page.locator('button:has-text("Got it!")');
     if (await modalCloseButton.isVisible()) {
       await modalCloseButton.click();
+      await expect(modalCloseButton).not.toBeVisible();
+      await page.waitForTimeout(300);
     }
   });
 

@@ -25,9 +25,19 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     /* Record video on failure */
     video: 'retain-on-failure',
-    /* Reduce timeouts for faster feedback */
-    actionTimeout: 5000,
-    navigationTimeout: 10000,
+    /* Timeouts optimized for animation-heavy card operations */
+    actionTimeout: 8000,  // Increased for drag-drop + auto-flip operations
+    navigationTimeout: 15000,  // Increased for form submission + redirect
+  },
+  
+  /* Configure where screenshots and visual regression snapshots are stored */
+  expect: {
+    /* Path to visual regression snapshots */
+    toMatchSnapshot: { 
+      threshold: 0.2, 
+      mode: 'strict',
+      animations: 'disabled' // Disable animations for consistent screenshots
+    }
   },
   
   /* Global test timeout */
