@@ -17,6 +17,7 @@ interface Step1State {
   // UI state
   isDragging: boolean;
   draggedCardId: string | null;
+  showOverflowWarning: boolean;
   
   // Actions
   initializeDeck: () => void;
@@ -24,6 +25,8 @@ interface Step1State {
   moveCardToPile: (cardId: string, pile: 'more' | 'less') => void;
   moveCardBetweenPiles: (cardId: string, fromPile: 'more' | 'less', toPile: 'more' | 'less') => void;
   setDragging: (isDragging: boolean, cardId?: string) => void;
+  showOverflowWarningMessage: () => void;
+  hideOverflowWarningMessage: () => void;
   resetStep1: () => void;
 }
 
@@ -55,6 +58,7 @@ export const useStep1Store = create<Step1State>((set, get) => ({
   lessImportantPile: [],
   isDragging: false,
   draggedCardId: null,
+  showOverflowWarning: false,
   
   // Initialize deck with shuffled cards
   initializeDeck: () => {
@@ -71,6 +75,7 @@ export const useStep1Store = create<Step1State>((set, get) => ({
       lessImportantPile: [],
       isDragging: false,
       draggedCardId: null,
+      showOverflowWarning: false,
     });
   },
   
@@ -80,6 +85,10 @@ export const useStep1Store = create<Step1State>((set, get) => ({
     
     // Can't flip if staging area is occupied or deck is empty
     if (stagingCard || deckPosition >= deck.length) {
+      // Show warning if trying to flip when staging is occupied
+      if (stagingCard) {
+        get().showOverflowWarningMessage();
+      }
       return;
     }
     
@@ -182,6 +191,20 @@ export const useStep1Store = create<Step1State>((set, get) => ({
       isDragging,
       draggedCardId: isDragging ? cardId || null : null,
     });
+  },
+
+  // Show overflow warning message
+  showOverflowWarningMessage: () => {
+    set({ showOverflowWarning: true });
+    // Auto-hide after 2 seconds (shorter for Step 1 learning)
+    setTimeout(() => {
+      set({ showOverflowWarning: false });
+    }, 2000);
+  },
+
+  // Hide overflow warning message
+  hideOverflowWarningMessage: () => {
+    set({ showOverflowWarning: false });
   },
   
   // Reset to initial state

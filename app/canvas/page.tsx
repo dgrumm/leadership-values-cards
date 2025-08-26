@@ -7,6 +7,7 @@ import { Step2Page } from '@/components/canvas/Step2Page';
 import { Step3Page } from '@/components/canvas/Step3Page';
 import { useStep1Store } from '@/state/local/step1-store';
 import { useStep2Store } from '@/state/local/step2-store';
+import { useStep3Store } from '@/state/local/step3-store';
 
 export default function CanvasPage() {
   const searchParams = useSearchParams();
@@ -20,6 +21,19 @@ export default function CanvasPage() {
   
   const { moreImportantPile, lessImportantPile } = useStep1Store();
   const { top8Pile, lessImportantPile: step2LessImportant, discardedPile: step2Discarded } = useStep2Store();
+  
+  // Expose stores globally for E2E testing
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.PLAYWRIGHT_TEST === 'true')) {
+      // Import and expose test utilities
+      import('@/lib/test-utils/browser-globals').then(() => {
+        (window as any).useStep1Store = useStep1Store;
+        (window as any).useStep2Store = useStep2Store;
+        (window as any).useStep3Store = useStep3Store;
+        console.log('🧪 Test utilities exposed for E2E testing');
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const sessionCode = searchParams.get('session');
