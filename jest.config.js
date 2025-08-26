@@ -26,7 +26,7 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: [
-        '<rootDir>/tests/unit/{utils,stores,session}/**/*.test.ts',
+        '<rootDir>/tests/unit/{utils,stores,session,lib}/**/*.test.ts',
         '<rootDir>/lib/**/*.test.ts',
       ],
       transform: {
@@ -41,11 +41,11 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
       testMatch: [
-        '<rootDir>/tests/unit/{hooks,components}/**/*.test.ts',
+        '<rootDir>/tests/unit/{hooks,components}/**/*.test.{ts,tsx}',
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
       transform: {
-        '^.+\\.ts$': 'ts-jest',
+        '^.+\\.(ts|tsx)$': 'ts-jest',
       },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',

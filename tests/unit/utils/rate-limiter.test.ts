@@ -4,7 +4,7 @@ import {
   getClientIP, 
   RATE_LIMIT_CONFIGS,
   type RateLimitConfig,
-  type RateLimitResult 
+ 
 } from '@/lib/utils/rate-limiter';
 
 describe('rate-limiter', () => {
@@ -264,7 +264,9 @@ describe('rate-limiter', () => {
 
     it('should have reasonable limits for session creation', () => {
       const config = RATE_LIMIT_CONFIGS.CREATE_SESSION;
-      expect(config.maxRequests).toBe(10);
+      // In test environment, limits are higher (1000) to allow E2E tests to run
+      const expectedMaxRequests = process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === 'true' ? 1000 : 10;
+      expect(config.maxRequests).toBe(expectedMaxRequests);
       expect(config.windowMs).toBe(60000); // 1 minute
     });
 

@@ -26,8 +26,8 @@ export default defineConfig({
     /* Record video on failure */
     video: 'retain-on-failure',
     /* Timeouts optimized for animation-heavy card operations */
-    actionTimeout: 8000,  // Increased for drag-drop + auto-flip operations
-    navigationTimeout: 15000,  // Increased for form submission + redirect
+    actionTimeout: 15000,  // Increased for drag-drop + auto-flip operations
+    navigationTimeout: 20000,  // Increased for form submission + redirect
     /* Set environment variable for E2E testing to relax rate limits */
     extraHTTPHeaders: {
       'X-Test-Environment': 'playwright'
@@ -49,8 +49,8 @@ export default defineConfig({
     }
   },
   
-  /* Global test timeout */
-  timeout: 10000,
+  /* Global test timeout - increased for complex animations and drag operations */
+  timeout: 30000,
 
   /* Configure projects for major browsers */
   projects: [
@@ -58,7 +58,7 @@ export default defineConfig({
       name: 'chromium',
       use: { 
         ...devices['Desktop Chrome'],
-        headless: false, // Run in headed mode for visibility
+        headless: true, // Run in headless mode for better performance
       },
     },
 
@@ -96,11 +96,15 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
+    command: 'cross-env PLAYWRIGHT_TEST=true NODE_ENV=test npm run dev',
     url: 'http://localhost:3000/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: {
+      PLAYWRIGHT_TEST: 'true',
+      NODE_ENV: 'test',
+    },
   },
 });

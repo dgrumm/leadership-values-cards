@@ -20,39 +20,62 @@ test.describe('Step 2 - Drag and Drop with Pile Constraints', () => {
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\/canvas/);
     
-    // Complete Step 1 quickly by sorting some cards
+    // Close Step 1 modal if present
     const modalCloseButton = page.locator('button:has-text("Got it!")');
     if (await modalCloseButton.isVisible()) {
       await modalCloseButton.click();
       await expect(modalCloseButton).not.toBeVisible();
-      await page.waitForTimeout(300);
     }
     
-    // Sort at least 8 cards in Step 1 to enable Step 2
-    for (let i = 0; i < 8; i++) {
-      await page.locator('[data-testid="deck"], .deck-container, button:has-text("Flip Next")').click();
-      await page.waitForTimeout(300);
-      
-      const stagingCard = page.locator('[data-testid="staging-area"] .card, .staging-area .card').first();
-      const targetZone = i < 4 ? 
-        page.locator('[data-pile="more"], [data-testid="more-important-pile"]') :
-        page.locator('[data-pile="less"], [data-testid="less-important-pile"]');
-      
-      await stagingCard.dragTo(targetZone);
-      await page.waitForTimeout(200);
-    }
+    // Verify we're in Step 1 and the deck exists before proceeding
+    await expect(page.locator('[data-testid="deck"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="staging-area"]')).toBeVisible();
+    
+    // Complete Step 1 by sorting ALL cards (optimized for speed)
+    const sortCards = async (count: number) => {
+      for (let i = 0; i < count; i++) {
+        // Click deck to flip card
+        const deck = page.locator('[data-testid="deck"]');
+        await deck.click();
+        
+        // Wait for card to appear in staging and flip animation to complete
+        await expect(page.locator('[data-testid="staging-area"] .card')).toBeVisible({ timeout: 5000 });
+        await page.waitForTimeout(100); // Minimal wait for flip animation
+        
+        // Drag card to pile (distribute roughly 8/8 split)
+        const stagingCard = page.locator('[data-testid="staging-area"] .card').first();
+        const targetPile = i < 8 ? 
+          page.locator('[data-testid="more-important-pile"]') :
+          page.locator('[data-testid="less-important-pile"]');
+        
+        await stagingCard.dragTo(targetPile);
+        
+        // Brief wait for drag to complete
+        await page.waitForTimeout(100);
+      }
+    };
+    
+    // Sort ALL cards (16 for DEV_DECK) to enable Step 2 button
+    await sortCards(16);
+    
+    // Verify staging area is completely empty and all cards are in piles
+    await expect(page.locator('[data-testid="staging-area"] .card')).not.toBeVisible();
+    await expect(page.locator('[data-testid="more-important-pile"] .card')).toHaveCount(8);
+    await expect(page.locator('[data-testid="less-important-pile"] .card')).toHaveCount(8);
     
     // Navigate to Step 2
-    await page.locator('button:has-text("Continue to Step 2"), .step-navigation button').click();
-    await page.waitForTimeout(500);
+    const continueButton = page.locator('button:has-text("Continue to Step 2")');
+    await continueButton.waitFor({ state: 'visible', timeout: 5000 });
+    await continueButton.click();
     
     // Close Step 2 modal if present
     const step2Modal = page.locator('button:has-text("Start Selecting"), button:has-text("Got it")');
-    if (await step2Modal.isVisible()) {
+    if (await step2Modal.isVisible({ timeout: 3000 })) {
       await step2Modal.click();
     }
     
-    await expect(page.locator('[data-testid="step2-page"], .step-2-container, h1:has-text("Step 2")')).toBeVisible();
+    // Verify Step 2 loaded
+    await expect(page.locator('[data-testid="step2-page"], .step-2-container, h1:has-text("Step 2")')).toBeVisible({ timeout: 5000 });
   });
 
   test('should display Step 2 interface with Top 8 and less important piles', async () => {
