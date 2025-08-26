@@ -45,7 +45,11 @@ module.exports = {
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
       transform: {
-        '^.+\\.(ts|tsx)$': 'ts-jest',
+        '^.+\\.(ts|tsx)$': ['ts-jest', {
+          tsconfig: {
+            jsx: 'react-jsx',
+          },
+        }],
       },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',
