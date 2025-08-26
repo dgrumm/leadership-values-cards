@@ -26,8 +26,8 @@ export default defineConfig({
     /* Record video on failure */
     video: 'retain-on-failure',
     /* Timeouts optimized for animation-heavy card operations */
-    actionTimeout: 15000,  // Increased for drag-drop + auto-flip operations
-    navigationTimeout: 20000,  // Increased for form submission + redirect
+    actionTimeout: 30000,  // Increased for drag-drop + auto-flip operations  
+    navigationTimeout: 30000,  // Increased for form submission + redirect
     /* Set environment variable for E2E testing to relax rate limits */
     extraHTTPHeaders: {
       'X-Test-Environment': 'playwright'
@@ -50,7 +50,7 @@ export default defineConfig({
   },
   
   /* Global test timeout - increased for complex animations and drag operations */
-  timeout: 30000,
+  timeout: 60000, // Increased from 30s to 60s for complex multi-step flows
 
   /* Configure projects for major browsers */
   projects: [

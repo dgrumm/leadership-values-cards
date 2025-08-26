@@ -31,41 +31,115 @@ export function createTestCards(count: number, startIndex = 0): Card[] {
  */
 export const StateInjectionUtils = {
   /**
-   * Inject Step 1 completion state (8 more important, remaining less important)
+   * Inject Step 1 completion state (8 more important, 8 less important)
+   * Uses 16 cards total to match DEV_DECK and enable Step 2 button
    */
   injectStep1Completion: () => {
-    const cards = createTestCards(12); // Use 12 cards for testing
+    const cards = createTestCards(16); // Use 16 cards to match DEV_DECK
     
     const moreImportantCards = cards.slice(0, 8).map(card => ({
       ...card,
       pile: 'more' as const
     }));
     
-    const lessImportantCards = cards.slice(8).map(card => ({
+    const lessImportantCards = cards.slice(8, 16).map(card => ({
       ...card,
       pile: 'less' as const
     }));
 
-    // Access the store directly
-    const step1Store = (window as any)?.useStep1Store?.getState?.();
-    if (step1Store) {
-      step1Store.moreImportantPile = moreImportantCards;
-      step1Store.lessImportantPile = lessImportantCards;
-      step1Store.deck = [];
-      step1Store.deckPosition = 12;
-      step1Store.stagingCard = null;
-      
-      // Notify React about the state change
-      (window as any)?.useStep1Store?.setState?.({
+    // Create the full deck for proper state
+    const fullDeck = [...moreImportantCards, ...lessImportantCards];
+
+    // Access the store directly and use proper Zustand pattern
+    const step1Store = (window as any)?.useStep1Store;
+    if (step1Store && step1Store.setState) {
+      // Use setState to properly update Zustand store
+      // CRITICAL: For canProceed = remainingCards === 0 && !stagingCard
+      // We need: deck.length - deckPosition === 0, so deckPosition === deck.length
+      step1Store.setState({
+        deck: fullDeck, // Full deck (16 cards)
+        deckPosition: fullDeck.length, // ALL cards processed (16)
+        stagingCard: null, // No card in staging (CRITICAL for canProceed)
         moreImportantPile: moreImportantCards,
         lessImportantPile: lessImportantCards,
-        deck: [],
-        deckPosition: 12,
-        stagingCard: null
+        isDragging: false,
+        draggedCardId: null,
+        showOverflowWarning: false,
+      });
+      
+      console.log('✅ Step 1 completion state injected:', {
+        moreImportant: moreImportantCards.length,
+        lessImportant: lessImportantCards.length,
+        deckLength: fullDeck.length,
+        deckPosition: fullDeck.length,
+        remainingCards: fullDeck.length - fullDeck.length, // Should be 0
+        stagingCard: null, // Should be null
+        canProceed: true // Both conditions met
+      });
+      
+      // Trigger test-only re-render hook
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('state-injection-complete'));
+      }, 10);
+    } else {
+      console.error('❌ Step1Store not found or setState not available');
+    }
+    
+    return { moreImportantCards, lessImportantCards, fullDeck };
+  },
+
+  /**
+   * Inject N-1 Step 1 state (cleaner approach)
+   * Injects 15 cards sorted, leaves 1 card for natural Playwright completion
+   * This triggers proper React re-renders through normal game flow
+   */
+  injectStep1Near90Completion: () => {
+    const cards = createTestCards(16);
+    
+    // Sort 15 cards with 7 more important, 8 less important
+    // Leave 1 card to be sorted naturally to "more" pile to get final 8/8 split
+    const moreImportantCards = cards.slice(0, 7).map(card => ({
+      ...card,
+      pile: 'more' as const
+    }));
+    
+    const lessImportantCards = cards.slice(7, 15).map(card => ({
+      ...card,
+      pile: 'less' as const
+    }));
+    
+    const remainingCard = cards[15]; // Last card stays in deck - will go to more pile
+    const fullDeck = [...moreImportantCards, ...lessImportantCards, remainingCard];
+
+    const step1Store = (window as any)?.useStep1Store;
+    if (step1Store && step1Store.setState) {
+      step1Store.setState({
+        deck: fullDeck,
+        deckPosition: 15, // 15 of 16 cards processed
+        stagingCard: null, // No card in staging
+        moreImportantPile: moreImportantCards, // 7 cards (will become 8 after natural completion)
+        lessImportantPile: lessImportantCards, // 8 cards (stays 8)
+        isDragging: false,
+        draggedCardId: null,
+        showOverflowWarning: false,
+      });
+      
+      console.log('✅ Step 1 N-1 state injected:', {
+        moreImportant: moreImportantCards.length, // 7, will become 8
+        lessImportant: lessImportantCards.length, // 8, stays 8
+        remainingCards: 1,
+        deckPosition: 15,
+        strategy: 'N-1 for natural completion'
       });
     }
     
-    return { moreImportantCards, lessImportantCards };
+    return { 
+      moreImportantCards, 
+      lessImportantCards, 
+      remainingCard,
+      finalMoreCount: 8, // After natural completion
+      finalLessCount: 8  // After natural completion
+    };
   },
 
   /**
