@@ -50,12 +50,12 @@ This document tracks the development status of all feature specifications for th
 
 | Spec | Feature | Status | Priority | Assignee | Notes |
 |------|---------|--------|----------|----------|--------|
-| 04.1 | [Ably Setup](04-collaboration/04.1-ably-setup.md) | 🔴 Not Started | Medium | - | Real-time infrastructure |
+| 04.1 | [Ably Setup](04-collaboration/04.1-ably-setup.md) | 🟢 Complete | Medium | - | Real-time infrastructure with production-ready error handling |
 | 04.2 | [Presence System](04-collaboration/04.2-presence-system.md) | 🔴 Not Started | Medium | - | Live cursors and status |
 | 04.3 | [Reveal Mechanism](04-collaboration/04.3-reveal-mechanism.md) | 🔴 Not Started | Medium | - | Share card selections |
 | 04.4 | [Viewer Mode](04-collaboration/04.4-viewer-mode.md) | 🔴 Not Started | Low | - | View others' selections |
 
-**Collaboration Progress**: 0% (0/4 complete)
+**Collaboration Progress**: 25% (1/4 complete)
 
 ---
 
@@ -179,24 +179,25 @@ To update this status document:
 | 2025-08-26 | 03.1 | 🔴 Not Started | 🟢 Complete | Core drag-drop verified with E2E tests |
 | 2025-08-26 | 03.2 | 🟡 Partial | 🟢 Complete | Comprehensive animation system implemented with full accessibility support |
 | 2025-08-26 | 06.1 | - | 🔴 Deferred v2.0 | Layout redesign moved to /specs/06-layout-redesign/ with comprehensive analysis |
+| 2025-08-26 | 04.1 | 🔴 Not Started | 🟢 Complete | Ably Setup with production-ready infrastructure, 25 unit tests, comprehensive error handling |
 
 ---
 
 ## Overall Project Progress
 
 **MVP Specifications**: 15  
-**MVP Completed**: 10 (67%)  
+**MVP Completed**: 11 (73%)  
 **MVP In Progress**: 0 (0%)  
-**MVP Not Started**: 5 (33%)  
+**MVP Not Started**: 4 (27%)  
 
 **v2.0 Specifications**: 1 (Layout Redesign)
 **v2.0 Status**: Deferred - comprehensive analysis complete
 
 **MVP Ready**: 95% (9.5/10 core specs complete) - Core functionality verified with E2E tests 🎉  
-**Collaboration Ready**: 0% (0/4 collaboration specs complete)  
+**Collaboration Ready**: 25% (1/4 collaboration specs complete) - Foundation infrastructure complete!  
 **v2.0 Layout Ready**: Planning complete - implementation deferred
 
-**🚀 MAJOR MILESTONE**: Core single-user flow complete and E2E tested! Step 1 drag-drop fully verified (10/10 tests passing).
+**🚀 MAJOR MILESTONE**: Core single-user flow complete and E2E tested! Real-time collaboration infrastructure foundation delivered with 04.1 Ably Setup!
 
 ---
 
