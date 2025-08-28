@@ -11,7 +11,7 @@ import { useSessionJoin } from '@/hooks/useSessionJoin';
 import { formatName } from '@/lib/utils/validation';
 
 export function LoginForm() {
-  const { data: storedData, updateField, clearData, isLoaded } = useSessionStorage();
+  const { data: storedData, updateField, isLoaded } = useSessionStorage();
   const [formData, setFormData] = useState({
     name: '',
     sessionCode: ''
@@ -59,7 +59,7 @@ export function LoginForm() {
     await joinOrCreateSession({
       name,
       sessionCode,
-      onSuccess: (code, participantName) => {
+      onSuccess: () => {
         // No need to clear form data - user is being redirected away
         // The session storage can be useful if user returns to login page
       },

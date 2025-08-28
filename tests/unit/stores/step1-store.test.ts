@@ -1,5 +1,5 @@
 import { useStep1Store } from '@/state/local/step1-store';
-import { DEV_DECK } from '@/lib/generated/card-decks';
+import { DEVELOPMENT_DECK } from '@/lib/generated/card-decks';
 
 describe('Step1Store', () => {
   beforeEach(() => {
@@ -40,7 +40,7 @@ describe('Step1Store', () => {
       state.initializeDeck();
       
       const newState = useStep1Store.getState();
-      expect(newState.deck).toHaveLength(DEV_DECK.length);
+      expect(newState.deck).toHaveLength(DEVELOPMENT_DECK.length);
       expect(newState.deckPosition).toBe(0);
       expect(newState.stagingCard).toBeNull();
       expect(newState.moreImportantPile).toEqual([]);
@@ -64,7 +64,7 @@ describe('Step1Store', () => {
 
     it('should shuffle cards from original order', () => {
       const state = useStep1Store.getState();
-      const originalOrder = DEV_DECK.map(def => def.value_name);
+      const originalOrder = DEVELOPMENT_DECK.map(def => def.value_name);
       
       state.initializeDeck();
       const shuffledOrder = useStep1Store.getState().deck.map(card => card.value_name);
@@ -279,7 +279,7 @@ describe('Step1Store', () => {
       state.resetStep1();
       
       const newState = useStep1Store.getState();
-      expect(newState.deck).toHaveLength(DEV_DECK.length);
+      expect(newState.deck).toHaveLength(DEVELOPMENT_DECK.length);
       expect(newState.deckPosition).toBe(0);
       expect(newState.stagingCard).toBeNull();
       expect(newState.moreImportantPile).toEqual([]);

@@ -47,7 +47,7 @@ const CardComponent = forwardRef<HTMLDivElement, CardProps>(({
       ref={ref}
       className={cn(
         "card", // Base card class for test selectors
-        "relative w-56 h-40 cursor-pointer select-none",
+        "relative w-64 h-40 cursor-pointer select-none",
         "bg-white rounded-xl shadow-lg border border-gray-200",
         "transition-shadow duration-200",
         "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50",
@@ -76,12 +76,12 @@ const CardComponent = forwardRef<HTMLDivElement, CardProps>(({
         // Front of card (value and description)
         <div className="p-4 h-full flex flex-col">
           <div className="text-center mb-2">
-            <h3 className="text-base font-bold text-gray-900 leading-tight">
+            <h3 className="text-lg font-bold text-gray-900 leading-tight">
               {card.value_name.replace(/_/g, ' ')}
             </h3>
           </div>
           <div className="flex-1 flex items-center">
-            <p className="text-xs text-gray-600 text-center leading-relaxed">
+            <p className="text-sm text-gray-600 text-center leading-relaxed">
               {card.description}
             </p>
           </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { DeckSpinAnimation } from '@/components/animations/DeckSpinAnimation';
 
@@ -10,10 +9,8 @@ interface WelcomeScreenProps {
   sessionCode: string;
 }
 
-export function WelcomeScreen({ participantName, sessionCode }: WelcomeScreenProps) {
-  const [showAnimation, setShowAnimation] = useState(true);
+export function WelcomeScreen({ participantName }: WelcomeScreenProps) {
   const [animationComplete, setAnimationComplete] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     // Animation completes after 2 seconds

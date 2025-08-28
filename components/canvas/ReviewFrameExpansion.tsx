@@ -25,7 +25,6 @@ interface ReviewFrameExpansionProps {
 export function ReviewFrameExpansion({
   isExpanded,
   cards,
-  onCardReorder,
   className = '',
 }: ReviewFrameExpansionProps) {
   const { controls, expandFrame, collapseFrame } = useFrameExpansionAnimation();

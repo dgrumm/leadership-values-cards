@@ -4,7 +4,7 @@
  */
 
 import { Card } from '@/lib/types/card';
-import { DEV_DECK } from '@/lib/generated/card-decks';
+import { DEVELOPMENT_DECK } from '@/lib/generated/card-decks';
 
 function createCardFromDefinition(definition: { value_name: string; description: string }, index: number): Card {
   return {
@@ -17,7 +17,7 @@ function createCardFromDefinition(definition: { value_name: string; description:
 }
 
 // Create consistent card set for testing (no randomization)
-const TEST_CARDS = DEV_DECK.slice(0, 16).map((def, index) => 
+const TEST_CARDS = DEVELOPMENT_DECK.slice(0, 16).map((def, index) => 
   createCardFromDefinition(def, index)
 );
 

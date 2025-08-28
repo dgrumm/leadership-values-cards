@@ -19,7 +19,6 @@ export function ConnectionStatus({
     connectionState,
     isOnline,
     isConnecting,
-    isOffline,
     hasError,
     lastConnectedAt,
     reconnectAttempts,
@@ -101,7 +100,7 @@ export function ConnectionStatus({
 
 // Floating connection indicator (for showing in corner of app)
 export function FloatingConnectionStatus({ className }: { className?: string }) {
-  const { isOnline, isConnecting, hasError } = useAblyConnectionStatus();
+  const { isOnline } = useAblyConnectionStatus();
   const [isVisible, setIsVisible] = useState(true);
 
   // Auto-hide when connected after a delay
@@ -162,7 +161,7 @@ export function ConnectionErrorBanner() {
             </div>
           ) : (
             <p className="text-sm text-red-600">
-              Your card sorting will continue to work offline, but you won't see updates from other participants until the connection is restored.
+              Your card sorting will continue to work offline, but you won&apos;t see updates from other participants until the connection is restored.
             </p>
           )}
         </div>

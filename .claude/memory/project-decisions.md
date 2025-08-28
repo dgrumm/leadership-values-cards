@@ -2,6 +2,42 @@
 
 Initial decisions to remember:
 
+## 2025-08-28 - 05-4-card-proportions
+
+**Spec**: 05.4 Card Proportions  
+**Status**: ✅ **COMPLETE** - Bridge Card Landscape Proportions Implemented
+
+**Implementation Decision**: Updated card dimensions from w-56 h-40 (1.4:1) to w-64 h-40 (1.6:1) to match Bridge card landscape proportions, improving visual appeal and text readability.
+
+### **Key Changes Delivered**:
+- **Card.tsx**: Updated base card dimensions and font sizes (text-base→text-lg for titles, text-xs→text-sm for descriptions)
+- **Layout Containers**: Updated all deck/staging containers in Step1/2/3 pages and component files
+- **Drop Zone Calculations**: Updated cardWidth from `56 * 4 * 0.9` to `64 * 4 * 0.9` for proper positioning
+- **StagingArea Animation**: Updated 3D flip animation offset from -232px to -264px for new deck width
+- **Test Updates**: Updated all test expectations for new 1.6:1 aspect ratio
+
+### **Visual Benefits**:
+1. **Better Proportions**: 1.6:1 ratio closely matches Bridge cards (1.56:1) for familiar feel
+2. **Improved Readability**: Additional 32px width allows larger fonts and better text layout
+3. **Professional Appearance**: More standard playing card proportions enhance credibility
+4. **Enhanced Stacking**: Value names remain visible when cards are stacked in drop zones
+
+### **Implementation Details**:
+- **Font Scaling**: Utilized extra width with larger text sizes for better readability
+- **Animation Compatibility**: DeckSpinAnimation already used w-64, no changes needed
+- **Positioning Updates**: All card positioning algorithms automatically adjusted
+- **Test Coverage**: Updated 3 test files with new dimension expectations
+
+### **Files Modified**: 11 total
+- Core: Card.tsx, Deck.tsx, StagingArea.tsx, DropZone.tsx
+- Layout: Step1Page.tsx, Step2Page.tsx, Step3Page.tsx
+- Tests: Card.test.ts, DropZone.test.ts, StagingArea.test.ts
+- Docs: project-decisions.md
+
+### **Status**: ✅ Complete - All cards now have professional Bridge card proportions with enhanced readability
+
+---
+
 ## 2025-08-26 - 04-1-ably-setup
 
 **Spec**: 04.1 Ably Setup  
@@ -406,7 +442,7 @@ app/api/sessions/route.ts       # Enhanced with atomic join-or-create endpoint
 
 ### Implementation Decisions
 - **Enhanced Drop Zones**: Increased height to 28rem (448px) with scrollable overflow for better card visibility
-- **Fixed Layout Architecture**: Both deck and staging area use fixed-size containers (w-56 h-40) to prevent layout shifts
+- **Fixed Layout Architecture**: Both deck and staging area use fixed-size containers (w-64 h-40) to prevent layout shifts
 - **Advanced 3D Flip Animation**: Card flips from deck center (-232px offset) to staging area with arc motion and spring physics
 - **Optimized Card Scaling**: Drop zone cards scaled to 90% (vs 70%) with updated positioning algorithms for better readability
 - **Sophisticated Animation System**: 500ms spring animations with rotateY/rotateX transforms and enhanced shadow effects
@@ -414,7 +450,7 @@ app/api/sessions/route.ts       # Enhanced with atomic join-or-create endpoint
 ### Architecture Components
 ```
 components/cards/
-├── Card.tsx                    # Landscape orientation (w-56 h-40) with enhanced styling
+├── Card.tsx                    # Landscape orientation (w-64 h-40) with enhanced styling
 ├── Deck.tsx                    # Fixed container with visual deck diminishing
 ├── StagingArea.tsx             # 3D flip animation from deck center with DraggableCard integration
 ├── DropZone.tsx               # Scrollable zones with 90% card scaling and optimized positioning
@@ -428,7 +464,7 @@ state/local/step1-store.ts     # Zustand state management for deck, staging, and
 ```
 
 ### Key Implementation Details
-- **Layout Stability**: Fixed containers (w-56 h-40) for deck and staging prevent visual shifts during card flipping
+- **Layout Stability**: Fixed containers (w-64 h-40) for deck and staging prevent visual shifts during card flipping
 - **3D Animation Physics**: Arc movement with rotateY (-180° to 0°), rotateX (-20° to 0°), and spring timing (stiffness: 260, damping: 20)  
 - **Card Positioning Algorithm**: Updated for 90% scale with optimized spacing (cardWidth * 0.4 + 12px spacing)
 - **Drop Zone Height**: 28rem (448px) provides ample space with scrollable overflow-y-auto

@@ -4,7 +4,7 @@
  */
 
 import { Card } from '@/lib/types/card';
-import { DEV_DECK } from '@/lib/generated/card-decks';
+import { DEVELOPMENT_DECK } from '@/lib/generated/card-decks';
 
 /**
  * Create test cards from the development deck
@@ -12,8 +12,8 @@ import { DEV_DECK } from '@/lib/generated/card-decks';
 export function createTestCards(count: number, startIndex = 0): Card[] {
   const cards: Card[] = [];
   for (let i = 0; i < count; i++) {
-    const deckIndex = (startIndex + i) % DEV_DECK.length;
-    const definition = DEV_DECK[deckIndex];
+    const deckIndex = (startIndex + i) % DEVELOPMENT_DECK.length;
+    const definition = DEVELOPMENT_DECK[deckIndex];
     cards.push({
       id: `test-card-${startIndex + i}`,
       value_name: definition.value_name,
@@ -32,10 +32,10 @@ export function createTestCards(count: number, startIndex = 0): Card[] {
 export const StateInjectionUtils = {
   /**
    * Inject Step 1 completion state (8 more important, 8 less important)
-   * Uses 16 cards total to match DEV_DECK and enable Step 2 button
+   * Uses 16 cards total to match DEVELOPMENT_DECK and enable Step 2 button
    */
   injectStep1Completion: () => {
-    const cards = createTestCards(16); // Use 16 cards to match DEV_DECK
+    const cards = createTestCards(16); // Use 16 cards to match DEVELOPMENT_DECK
     
     const moreImportantCards = cards.slice(0, 8).map(card => ({
       ...card,

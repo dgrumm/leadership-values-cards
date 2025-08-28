@@ -26,12 +26,12 @@ describe('StagingArea Component', () => {
   it('should maintain landscape dimensions for consistency', () => {
     // Staging area should match card dimensions (landscape)
     const stagingDimensions = {
-      width: 56, // w-56
+      width: 64, // w-64
       height: 40  // h-40
     };
     
     expect(stagingDimensions.width).toBeGreaterThan(stagingDimensions.height);
-    expect(stagingDimensions.width).toBe(56);
+    expect(stagingDimensions.width).toBe(64);
     expect(stagingDimensions.height).toBe(40);
   });
 });

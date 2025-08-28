@@ -3,7 +3,7 @@
  * Includes error recovery, performance monitoring, and debug tools
  */
 
-import { ANIMATION_TIMINGS, PERFORMANCE, DEBUG_CONFIG, A11Y_CONFIG } from './constants';
+import { PERFORMANCE, DEBUG_CONFIG, A11Y_CONFIG } from './constants';
 
 /**
  * Animation state management for error recovery
@@ -305,7 +305,7 @@ export const performanceMonitor = new PerformanceMonitor();
 export function setupAnimationDebugging() {
   if (DEBUG_CONFIG.enabled && typeof window !== 'undefined') {
     // Add debug commands to window for console access
-    (window as any).animationDebug = {
+    (window as unknown as { animationDebug: Record<string, unknown> }).animationDebug = {
       ...debugUtils,
       controller: animationController,
       monitor: performanceMonitor,

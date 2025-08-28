@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CardDefinition } from './types/card';
-import { DeckValidator, ValidationResult } from './validation/deck-validation';
+import { DeckValidator } from './validation/deck-validation';
 
 export interface CSVValidationError {
   row: number;

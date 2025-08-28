@@ -87,7 +87,7 @@ export async function DELETE(
     try {
       const body = await request.json();
       participantId = body.participantId;
-    } catch (jsonError) {
+    } catch {
       // Handle empty or malformed JSON body
       return NextResponse.json({
         error: 'Request body must contain participantId'

@@ -308,7 +308,7 @@ Respect,"Showing consideration and appreciation for others"
 #### Deck Configuration
 - **File Loading**: Load CSV at application build/startup via make command
 - **Multiple Decks**: Support different CSV files selected at build time:
-  - `dev.csv` (16 cards for testing)
+  - `development.csv` (16 cards for testing)
   - `professional.csv` (40 cards standard)
   - `extended.csv` (72 cards comprehensive)
 - **Shuffle Algorithm**: Fisher-Yates shuffle on session start

@@ -106,7 +106,7 @@ export function Step2Modal({
                 </div>
                 
                 <div className="text-sm text-gray-600">
-                  <strong>Click the deck</strong> to flip cards from your "More Important" pile, then sort them into two new piles.
+                  <strong>Click the deck</strong> to flip cards from your &quot;More Important&quot; pile, then sort them into two new piles.
                 </div>
                 
                 <div className="text-sm text-gray-600">
@@ -122,7 +122,7 @@ export function Step2Modal({
                 </div>
 
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-3 text-sm text-blue-800">
-                  <strong>Tip:</strong> Consider which values you couldn't lead without
+                  <strong>Tip:</strong> Consider which values you couldn&apos;t lead without
                 </div>
 
                 {/* Dynamic progress counts */}

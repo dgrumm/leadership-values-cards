@@ -59,15 +59,16 @@ This document tracks the development status of all feature specifications for th
 
 ---
 
-## 05. Export & Polish (3/3 specs)
+## 05. Export & Polish (4/4 specs)
 
 | Spec | Feature | Status | Priority | Assignee | Notes |
 |------|---------|--------|----------|----------|--------|
 | 05.1 | [Snapshot Export](05-export-polish/05.1-snapshot-export.md) | 🔴 Not Started | Low | - | JPG/PNG/PDF export |
 | 05.2 | [Error Handling](05-export-polish/05.2-error-handling.md) | 🔴 Not Started | High | - | Comprehensive error management |
 | 05.3 | [Session Timeout](05-export-polish/05.3-session-timeout.md) | 🔴 Not Started | Medium | - | 60-minute timeout system |
+| 05.4 | [Card Proportions](05-export-polish/05.4-card-proportions.md) | 🟢 Complete | Medium | - | Bridge card dimensions with enhanced readability |
 
-**Export & Polish Progress**: 0% (0/3 complete)
+**Export & Polish Progress**: 25% (1/4 complete)
 
 ---
 
@@ -185,10 +186,10 @@ To update this status document:
 
 ## Overall Project Progress
 
-**MVP Specifications**: 15  
-**MVP Completed**: 11 (73%)  
+**MVP Specifications**: 16  
+**MVP Completed**: 12 (75%)  
 **MVP In Progress**: 0 (0%)  
-**MVP Not Started**: 4 (27%)  
+**MVP Not Started**: 4 (25%)  
 
 **v2.0 Specifications**: 1 (Layout Redesign)
 **v2.0 Status**: Deferred - comprehensive analysis complete

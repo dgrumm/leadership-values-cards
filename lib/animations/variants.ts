@@ -3,7 +3,7 @@
  * Organized by component type and interaction patterns
  */
 
-import { Variants, Transition } from 'framer-motion';
+import { Variants } from 'framer-motion';
 import { ANIMATION_TIMINGS, EASING } from './constants';
 
 /**

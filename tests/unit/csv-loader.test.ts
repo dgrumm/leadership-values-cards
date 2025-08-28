@@ -181,8 +181,8 @@ Leadership,"Description 3"`;
 
   describe('getAvailableDecks', () => {
     it('should return available deck types', () => {
-      mockFs.existsSync.mockImplementation((filePath: string) => {
-        return filePath.includes('dev.csv') || filePath.includes('professional.csv');
+      mockFs.existsSync.mockImplementation((filePath: fs.PathLike) => {
+        return String(filePath).includes('development.csv') || String(filePath).includes('professional.csv');
       });
 
       const result = CSVLoader.getAvailableDecks();

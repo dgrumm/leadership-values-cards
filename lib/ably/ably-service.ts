@@ -28,7 +28,7 @@ export type PresenceMessage =
   | { type: 'presence-update'; data: { participantId: string; status: string; timestamp: number } };
 
 export type RevealsMessage = 
-  | { type: 'reveal-cards'; data: { participantId: string; step: number; cards: any[]; arrangement: any } };
+  | { type: 'reveal-cards'; data: { participantId: string; step: number; cards: unknown[]; arrangement: unknown } };
 
 export type ViewersMessage = 
   | { type: 'viewer-joined'; data: { viewerId: string; targetParticipantId: string } }
@@ -41,13 +41,13 @@ export type AblyMessage = SessionMessage | PresenceMessage | RevealsMessage | Vi
 
 // Throttling and debouncing utilities
 class MessageHandler {
-  private throttledCallbacks = new Map<string, (...args: any[]) => void>();
-  private debouncedCallbacks = new Map<string, (...args: any[]) => void>();
+  private throttledCallbacks = new Map<string, (...args: unknown[]) => void>();
+  private debouncedCallbacks = new Map<string, (...args: unknown[]) => void>();
 
-  throttle(key: string, func: (...args: any[]) => void, limit: number): (...args: any[]) => void {
+  throttle(key: string, func: (...args: unknown[]) => void, limit: number): (...args: unknown[]) => void {
     if (!this.throttledCallbacks.has(key)) {
       let inThrottle = false;
-      const throttledFunc = (...args: any[]) => {
+      const throttledFunc = (...args: unknown[]) => {
         if (!inThrottle) {
           func.apply(this, args);
           inThrottle = true;
@@ -59,10 +59,10 @@ class MessageHandler {
     return this.throttledCallbacks.get(key)!;
   }
 
-  debounce(key: string, func: (...args: any[]) => void, delay: number): (...args: any[]) => void {
+  debounce(key: string, func: (...args: unknown[]) => void, delay: number): (...args: unknown[]) => void {
     if (!this.debouncedCallbacks.has(key)) {
       let timeoutId: NodeJS.Timeout;
-      const debouncedFunc = (...args: any[]) => {
+      const debouncedFunc = (...args: unknown[]) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func.apply(this, args), delay);
       };
@@ -141,7 +141,7 @@ export class AblyService {
         };
 
         // Handle connection failure
-        const handleFailed = (error: any) => {
+        const handleFailed = (error: unknown) => {
           clearTimeout(timeout);
           reject(new Error(`Ably connection failed: ${error?.message || 'Unknown error'}`));
         };
@@ -166,8 +166,8 @@ export class AblyService {
         // Clean up on both success and failure
         const originalResolve = resolve;
         const originalReject = reject;
-        resolve = (...args) => { cleanup(); originalResolve(...args); };
-        reject = (...args) => { cleanup(); originalReject(...args); };
+        resolve = (...args: unknown[]) => { cleanup(); originalResolve(...args); };
+        reject = (...args: unknown[]) => { cleanup(); originalReject(...args); };
       });
 
     } catch (error) {
@@ -282,7 +282,7 @@ export class AblyService {
   }
 
   // Debounced card position updates (200ms delay)
-  publishCardPositions(sessionCode: string, data: any): void {
+  publishCardPositions(sessionCode: string, data: unknown): void {
     const debouncedPublish = this.messageHandler.debounce(
       `cards-${sessionCode}`,
       () => {
@@ -309,7 +309,7 @@ export class AblyService {
   ): () => void {
     const channel = this.getChannel(sessionCode, channelType);
     
-    const listener = (message: { name: string; data: any }) => {
+    const listener = (message: { name: string; data: unknown }) => {
       if (message.name === messageType) {
         callback({ type: messageType, data: message.data } as T);
       }
@@ -327,7 +327,7 @@ export class AblyService {
   subscribeAll(
     sessionCode: string, 
     channelType: ChannelType, 
-    callback: (message: { name: string; data: any }) => void
+    callback: (message: { name: string; data: unknown }) => void
   ): () => void {
     const channel = this.getChannel(sessionCode, channelType);
     channel.subscribe(callback);

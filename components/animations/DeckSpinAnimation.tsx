@@ -55,7 +55,7 @@ export function DeckSpinAnimation({ participantName, onComplete }: DeckSpinAnima
                 </span>
               </div>
               <h3 className="text-lg font-semibold text-gray-800 text-center">
-                {participantName}'s
+                {participantName}&apos;s
               </h3>
               <p className="text-sm text-gray-600 text-center mt-1">
                 Leadership Values

@@ -8,7 +8,7 @@ describe('DropZone Component', () => {
   describe('Card positioning algorithm', () => {
     // Simulate the getCardPosition function from DropZone
     const getCardPosition = (index: number, containerWidth: number = 400, containerHeight: number = 256) => {
-      const cardWidth = 56 * 4 * 0.7; // w-56 * scale 0.7 in rem -> px
+      const cardWidth = 64 * 4 * 0.7; // w-64 * scale 0.7 in rem -> px
       const cardHeight = 40 * 4 * 0.7; // h-40 * scale 0.7 in rem -> px
       const cardSpacing = 20; // spacing between cards
       const cardsPerRow = Math.floor((containerWidth - cardWidth) / (cardWidth * 0.3)) || 1; // overlap factor

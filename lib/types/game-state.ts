@@ -73,7 +73,7 @@ export interface GameProgress {
 export interface GameAction {
   type: GameActionType;
   participantName: string;
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: string;
   sessionCode: string;
 }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: any) => void;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 interface State {
@@ -28,7 +28,7 @@ export class DragErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Drag operation error caught by boundary:', error, errorInfo);
     
     // Report to error tracking service if available

@@ -29,7 +29,7 @@ export const Deck = forwardRef<HTMLButtonElement, DeckProps>(function Deck({
   
   if (isEmpty) {
     return (
-      <div className={cn("relative w-56 h-40", className)}>
+      <div className={cn("relative w-64 h-40", className)}>
         <motion.div
           className={cn(
             "w-full h-full rounded-xl border-2 border-dashed border-gray-300",
@@ -49,13 +49,13 @@ export const Deck = forwardRef<HTMLButtonElement, DeckProps>(function Deck({
   }
   
   return (
-    <div className={cn("relative w-56 h-40", className)}>
+    <div className={cn("relative w-64 h-40", className)}>
       {/* Stack of cards behind for depth effect */}
       {Array.from({ length: stackCards }, (_, i) => (
         <motion.div
           key={i}
           className={cn(
-            "absolute w-56 h-40 bg-gradient-to-br from-blue-600 to-purple-700",
+            "absolute w-64 h-40 bg-gradient-to-br from-blue-600 to-purple-700",
             "rounded-xl shadow-md border border-blue-500",
             disabled && "opacity-60"
           )}
@@ -72,7 +72,7 @@ export const Deck = forwardRef<HTMLButtonElement, DeckProps>(function Deck({
       <motion.button
         ref={ref}
         className={cn(
-          "relative w-56 h-40 bg-gradient-to-br from-blue-600 to-purple-700",
+          "relative w-64 h-40 bg-gradient-to-br from-blue-600 to-purple-700",
           "rounded-xl shadow-lg border border-blue-500",
           "flex items-center justify-center text-white cursor-pointer select-none",
           "transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300",

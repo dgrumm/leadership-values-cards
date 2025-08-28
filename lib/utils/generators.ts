@@ -18,7 +18,7 @@ export function generateSessionCode(): string {
       for (let i = 0; i < SESSION_CODE_LENGTH; i++) {
         array[i] = bytes[i];
       }
-    } catch (error) {
+    } catch {
       throw new Error('Node.js crypto module not available for secure random generation');
     }
   }

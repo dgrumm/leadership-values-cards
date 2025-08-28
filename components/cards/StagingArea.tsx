@@ -1,14 +1,13 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo, useCallback, forwardRef } from 'react';
+import { useMemo, forwardRef } from 'react';
 import { DraggableCard } from './DraggableCard';
 import { Card as CardType } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
 
 interface StagingAreaProps {
   card: CardType | null;
-  isDragging?: boolean;
   className?: string;
   'data-testid'?: string;
   // Accessibility props
@@ -20,7 +19,6 @@ interface StagingAreaProps {
 
 export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function StagingArea({ 
   card, 
-  isDragging = false, 
   className,
   'data-testid': dataTestId,
   tabIndex,
@@ -31,7 +29,7 @@ export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function
   // Memoize animation configurations to prevent recreation on every render
   const animationConfig = useMemo(() => ({
     initial: { 
-      x: -232,  // Start from deck center (deck width + gap = 56*4 + 32 = 256px, so -232 to center)
+      x: -264,  // Start from deck center (deck width + gap = 64*4 + 32 = 288px, so -264 to center)
       y: 0,     // Same level as staging area
       rotateY: -180,  // Start with back facing
       rotateX: -20,   // Slight tilt for 3D effect
@@ -83,7 +81,7 @@ export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function
   return (
     <div 
       ref={ref}
-      className={cn("relative w-56 h-40", className)}
+      className={cn("relative w-64 h-40", className)}
       data-testid={dataTestId}
       tabIndex={tabIndex}
       role={role || "region"}
