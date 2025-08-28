@@ -27,9 +27,14 @@ export default function CanvasPage() {
     if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.PLAYWRIGHT_TEST === 'true')) {
       // Import and expose test utilities
       import('@/lib/test-utils/browser-globals').then(() => {
-        (window as any).useStep1Store = useStep1Store;
-        (window as any).useStep2Store = useStep2Store;
-        (window as any).useStep3Store = useStep3Store;
+        const testWindow = window as typeof window & {
+          useStep1Store: typeof useStep1Store;
+          useStep2Store: typeof useStep2Store;
+          useStep3Store: typeof useStep3Store;
+        };
+        testWindow.useStep1Store = useStep1Store;
+        testWindow.useStep2Store = useStep2Store;
+        testWindow.useStep3Store = useStep3Store;
         console.log('🧪 Test utilities exposed for E2E testing');
       });
     }

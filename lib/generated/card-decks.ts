@@ -1,5 +1,5 @@
 // Generated at build time - DO NOT EDIT
-// Generated on: 2025-08-28T18:09:29.226Z
+// Generated on: 2025-08-28T18:51:52.541Z
 
 import { CardDefinition } from '../types/card';
 

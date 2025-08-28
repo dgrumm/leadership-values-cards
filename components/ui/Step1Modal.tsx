@@ -81,7 +81,7 @@ export function Step1Modal({
                 </div>
                 
                 <div className="text-sm text-gray-600">
-                  <strong>Click the deck</strong> to flip a card, then drag it to "Most Important" or "Less Important".
+                  <strong>Click the deck</strong> to flip a card, then drag it to &quot;Most Important&quot; or &quot;Less Important&quot;.
                 </div>
                 
                 <div className="text-sm text-gray-600">

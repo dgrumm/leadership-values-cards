@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, DragCancelEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStep3Store } from '@/state/local/step3-store';
 import { Deck } from '@/components/cards/Deck';
@@ -54,8 +54,6 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
     discardedPile,
     showOverflowWarning,
     isTransitioning,
-    transitionPhase,
-    initializeFromStep2,
     startTransition,
     flipNextCard,
     moveCardToPile,
@@ -88,7 +86,8 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
       setTimeout(() => setShowModal(true), 200);
     };
     initializeStep3();
-  }, []); // Run only once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, []); // Run only once on mount - intentionally omitting dependencies
 
   const remainingCards = deck.length - deckPosition;
   const canProceed = remainingCards === 0 && !stagingCard && top3Pile.length === 3;
@@ -199,13 +198,13 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
   };
 
   // Enhanced bounce animation for final step overflow
-  const triggerEnhancedBounceAnimation = () => {
+  const triggerEnhancedBounceAnimation = useCallback(() => {
     setBounceAnimation(true);
     showOverflowWarningMessage();
     setTimeout(() => {
       setBounceAnimation(false);
     }, 400); // Match spec: 400ms elastic bounce
-  };
+  }, [showOverflowWarningMessage]);
 
   // Debounced card movement for better performance
   const debouncedMoveCardToPile = useMemo(
@@ -301,7 +300,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
   }, [top3Pile.length, debouncedMoveCardToPile, debouncedMoveCardBetweenPiles, triggerEnhancedBounceAnimation, clearDragState]);
 
   // Handle drag cancellation
-  const handleDragCancel = useCallback((event: DragCancelEvent) => {
+  const handleDragCancel = useCallback(() => {
     clearDragState();
   }, [clearDragState]);
 
@@ -400,7 +399,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
             >
               <div className="text-center">
                 <div className="text-2xl font-bold mb-2">🎉 Excellent!</div>
-                <div className="text-lg">You've identified your top 3 leadership values!</div>
+                <div className="text-lg">You&apos;ve identified your top 3 leadership values!</div>
               </div>
             </motion.div>
           </motion.div>
@@ -598,7 +597,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
               <div>Top 3: {top3Pile.length}/3 • Cards sorted: {totalSortedCards} / {deck.length}</div>
               {stagingCard && (
                 <div className="text-amber-600 font-medium mt-1">
-                  Sort the "{stagingCard.value_name.replace(/_/g, ' ')}" card
+                  Sort the &quot;{stagingCard.value_name.replace(/_/g, ' ')}&quot; card
                 </div>
               )}
               {getValidationMessage() && (

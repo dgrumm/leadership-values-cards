@@ -19,8 +19,6 @@ interface SessionHeaderProps {
 }
 
 export function SessionHeader({ 
-  sessionCode, 
-  participantName, 
   currentStep, 
   totalSteps, 
   participantCount,

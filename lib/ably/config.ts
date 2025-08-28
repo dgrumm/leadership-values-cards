@@ -157,7 +157,7 @@ export class ConnectionQualityMonitor {
     }
   }
 
-  async pingAbly(client: any): Promise<number> {
+  async pingAbly(client: { connection: { ping: () => Promise<void> } }): Promise<number> {
     const startTime = Date.now();
     this.lastPingTime = startTime;
     
@@ -199,7 +199,7 @@ export interface AblyError {
   retryAfter?: number;
 }
 
-export function classifyAblyError(error: any): AblyError {
+export function classifyAblyError(error: unknown): AblyError {
   if (!error) {
     return {
       type: AblyErrorType.UNKNOWN,
@@ -209,8 +209,8 @@ export function classifyAblyError(error: any): AblyError {
   }
 
   // Ably errors have a code property
-  const code = error.code || error.statusCode;
-  const message = error.message || 'Unknown error';
+  const code = (error as { code?: number; statusCode?: number }).code || (error as { code?: number; statusCode?: number }).statusCode;
+  const message = (error as { message?: string }).message || 'Unknown error';
 
   // Common Ably error codes
   switch (code) {

@@ -1,14 +1,13 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo, useCallback, forwardRef } from 'react';
+import { useMemo, forwardRef } from 'react';
 import { DraggableCard } from './DraggableCard';
 import { Card as CardType } from '@/lib/types/card';
 import { cn } from '@/lib/utils';
 
 interface StagingAreaProps {
   card: CardType | null;
-  isDragging?: boolean;
   className?: string;
   'data-testid'?: string;
   // Accessibility props
@@ -20,7 +19,6 @@ interface StagingAreaProps {
 
 export const StagingArea = forwardRef<HTMLDivElement, StagingAreaProps>(function StagingArea({ 
   card, 
-  isDragging = false, 
   className,
   'data-testid': dataTestId,
   tabIndex,

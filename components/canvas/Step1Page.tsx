@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, DragCancelEvent, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import { useStep1Store } from '@/state/local/step1-store';
 import { Deck } from '@/components/cards/Deck';
@@ -11,7 +11,7 @@ import { DraggableCard } from '@/components/cards/DraggableCard';
 import { Step1Modal } from '@/components/ui/Step1Modal';
 import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
-import { cn } from '@/lib/utils';
+import { Card as CardType } from '@/lib/types/card';
 
 interface Step1PageProps {
   sessionCode: string;
@@ -23,7 +23,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
   const [showModal, setShowModal] = useState(true);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [activeCard, setActiveCard] = useState<any>(null);
+  const [activeCard, setActiveCard] = useState<CardType | null>(null);
   
   const {
     deck,
@@ -193,7 +193,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
     }
   };
 
-  const handleDragCancel = (event: DragCancelEvent) => {
+  const handleDragCancel = () => {
     clearDragState();
   };
 
@@ -278,7 +278,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
               <div>Cards sorted: {totalSortedCards} / {deck.length}</div>
               {stagingCard && (
                 <div className="text-blue-600 font-medium mt-1">
-                  Sort the "{stagingCard.value_name.replace(/_/g, ' ')}" card
+                  Sort the &quot;{stagingCard.value_name.replace(/_/g, ' ')}&quot; card
                 </div>
               )}
             </div>

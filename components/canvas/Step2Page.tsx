@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, DragCancelEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStep2Store } from '@/state/local/step2-store';
 import { Deck } from '@/components/cards/Deck';
@@ -49,8 +49,6 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
     discardedPile,
     showOverflowWarning,
     isTransitioning,
-    transitionPhase,
-    initializeFromStep1,
     startTransition,
     flipNextCard,
     moveCardToPile,
@@ -79,7 +77,8 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
       setTimeout(() => setShowModal(true), 200);
     };
     initializeStep2();
-  }, []); // Run only once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount - intentionally omitting dependencies
 
   // Error recovery: ESC key cancellation
   useEffect(() => {
@@ -280,7 +279,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   };
 
   // Handle drag cancellation
-  const handleDragCancel = (event: DragCancelEvent) => {
+  const handleDragCancel = () => {
     clearDragState();
   };
 
@@ -551,7 +550,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
               <div>Top 8: {top8Pile.length}/8 • Cards sorted: {totalSortedCards} / {deck.length}</div>
               {stagingCard && (
                 <div className="text-blue-600 font-medium mt-1">
-                  Sort the "{stagingCard.value_name.replace(/_/g, ' ')}" card
+                  Sort the &quot;{stagingCard.value_name.replace(/_/g, ' ')}&quot; card
                 </div>
               )}
               {getValidationMessage() && (

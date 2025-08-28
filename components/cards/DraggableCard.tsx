@@ -36,7 +36,7 @@ export function DraggableCard({ card, isInStaging = false, pile }: DraggableCard
   });
 
   // Touch event handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = () => {
     setIsTouch(true);
     longPressRef.current = false;
     
@@ -58,7 +58,7 @@ export function DraggableCard({ card, isInStaging = false, pile }: DraggableCard
     longPressRef.current = false;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = () => {
     if (!longPressRef.current) {
       if (touchTimeoutRef.current) {
         clearTimeout(touchTimeoutRef.current);

@@ -10,13 +10,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePileTransitionAnimation } from '../../hooks/useAnimations';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { animationController } from '../../lib/animations/utils';
-import { ANIMATION_TIMINGS } from '../../lib/animations/constants';
 import { buttonVariants, modalVariants } from '../../lib/animations/variants';
 
 interface StepTransitionManagerProps {
   currentStep: number;
   onStepComplete: (step: number) => void;
-  lessImportantCards: string[];
   moreImportantCards: string[];
   top8Cards: string[];
   children: React.ReactNode;
@@ -25,7 +23,6 @@ interface StepTransitionManagerProps {
 export function StepTransitionManager({
   currentStep,
   onStepComplete,
-  lessImportantCards,
   moreImportantCards,
   top8Cards,
   children,

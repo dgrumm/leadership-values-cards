@@ -40,7 +40,7 @@ export async function generateUniqueSessionCode(): Promise<string> {
       
       // If session exists, try again
       continue;
-    } catch (error) {
+    } catch {
       // Network error - assume code is available
       return code;
     }
