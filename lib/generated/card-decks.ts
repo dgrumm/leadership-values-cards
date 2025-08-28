@@ -1,77 +1,61 @@
 // Generated at build time - DO NOT EDIT
-// Generated on: 2025-08-28T17:41:18.110Z
+// Generated on: 2025-08-28T18:09:29.226Z
 
 import { CardDefinition } from '../types/card';
 
-export type DeckType = 'dev' | 'professional' | 'extended' | 'development';
+export type DeckType = 'development' | 'professional' | 'extended';
 
-export const AVAILABLE_DECKS: DeckType[] = ['dev', 'professional', 'extended', 'development'];
+export const AVAILABLE_DECKS: DeckType[] = ['development', 'professional', 'extended'];
 
 
-export const DEV_DECK: CardDefinition[] = [
+export const DEVELOPMENT_DECK: CardDefinition[] = [
   {
-    "value_name": "Trust",
-    "description": "Firm reliance on the integrity, ability, or character of a person or thing"
+    "value_name": "Caffeine",
+    "description": "The fundamental belief that productivity is directly proportional to coffee consumption"
   },
   {
-    "value_name": "Teamwork",
-    "description": "Cooperative effort by a group or team"
+    "value_name": "Snacks",
+    "description": "Commitment to maintaining strategic reserves of treats for optimal team morale"
   },
   {
-    "value_name": "Commitment",
-    "description": "Being bound emotionally or intellectually to a course of action"
+    "value_name": "Muting",
+    "description": "The discipline to silence oneself before dogs, children, or doorbells interrupt meetings"
   },
   {
-    "value_name": "Balance",
-    "description": "Balancing time and effort between work, home, and hobbies"
-  },
-  {
-    "value_name": "Integrity",
-    "description": "Words and deeds match up - being consistent regardless of context"
-  },
-  {
-    "value_name": "Empathy",
-    "description": "Understanding and sharing the feelings of others, showing compassion"
-  },
-  {
-    "value_name": "Growth",
-    "description": "Investing in lifelong learning, personal development, and self-education"
-  },
-  {
-    "value_name": "Accountability",
-    "description": "Taking responsibility for both actions and outcomes"
-  },
-  {
-    "value_name": "Innovation",
-    "description": "Thinking outside the box and trying new ways to accomplish goals"
-  },
-  {
-    "value_name": "Quality",
-    "description": "Maintaining a standard of excellence in all endeavors"
-  },
-  {
-    "value_name": "Courage",
-    "description": "Willingness to take calculated risks and step outside comfort zones"
-  },
-  {
-    "value_name": "Honesty",
-    "description": "Being truthful and sincere in all interactions"
+    "value_name": "Restraint",
+    "description": "The wisdom to resist reply-all when someone microwaves fish in the office"
   },
   {
     "value_name": "Efficiency",
-    "description": "Producing results in a timely manner with minimal waste or effort"
+    "description": "The courage to end meetings that have veered into discussing weekend plans"
   },
   {
-    "value_name": "Recognition",
-    "description": "Giving and receiving acknowledgement for achievements"
+    "value_name": "Flexibility",
+    "description": "The art of interpreting deadlines as gentle suggestions rather than fixed points"
   },
   {
-    "value_name": "Leadership",
-    "description": "Guiding and inspiring others toward common goals"
+    "value_name": "Lunch",
+    "description": "The sacred practice of stepping away from one's desk for actual nourishment"
   },
   {
-    "value_name": "Resilience",
-    "description": "Ability to bounce back from setbacks and adapt to challenges"
+    "value_name": "Emojis",
+    "description": "The ability to convey professionalism while using the perfect amount of 👍 and 😊"
+  },
+  {
+    "value_name": "Parking",
+    "description": "The mystical force that guides one to spaces near the entrance, always"
+  },
+  {
+    "value_name": "Friday",
+    "description": "The superhuman strength to maintain focus despite the weekend's gravitational pull"
+  },
+  {
+    "value_name": "Spreadsheets",
+    "description": "Finding enlightenment through pivot tables and conditional formatting"
+  },
+  {
+    "value_name": "Cake",
+    "description": "The moral duty to ensure equitable distribution of celebration desserts"
   }
 ];
 
@@ -529,70 +513,18 @@ export const EXTENDED_DECK: CardDefinition[] = [
   }
 ];
 
-export const DEVELOPMENT_DECK: CardDefinition[] = [
-  {
-    "value_name": "Caffeine",
-    "description": "The fundamental belief that productivity is directly proportional to coffee consumption"
-  },
-  {
-    "value_name": "Snacks",
-    "description": "Commitment to maintaining strategic reserves of treats for optimal team morale"
-  },
-  {
-    "value_name": "Muting",
-    "description": "The discipline to silence oneself before dogs, children, or doorbells interrupt meetings"
-  },
-  {
-    "value_name": "Restraint",
-    "description": "The wisdom to resist reply-all when someone microwaves fish in the office"
-  },
-  {
-    "value_name": "Efficiency",
-    "description": "The courage to end meetings that have veered into discussing weekend plans"
-  },
-  {
-    "value_name": "Flexibility",
-    "description": "The art of interpreting deadlines as gentle suggestions rather than fixed points"
-  },
-  {
-    "value_name": "Lunch",
-    "description": "The sacred practice of stepping away from one's desk for actual nourishment"
-  },
-  {
-    "value_name": "Emojis",
-    "description": "The ability to convey professionalism while using the perfect amount of 👍 and 😊"
-  },
-  {
-    "value_name": "Parking",
-    "description": "The mystical force that guides one to spaces near the entrance, always"
-  },
-  {
-    "value_name": "Friday",
-    "description": "The superhuman strength to maintain focus despite the weekend's gravitational pull"
-  },
-  {
-    "value_name": "Spreadsheets",
-    "description": "Finding enlightenment through pivot tables and conditional formatting"
-  },
-  {
-    "value_name": "Cake",
-    "description": "The moral duty to ensure equitable distribution of celebration desserts"
-  }
-];
-
 
 export const DECK_MAP: Record<DeckType, CardDefinition[]> = {
-  dev: DEV_DECK,
+  development: DEVELOPMENT_DECK,
   professional: PROFESSIONAL_DECK,
-  extended: EXTENDED_DECK,
-  development: DEVELOPMENT_DECK
+  extended: EXTENDED_DECK
 };
 
 export const DECK_INFO = {
-  dev: {
-    name: 'Dev',
-    cardCount: 16,
-    type: 'dev' as DeckType
+  development: {
+    name: 'Development',
+    cardCount: 12,
+    type: 'development' as DeckType
   },
   professional: {
     name: 'Professional',
@@ -603,10 +535,5 @@ export const DECK_INFO = {
     name: 'Extended',
     cardCount: 72,
     type: 'extended' as DeckType
-  },
-  development: {
-    name: 'Development',
-    cardCount: 12,
-    type: 'development' as DeckType
   }
 };

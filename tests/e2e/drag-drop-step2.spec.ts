@@ -55,8 +55,8 @@ test.describe('Step 2 - Drag and Drop with Pile Constraints', () => {
       }
     };
     
-    // Sort ALL cards (16 for DEV_DECK) to enable Step 2 button
-    await sortCards(16);
+    // Sort ALL cards (12 for DEVELOPMENT_DECK) to enable Step 2 button
+    await sortCards(12);
     
     // Verify staging area is completely empty and all cards are in piles
     await expect(page.locator('[data-testid="staging-area"] .card')).not.toBeVisible();

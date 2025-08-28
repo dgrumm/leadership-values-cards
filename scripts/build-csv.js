@@ -11,7 +11,7 @@ const path = require('path');
 // Constants
 const CSV_DIR = path.join(process.cwd(), 'data', 'csv');
 const OUTPUT_DIR = path.join(process.cwd(), 'lib', 'generated');
-const VALID_DECK_TYPES = ['dev', 'professional', 'extended', 'development'];
+const VALID_DECK_TYPES = ['development', 'professional', 'extended'];
 
 /**
  * Parse CSV content
@@ -98,7 +98,6 @@ function parseCSVLine(line) {
  */
 function validateDeckSize(deckType, cardCount) {
   const expectedCounts = {
-    dev: 16,
     professional: 40,
     extended: 72,
     development: 12 // Flexible for testing
