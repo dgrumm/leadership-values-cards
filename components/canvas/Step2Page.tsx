@@ -11,7 +11,9 @@ import { DraggableCard } from '@/components/cards/DraggableCard';
 import { Step2Modal } from '@/components/ui/Step2Modal';
 import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
+import { ParticipantsModal } from '@/components/collaboration/ParticipantsModal';
 import { DragErrorBoundary } from '@/components/ui/DragErrorBoundary';
+import { usePresence } from '@/hooks/collaboration/usePresence';
 import { Card } from '@/lib/types/card';
 import { cn, debounce } from '@/lib/utils';
 
@@ -32,7 +34,23 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   const [isRevealed, setIsRevealed] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
   const isDraggingRef = useRef(false);
+  
+  // Initialize presence system
+  const {
+    participants,
+    currentUser,
+    participantCount,
+    isConnected,
+    error: presenceError,
+    onViewReveal
+  } = usePresence({
+    sessionCode,
+    participantName,
+    currentStep: 2,
+    enabled: true
+  });
   
   // Refs for focus management
   const deckRef = useRef<HTMLButtonElement>(null);
@@ -298,6 +316,15 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
     console.log('Reveal toggled:', !isRevealed);
   };
 
+  // Participants modal handlers
+  const handleShowParticipants = () => {
+    setShowParticipants(true);
+  };
+
+  const handleCloseParticipants = () => {
+    setShowParticipants(false);
+  };
+
   // Get validation message based on current state
   const getValidationMessage = () => {
     if (top8Pile.length < 8) {
@@ -324,10 +351,12 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
         participantName={participantName}
         currentStep={2}
         totalSteps={3}
+        participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
         onReveal={handleReveal}
         isRevealed={isRevealed}
         showRevealButton={true}
+        onParticipantsClick={handleShowParticipants}
       />
 
       {/* Transition overlay */}
@@ -558,6 +587,18 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
                   {getValidationMessage()}
                 </div>
               )}
+              
+              {/* Presence status */}
+              {presenceError && (
+                <div className="text-red-500 text-xs mt-1">
+                  Collaboration offline: {presenceError}
+                </div>
+              )}
+              {isConnected && participantCount > 1 && (
+                <div className="text-green-600 text-xs mt-1">
+                  ✓ Connected with {participantCount - 1} other participant{participantCount === 2 ? '' : 's'}
+                </div>
+              )}
             </div>
 
             {/* Action buttons - Show different options based on card count */}
@@ -641,6 +682,16 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
         lessImportantCount={lessImportantPile.length}
         cardsInDeck={remainingCards}
         totalCards={deck.length}
+      />
+
+      {/* Participants modal */}
+      <ParticipantsModal
+        isOpen={showParticipants}
+        onClose={handleCloseParticipants}
+        participants={participants}
+        currentUserId={currentUser?.participantId || ''}
+        sessionCode={sessionCode}
+        onViewReveal={onViewReveal}
       />
     </div>
   );

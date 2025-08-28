@@ -16,6 +16,7 @@ interface SessionHeaderProps {
   onReveal?: () => void;
   isRevealed?: boolean;
   showRevealButton?: boolean;
+  onParticipantsClick?: () => void;
 }
 
 export function SessionHeader({ 
@@ -25,7 +26,8 @@ export function SessionHeader({
   onStepClick,
   onReveal,
   isRevealed,
-  showRevealButton
+  showRevealButton,
+  onParticipantsClick
 }: SessionHeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -33,7 +35,10 @@ export function SessionHeader({
         {/* Left side - Navigation */}
         <div className="flex items-center space-x-3">
           <LeaveSessionButton />
-          <ParticipantsButton participantCount={participantCount} />
+          <ParticipantsButton 
+            participantCount={participantCount}
+            onClick={onParticipantsClick}
+          />
           {showRevealButton && (
             <RevealButton 
               onClick={onReveal}

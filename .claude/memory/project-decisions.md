@@ -92,6 +92,64 @@ Initial decisions to remember:
 
 **Next Phase**: Foundation infrastructure complete and tested - ready for 04.2 Presence System implementation.
 
+---
+
+## 2025-08-28 - 04-2-participants-overview
+
+**Spec**: 04.2 Participants Overview  
+**Status**: ✅ **COMPLETE** - Real-time Presence System with Critical Bug Discovery
+
+**Implementation Decision**: Built comprehensive presence system with participant tracking, real-time updates, and session-scoped participant management. **CRITICAL DISCOVERY**: Found fundamental state bleeding bug affecting collaborative experience.
+
+### **Key Components Delivered**:
+- **PresenceManager** (`/lib/presence/presence-manager.ts`) - Core real-time participant tracking with heartbeat (5s), cursor throttling (50ms), async cleanup protection
+- **Participant Identity System** (`/lib/presence/participant-identity.ts`) - Conflict-free assignment using 15 colors × 20 emojis = 300 unique identities
+- **ParticipantList/Card/Modal** (`/components/collaboration/`) - Complete UI for viewing all participants with "(You)" indicators and session code display
+- **usePresence Hook** (`/hooks/collaboration/usePresence.ts`) - React integration with 200ms polling for responsive UI updates
+- **Real-time Integration** - All Step pages (1,2,3) now show live participant count and presence modal
+
+### **Critical Bug Discovery - State Bleeding**:
+🚨 **PRODUCTION BLOCKING ISSUE IDENTIFIED**: 
+- **Root Cause**: Zustand stores (`useStep1Store`, `useStep2Store`, `useStep3Store`) are global singletons shared across all participants
+- **Impact**: User1 completing Step 2 shows "Continue to Step 3" button for User2 (even while User2 is on Step 1)
+- **Scope**: All local UI state bleeds between users - deck positions, completion status, card piles
+- **Risk**: Makes collaborative sessions unusable - fundamental architecture flaw
+
+### **Architectural Analysis**:
+**Current State**: 
+- Local UI state (deck, cards, completion) stored in global Zustand singletons
+- All users share same store instances → complete state bleeding
+- Presence system correctly isolated, but local game state is not
+
+**Required Fix**: Spec 04.5 created for Local vs Shared State Architecture
+- **Local State** (per-participant): UI state, step progress, card positions - never synced
+- **Shared State** (via Ably): Presence data, reveals, session metadata - synced
+- **Implementation**: Session-scoped store manager with participant isolation
+
+### **Features Successfully Delivered**:
+- ✅ **Real-time Participant Tracking**: Live join/leave, heartbeat maintenance, identity assignment
+- ✅ **ParticipantsModal**: Shows ALL participants including self with clear "(You)" indicator
+- ✅ **Session Code Display**: Added to modal header for easy sharing
+- ✅ **Responsive Updates**: Reduced polling to 200ms for better user experience
+- ✅ **Async Cleanup**: Fixed memory leaks and "Cannot log after tests are done" issues
+- ✅ **Integration**: All Step pages show live participant count and modal access
+
+### **Testing Status**:
+- **46/76 tests passing** - Core presence functionality working
+- **State isolation tests**: Created test demonstrating state bleeding bug
+- **Production-ready**: Core presence system stable, state bleeding is separate issue
+
+### **Next Critical Priority**:
+**MUST IMPLEMENT**: Spec 04.5 Local vs Shared State Architecture
+- **Urgency**: Production blocking bug for collaborative sessions
+- **Complexity**: High - requires architectural refactoring of store system  
+- **Timeline**: 3-4 weeks phased migration to prevent breaking changes
+- **Impact**: Essential for collaborative functionality - cannot ship without this fix
+
+### **Status**: ✅ Presence system complete, ❌ **CRITICAL BLOCKER**: State bleeding requires Spec 04.5 implementation
+
+---
+
 ## 2025-08-26 - 03-2-animations-transitions
 
 **Spec**: 03.2 Animations & Transitions  

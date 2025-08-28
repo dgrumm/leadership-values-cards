@@ -3,7 +3,7 @@
 ## Overview
 This document tracks the development status of all feature specifications for the Leadership Values Card Sort application.
 
-**Last Updated**: 2025-08-26  
+**Last Updated**: 2025-08-28  
 **Total Specifications**: 16 (15 MVP + 1 v2.0)  
 **Status Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⏸️ Blocked | ⚠️ Needs Review
 
@@ -68,7 +68,7 @@ This document tracks the development status of all feature specifications for th
 | 05.3 | [Session Timeout](05-export-polish/05.3-session-timeout.md) | 🔴 Not Started | Medium | - | 60-minute timeout system |
 | 05.4 | [Card Proportions](05-export-polish/05.4-card-proportions.md) | 🟢 Complete | Medium | - | Bridge card dimensions with enhanced readability |
 
-**Export & Polish Progress**: 25% (1/4 complete)
+**Export & Polish Progress**: 50% (2/4 complete)
 
 ---
 
@@ -181,15 +181,16 @@ To update this status document:
 | 2025-08-26 | 03.2 | 🟡 Partial | 🟢 Complete | Comprehensive animation system implemented with full accessibility support |
 | 2025-08-26 | 06.1 | - | 🔴 Deferred v2.0 | Layout redesign moved to /specs/06-layout-redesign/ with comprehensive analysis |
 | 2025-08-26 | 04.1 | 🔴 Not Started | 🟢 Complete | Ably Setup with production-ready infrastructure, 25 unit tests, comprehensive error handling |
+| 2025-08-28 | 05.4 | 🔴 Not Started | 🟢 Complete | Card Proportions updated to Bridge card dimensions (w-56→w-64), 345 unit tests passing |
 
 ---
 
 ## Overall Project Progress
 
 **MVP Specifications**: 16  
-**MVP Completed**: 12 (75%)  
+**MVP Completed**: 13 (81%)  
 **MVP In Progress**: 0 (0%)  
-**MVP Not Started**: 4 (25%)  
+**MVP Not Started**: 3 (19%)  
 
 **v2.0 Specifications**: 1 (Layout Redesign)
 **v2.0 Status**: Deferred - comprehensive analysis complete
