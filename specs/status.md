@@ -107,11 +107,11 @@ This document tracks the development status of all feature specifications for th
 
 ### Phase 3: Collaboration Features (Multi-user functionality)
 **Priority: Medium**
-- 04.1 Ably Setup
+- 04.1 Ably Setup ✅
 - 04.2 Presence System  
 - 04.3 Reveal Mechanism
 
-**Phase 3 Progress**: 0% (0/3 complete)
+**Phase 3 Progress**: 33% (1/3 complete)
 
 ### Phase 4: Advanced Features (Nice-to-have)
 **Priority: Low**

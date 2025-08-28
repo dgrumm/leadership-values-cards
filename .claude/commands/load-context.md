@@ -14,6 +14,8 @@ SPEC=$1
 if [ "$SPEC" = "full" ]; then
   echo "=== FULL CONTEXT LOAD ==="
   cat /prd/values-cards-prd-0.2.md
+  cat .claude/memory/project-decisions.md
+  cat .claude/memory/testing-requirements.md
   echo -e "\n=== CURRENT STATUS ==="
   cat specs/status.md
 elif [ -n "$SPEC" ]; then
