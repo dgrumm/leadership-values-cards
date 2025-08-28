@@ -11,6 +11,8 @@ import { DraggableCard } from '@/components/cards/DraggableCard';
 import { Step1Modal } from '@/components/ui/Step1Modal';
 import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
+import { ParticipantsModal } from '@/components/collaboration/ParticipantsModal';
+import { usePresence } from '@/hooks/collaboration/usePresence';
 import { Card as CardType } from '@/lib/types/card';
 
 interface Step1PageProps {
@@ -24,6 +26,22 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
   const [activeCard, setActiveCard] = useState<CardType | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
+
+  // Initialize presence system
+  const {
+    participants,
+    currentUser,
+    participantCount,
+    isConnected,
+    error: presenceError,
+    onViewReveal
+  } = usePresence({
+    sessionCode,
+    participantName,
+    currentStep: 1,
+    enabled: true
+  });
   
   const {
     deck,
@@ -206,6 +224,15 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
     }
   };
 
+  // Participants modal handlers
+  const handleShowParticipants = () => {
+    setShowParticipants(true);
+  };
+
+  const handleCloseParticipants = () => {
+    setShowParticipants(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" data-testid="step1-page">
       {/* Header */}
@@ -214,8 +241,9 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
         participantName={participantName}
         currentStep={1}
         totalSteps={3}
-        participantCount={1} // TODO: Get from real session state when collaboration is implemented
+        participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
+        onParticipantsClick={handleShowParticipants}
       />
 
       {/* Main content */}
@@ -281,6 +309,18 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
                   Sort the &quot;{stagingCard.value_name.replace(/_/g, ' ')}&quot; card
                 </div>
               )}
+              
+              {/* Presence status */}
+              {presenceError && (
+                <div className="text-red-500 text-xs mt-1">
+                  Collaboration offline: {presenceError}
+                </div>
+              )}
+              {isConnected && participantCount > 1 && (
+                <div className="text-green-600 text-xs mt-1">
+                  ✓ Connected with {participantCount - 1} other participant{participantCount === 2 ? '' : 's'}
+                </div>
+              )}
             </div>
 
             {/* Step 2 button */}
@@ -343,6 +383,16 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
         lessImportantCount={lessImportantPile.length}
         cardsRemaining={remainingCards}
         totalCards={deck.length}
+      />
+
+      {/* Participants modal */}
+      <ParticipantsModal
+        isOpen={showParticipants}
+        onClose={handleCloseParticipants}
+        participants={participants}
+        currentUserId={currentUser?.participantId || ''}
+        sessionCode={sessionCode}
+        onViewReveal={onViewReveal}
       />
     </div>
   );

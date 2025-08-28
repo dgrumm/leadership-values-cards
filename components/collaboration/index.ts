@@ -13,3 +13,7 @@ export {
   AblyErrorBoundary,
   useAblyErrorHandler
 } from './AblyErrorBoundary';
+
+// Participant presence components
+export { ParticipantList } from './ParticipantList';
+export { ParticipantCard } from './ParticipantCard';
