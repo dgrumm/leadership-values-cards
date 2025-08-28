@@ -24,13 +24,15 @@ Interactive card-sorting exercise for identifying core leadership values through
   /ui               # Buttons, Modals, Progress
 /hooks
   /collaboration    # useAbly, usePresence, useSession
+  /stores           # useSessionStep1Store, useSessionStep2Store (session-scoped)
   /dnd              # useDragCard, useDropZone
 /lib
+  /stores           # SessionStoreManager, store factories
   /ably             # Channel setup, presence management
   /game-logic       # Shuffle, validation, step transitions
   /export           # Snapshot generation
 /state
-  /local            # Zustand stores (UI, drag state)
+  /local            # Store factories (createStep1Store, createStep2Store, createStep3Store)
   /shared           # Ably-synced state (reveals, positions)
 /data
   /csv              # Values card definitions
@@ -44,7 +46,22 @@ Interactive card-sorting exercise for identifying core leadership values through
 - Separate channels: presence, reveals, viewers
 - Optimistic UI with rollback on conflict
 
-### Drag State Management
+### State Architecture (CRITICAL)
+**🚨 PRODUCTION BLOCKER**: Global Zustand stores cause state bleeding between participants
+```typescript
+// CURRENT BUG: Global stores shared between all users
+const { deck, flipCard } = useStep1Store(); // BAD - same instance for all users
+
+// REQUIRED FIX: Session-scoped stores per participant  
+const { deck, flipCard } = useSessionStep1Store(sessionCode, participantId); // GOOD
+
+// State Separation Rules:
+// LOCAL (per-participant): UI state, step progress, card positions - NEVER synced
+// SHARED (via Ably): Presence data, reveals, session metadata - synced
+// DERIVED: Computed from local + shared without mutation
+```
+
+### Drag State Management  
 ```typescript
 // Local: Immediate visual feedback
 localDragState: { isDragging, draggedCard, previewPosition }
@@ -68,6 +85,8 @@ sharedCardPositions: { cardId: { pile, index, owner } }
 
 ## DO NOT
 - **Never commit secrets or API keys** to the repository
+- **NEVER use global stores** - use session-scoped stores: `useSessionStep1Store(sessionCode, participantId)`
+- **NEVER use `useStep1Store()` directly** - causes state bleeding between participants
 - Modify `/data/csv/` files directly (use make command)
 - Commit to main branch
 - Use localStorage/sessionStorage in components (memory only)
@@ -123,5 +142,13 @@ npm run test:coverage   # Unit tests with coverage report
 - 🟢 Complete
 - 🔵 Tested
 
-## Current Focus
-Building Step 1-3 card sorting flow with proper animations and pile constraints. WebSocket integration pending.
+## Current Focus  
+🚨 **CRITICAL PRIORITY**: Spec 04.5 Local vs Shared State Architecture - Fix production-blocking state bleeding bug
+
+**ARCHITECTURE MIGRATION REQUIRED**: 
+- Current Zustand stores are global singletons causing user1 actions to affect user2 UI
+- Must implement session-scoped store manager with `${sessionCode}:${participantId}` isolation
+- 4-week phased migration: Foundation → Hook Migration → Component Integration → Production Polish
+- All collaboration features depend on fixing this critical architectural flaw
+
+**Status**: Presence system ✅ complete, state isolation ❌ **PRODUCTION BLOCKER**
