@@ -86,21 +86,21 @@ describe('MemoryTracker', () => {
     });
 
     it('should identify oldest store', () => {
-      // Add a small delay to ensure different creation times
-      const now = Date.now();
-      
       // Manually set creation times to ensure predictable ordering
+      const now = Date.now();
       const user1Metadata = tracker.getStoreMetadata('ABC123:user1')!;
       const user2Metadata = tracker.getStoreMetadata('ABC123:user2')!;
+      const user3Metadata = tracker.getStoreMetadata('XYZ999:user1')!;
       
-      user1Metadata.createdAt = now - 1000; // 1 second ago
-      user2Metadata.createdAt = now - 500;  // 0.5 seconds ago
+      user1Metadata.createdAt = now - 3000; // 3 seconds ago (oldest)
+      user2Metadata.createdAt = now - 2000; // 2 seconds ago  
+      user3Metadata.createdAt = now - 1000; // 1 second ago (newest)
       
       const stats = tracker.getMemoryStats();
       
       expect(stats.oldestStore).toBeTruthy();
-      expect(stats.oldestStore!.key).toBe('ABC123:user1'); // First created
-      expect(stats.oldestStore!.age).toBeGreaterThan(0);
+      expect(stats.oldestStore!.key).toBe('ABC123:user1'); // Oldest
+      expect(stats.oldestStore!.age).toBeGreaterThanOrEqual(3000); // At least 3 seconds
     });
 
     it('should handle empty state', () => {
@@ -125,11 +125,11 @@ describe('MemoryTracker', () => {
       const user1Metadata = tracker.getStoreMetadata('ABC123:user1')!;
       const user2Metadata = tracker.getStoreMetadata('ABC123:user2')!;
       
-      // Make user1 inactive by setting old lastAccessed time
-      user1Metadata.lastAccessed = Date.now() - 400000; // 6+ minutes ago
+      // Make user1 inactive by setting old lastAccessed time (6+ minutes ago)
+      user1Metadata.lastAccessed = Date.now() - 400000;
       
-      // Keep user2 active with recent access
-      user2Metadata.lastAccessed = Date.now() - 60000; // 1 minute ago
+      // Keep user2 active with recent access (1 minute ago) 
+      user2Metadata.lastAccessed = Date.now() - 60000;
       
       const inactiveStores = tracker.getInactiveStores();
       expect(inactiveStores).toContain('ABC123:user1');
@@ -161,9 +161,14 @@ describe('MemoryTracker', () => {
     it('should warn about old stores', () => {
       tracker.recordStoreCreation('ABC123:user1');
       
-      // Mock very old store by manipulating metadata
+      // Mock very old store by manipulating metadata (2+ hours ago)
       const metadata = tracker.getStoreMetadata('ABC123:user1')!;
       metadata.createdAt = Date.now() - 7200000; // 2 hours ago
+      
+      // Force the age calculation in getMemoryStats to be correct
+      const stats = tracker.getMemoryStats();
+      expect(stats.oldestStore).toBeTruthy();
+      expect(stats.oldestStore!.age).toBeGreaterThan(3600000); // > 1 hour
       
       const warnings = tracker.checkForMemoryWarnings();
       expect(warnings.some(w => w.includes('Old store detected'))).toBe(true);

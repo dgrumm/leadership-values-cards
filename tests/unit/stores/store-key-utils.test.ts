@@ -150,9 +150,11 @@ describe('Store Key Utils', () => {
       expect(result).toEqual([]);
     });
 
-    it('should throw for invalid session codes', () => {
-      expect(() => getSessionParticipantKeys(sampleKeys, 'invalid')).toThrow('Invalid session code');
-      expect(() => getSessionParticipantKeys(sampleKeys, '')).toThrow('Invalid session code');
+    it('should return empty array for invalid session codes', () => {
+      const result1 = getSessionParticipantKeys(sampleKeys, 'invalid');
+      const result2 = getSessionParticipantKeys(sampleKeys, '');
+      expect(result1).toEqual([]);
+      expect(result2).toEqual([]);
     });
 
     it('should filter out invalid keys', () => {

@@ -85,10 +85,11 @@ export function extractParticipantId(key: string): string {
 
 /**
  * Gets all participant keys for a session
+ * Returns empty array for invalid session codes (non-throwing)
  */
 export function getSessionParticipantKeys(allKeys: string[], sessionCode: string): string[] {
   if (!validateSessionCode(sessionCode)) {
-    throw new Error(`Invalid session code: ${sessionCode}`);
+    return []; // Return empty array instead of throwing
   }
   
   const sessionPrefix = `${sessionCode}:`;
