@@ -31,7 +31,7 @@ export function DropZone({
   // Calculate card layout - arrange from top-left to right-down with scrolling support
   const getCardPosition = useCallback((index: number, containerWidth: number = 350) => {
     try {
-      const cardWidth = 56 * 4 * 0.9; // w-56 * scale 0.9 in rem -> px  
+      const cardWidth = 64 * 4 * 0.9; // w-64 * scale 0.9 in rem -> px  
       const cardHeight = 40 * 4 * 0.9; // h-40 * scale 0.9 in rem -> px
       const cardSpacing = 12; // spacing between cards
       const cardsPerRow = Math.floor((containerWidth - 32) / (cardWidth * 0.4 + cardSpacing)) || 1; // account for padding
@@ -55,7 +55,7 @@ export function DropZone({
     try {
       if (cardCount === 0) return 0;
       const cardHeight = 40 * 4 * 0.9;
-      const cardsPerRow = Math.floor((containerWidth - 32) / (56 * 4 * 0.9 * 0.4 + 12)) || 1;
+      const cardsPerRow = Math.floor((containerWidth - 32) / (64 * 4 * 0.9 * 0.4 + 12)) || 1;
       const rows = Math.ceil(cardCount / cardsPerRow);
       return rows * (cardHeight * 0.5 + 10) + cardHeight * 0.9; // add extra for last card
     } catch (error) {

@@ -529,7 +529,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
             aria-label="Deck and staging area"
           >
             {/* Deck - fixed size container */}
-            <div className="w-56 h-40">
+            <div className="w-64 h-40">
               <Deck
                 cardCount={remainingCards}
                 onClick={handleDeckClick}
@@ -545,7 +545,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
             
             {/* Staging area - enhanced bounce animation */}
             <motion.div 
-              className="w-56 h-40"
+              className="w-64 h-40"
               animate={bounceAnimation ? {
                 x: [0, -20, 15, -10, 6, -2, 0],
                 y: [0, -12, 8, -5, 3, -1, 0],

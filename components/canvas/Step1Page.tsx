@@ -251,7 +251,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
           {/* Bottom section - Deck and staging side by side with fixed positions */}
           <div className="flex-1 flex items-center justify-center gap-8">
             {/* Deck - fixed size container */}
-            <div className="w-56 h-40">
+            <div className="w-64 h-40">
               <Deck
                 cardCount={remainingCards}
                 onClick={handleDeckClick}
@@ -261,7 +261,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
             </div>
             
             {/* Staging area - fixed size container with 3D flip animation */}
-            <div className="w-56 h-40">
+            <div className="w-64 h-40">
               <StagingArea
                 card={stagingCard}
                 isDragging={draggedCardId === stagingCard?.id}
