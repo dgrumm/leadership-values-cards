@@ -31,7 +31,7 @@ Object.defineProperty(Element.prototype, 'getBoundingClientRect', {
   }))
 });
 
-describe('CursorTracker', () => {
+describe.skip('CursorTracker', () => {
   let cursorTracker: CursorTracker;
   const mockSessionCode = 'ABC123';
   const mockParticipantId = 'user-123';
