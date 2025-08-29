@@ -2,6 +2,130 @@
 
 Initial decisions to remember:
 
+## 2025-08-29 - 04-5-5-participant-state-consistency
+**Specs**: 04-5-local-vs-shared-state-architecture.md, 04-5-5-participant-state-consistency
+**Status**: **COMPLETE** - Resolved
+
+### Hybrid Data Architecture
+
+#### Core Principle: Authoritative Session + Real-time Presence
+
+Our architecture separates **authoritative data** (session-based) from **ephemeral real-time data** (presence-based), then merges them for display:
+
+```typescript
+// Authoritative Data (Session API + Database)
+interface SessionParticipant {
+  participantId: string;
+  name: string;
+  emoji: string;        // FIXED at join - never changes
+  color: string;        // FIXED at join - never changes  
+  currentStep: 1 | 2 | 3; // AUTHORITATIVE step state
+  cardPositions: Card[]; // AUTHORITATIVE card arrangements
+  revealedSelections?: { // AUTHORITATIVE reveal data
+    top8?: Card[];
+    top3?: Card[];
+  };
+}
+
+// Real-time Data (Ably Presence)
+interface PresenceData {
+  participantId: string;
+  status: 'sorting' | 'revealed-8' | 'revealed-3' | 'completed'; // REAL-TIME activity
+  lastActive: number;   // HEARTBEAT for connection health
+  isViewing?: string;   // WHO they're currently viewing (ephemeral)
+}
+
+// Hybrid Display Data (Merged for UI)
+interface ParticipantDisplayData {
+  // FROM SESSION (authoritative, persistent)
+  participantId: string;
+  name: string;
+  emoji: string;
+  color: string;
+  currentStep: 1 | 2 | 3;
+  
+  // FROM PRESENCE (real-time, ephemeral)
+  status: 'sorting' | 'revealed-8' | 'revealed-3' | 'completed';
+  lastActive: number;
+  
+  // COMPUTED (derived from both sources)
+  isCurrentUser: boolean;
+  canViewTop8: boolean;  // session.revealedSelections?.top8 exists
+  canViewTop3: boolean;  // session.revealedSelections?.top3 exists
+}
+```
+
+#### Data Flow Architecture
+
+```mermaid
+graph TD
+    A[User Action] --> B{Action Type}
+    
+    B -->|Identity/Step/Cards| C[Session API]
+    B -->|Status/Presence| D[Ably Presence]
+    
+    C --> E[Database Storage]
+    C --> F[Session Manager]
+    F --> G[Session-Scoped Stores]
+    
+    D --> H[Real-time Broadcast]
+    H --> I[Other Participants]
+    
+    G --> J[usePresence Hook]
+    I --> J
+    J --> K[Hybrid Display Data]
+    K --> L[UI Components]
+```
+
+#### Responsibilities by Data Type
+
+| Data Type | Source | Persistence | Real-time | Use Case |
+|-----------|--------|-------------|-----------|----------|
+| **Identity** (emoji, color, name) | Session API | Database | No | Fixed participant identification |
+| **Step State** | Session API | Database | No | Authoritative progress tracking |
+| **Card Positions** | Session-Scoped Stores | Memory only | No | Per-user sorting state |
+| **Reveal Data** | Session API | Database | No | Authoritative shared selections |
+| **Activity Status** | Ably Presence | Memory only | Yes | Real-time collaboration indicators |
+| **Viewer Tracking** | Ably Presence | Memory only | Yes | Who's viewing whom |
+| **Connection Health** | Ably Presence | Memory only | Yes | Heartbeat/last active |
+
+#### Key Architectural Decisions
+
+1. **Single Source of Truth per Data Type**: Each piece of data has exactly one authoritative source
+2. **Session-Scoped Isolation**: Local state never bleeds between participants via `${sessionCode}:${participantId}` keys
+3. **Deterministic Identity**: Fixed emoji/color assignment prevents flickering across views
+4. **Hybrid Merging**: UI components receive merged data but never mutate the source separation
+5. **Ephemeral vs Persistent**: Real-time data dies with connections, persistent data survives refreshes
+6. **Event-Driven Updates**: Session data refresh (5s intervals) + Ably events for immediate updates
+
+#### Implementation Pattern
+
+```typescript
+// usePresence hook merges both data sources
+export function usePresence(sessionCode: string, participantName: string) {
+  // Authoritative session data (refreshed every 5s)
+  const { sessionData } = useQuery(['session', sessionCode]);
+  
+  // Real-time presence data (live Ably updates)
+  const [presenceData, setPresenceData] = useState<Map<string, PresenceData>>();
+  
+  // Hybrid merge for display
+  const participantDisplayData = useMemo(() => {
+    return mergeSessionAndPresenceData(sessionData, presenceData);
+  }, [sessionData, presenceData]);
+  
+  return { participants: participantDisplayData };
+}
+```
+
+#### Benefits
+
+- **Consistency**: Identity/step data never flickers or desynchronizes
+- **Real-time Feel**: Status updates appear instantly via presence events
+- **Resilience**: Core data persists through connection issues
+- **Scalability**: Presence data auto-cleans up, session data is finite
+- **Debuggability**: Clear data source separation makes issues traceable
+
 ## 2025-08-29 - 04-5-4-component-integration-testing
 
 **Spec**: 04.5.4 Component Integration & Testing  
