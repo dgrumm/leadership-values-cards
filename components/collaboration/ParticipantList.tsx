@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils/cn';
 import { ParticipantCard } from './ParticipantCard';
-import type { PresenceData } from '@/lib/presence/types';
+import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 
 export interface ParticipantListProps {
-  participants: Map<string, PresenceData>;
-  currentUserId: string;
+  participants: Map<string, ParticipantDisplayData>; // NOW: Hybrid data with consistent identity/step
+  currentUserId?: string; // DEPRECATED: ParticipantDisplayData includes isCurrentUser flag
   onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
   className?: string;
 }
@@ -20,7 +20,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
 }) => {
   // Convert to array with all participants including self
   const allParticipants = React.useMemo(() => {
-    const filtered: PresenceData[] = [];
+    const filtered: ParticipantDisplayData[] = [];
     
     participants.forEach((participant) => {
       filtered.push(participant);
@@ -28,8 +28,12 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
     
     // Sort by name for consistent display, but put current user first
     return filtered.sort((a, b) => {
-      if (a.participantId === currentUserId) return -1;
-      if (b.participantId === currentUserId) return 1;
+      // Use built-in isCurrentUser flag (preferred) or fallback to currentUserId
+      const aIsCurrentUser = currentUserId ? (a.participantId === currentUserId) : a.isCurrentUser;
+      const bIsCurrentUser = currentUserId ? (b.participantId === currentUserId) : b.isCurrentUser;
+      
+      if (aIsCurrentUser) return -1;
+      if (bIsCurrentUser) return 1;
       return a.name.localeCompare(b.name);
     });
   }, [participants, currentUserId]);
@@ -51,7 +55,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           👥
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          It's just you here. No other participants yet.
+          It&apos;s just you here. No other participants yet.
         </h3>
         <p className="text-sm text-gray-600">
           Share your session code with others to collaborate!

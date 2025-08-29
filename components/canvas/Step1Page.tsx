@@ -31,7 +31,8 @@ export function Step1Page({ sessionCode, participantName, currentStep = 1, onSte
 
   // Initialize presence system
   const {
-    allParticipantsForDisplay = new Map(),
+    participantsForDisplay = new Map(), // NEW: Hybrid data with consistent identity/step
+    allParticipantsForDisplay = new Map(), // LEGACY: Fallback for backward compatibility
     currentUser,
     participantCount,
     isConnected,
@@ -390,7 +391,7 @@ export function Step1Page({ sessionCode, participantName, currentStep = 1, onSte
       <ParticipantsModal
         isOpen={showParticipants}
         onClose={handleCloseParticipants}
-        participants={allParticipantsForDisplay}
+        participants={participantsForDisplay.size > 0 ? participantsForDisplay : allParticipantsForDisplay}
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PresenceManager } from '@/lib/presence/presence-manager';
 import { getAblyService } from '@/lib/ably/ably-service';
 import type { PresenceData } from '@/lib/presence/types';
+import type { ParticipantDisplayData } from '@/lib/types/participant-display';
+import { createParticipantDisplayData, createParticipantDisplayDataFromPresence } from '@/lib/types/participant-display';
 
 export interface UsePresenceOptions {
   sessionCode: string;
@@ -13,9 +15,14 @@ export interface UsePresenceOptions {
 }
 
 export interface UsePresenceReturn {
-  // Participant data
+  // NEW: Hybrid participant data (session + presence) - USE THIS FOR UI DISPLAY
+  participantsForDisplay: Map<string, ParticipantDisplayData>; // All participants with consistent identity/step from session
+  currentUserForDisplay: ParticipantDisplayData | null;
+  otherParticipantsForDisplay: ParticipantDisplayData[];
+  
+  // LEGACY: Raw presence data (for internal use only - DO NOT use for UI display)
   participants: Map<string, PresenceData>; // Others only (filtered)
-  allParticipantsForDisplay: Map<string, PresenceData>; // Combined self + others for UI
+  allParticipantsForDisplay: Map<string, PresenceData>; // Combined self + others for UI (DEPRECATED)
   currentUser: PresenceData | null;
   participantCount: number;
   otherParticipants: PresenceData[];
@@ -44,6 +51,10 @@ export function usePresence({
   const [isConnected, setIsConnected] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // NEW: Hybrid display data state
+  const [participantsForDisplay, setParticipantsForDisplay] = useState<Map<string, ParticipantDisplayData>>(new Map());
+  const [currentUserForDisplay, setCurrentUserForDisplay] = useState<ParticipantDisplayData | null>(null);
 
   // Initialize presence manager
   useEffect(() => {
@@ -84,10 +95,16 @@ export function usePresence({
           console.warn(`⚠️ Participant "${participantName}" not found in session "${sessionCode}" - using fallback`);
           console.warn(`📋 Available participants:`, session?.participants?.map(p => ({ name: p.name, isActive: p.isActive })));
           
-          // Temporary fallback to prevent complete failure
-          emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
-          color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
-          console.warn(`🔄 Fallback identity for ${participantName}:`, { emoji, color });
+          // Deterministic fallback based on participant name to ensure consistency across observers
+          const nameHash = participantName.split('').reduce((hash, char) => {
+            return ((hash << 5) - hash) + char.charCodeAt(0);
+          }, 0);
+          const emojiIndex = Math.abs(nameHash) % PARTICIPANT_EMOJIS.length;
+          const colorIndex = Math.abs(nameHash * 31) % PARTICIPANT_COLORS.length; // Different hash for color
+          
+          emoji = PARTICIPANT_EMOJIS[emojiIndex];
+          color = PARTICIPANT_COLORS[colorIndex];
+          console.warn(`🔄 Deterministic fallback identity for ${participantName}:`, { emoji, color });
         }
 
         // Create current user data
@@ -141,6 +158,72 @@ export function usePresence({
     };
   }, [enabled, sessionCode, participantName, currentStep]);
 
+  // NEW: Create hybrid display data by merging session + presence 
+  useEffect(() => {
+    if (!sessionCode || !currentUser) return;
+    
+    const createHybridDisplayData = async () => {
+      try {
+        const { getSessionManager } = await import('@/lib/session/session-manager');
+        const sessionManager = getSessionManager();
+        
+        // Get current session to access all participants
+        const session = await sessionManager.getSession(sessionCode);
+        if (!session) {
+          console.warn(`⚠️ Session ${sessionCode} not found for display data creation`);
+          return;
+        }
+        
+        const hybridParticipants = new Map<string, ParticipantDisplayData>();
+        let hybridCurrentUser: ParticipantDisplayData | null = null;
+        
+        // Process each session participant
+        for (const sessionParticipant of session.participants) {
+          if (!sessionParticipant.isActive) continue;
+          
+          // Find corresponding presence data
+          const presenceData = sessionParticipant.name === participantName 
+            ? currentUser // Use local current user for self
+            : participants.get(sessionParticipant.id); // Lookup others in presence map
+          
+          // Create hybrid display data
+          const displayData = createParticipantDisplayData(
+            sessionParticipant,
+            presenceData || null,
+            currentUser.participantId
+          );
+          
+          hybridParticipants.set(sessionParticipant.id, displayData);
+          
+          if (sessionParticipant.name === participantName) {
+            hybridCurrentUser = displayData;
+          }
+        }
+        
+        // Handle presence-only participants (shouldn't happen in normal flow, but defensive)
+        for (const [participantId, presenceData] of participants) {
+          if (!hybridParticipants.has(participantId)) {
+            console.warn(`⚠️ Found presence-only participant: ${presenceData.name}`);
+            const fallbackDisplayData = createParticipantDisplayDataFromPresence(
+              presenceData,
+              currentUser.participantId
+            );
+            hybridParticipants.set(participantId, fallbackDisplayData);
+          }
+        }
+        
+        console.log(`🎯 Created hybrid display data for ${hybridParticipants.size} participants`);
+        setParticipantsForDisplay(hybridParticipants);
+        setCurrentUserForDisplay(hybridCurrentUser);
+        
+      } catch (error) {
+        console.error('❌ Failed to create hybrid display data:', error);
+      }
+    };
+    
+    createHybridDisplayData();
+  }, [sessionCode, currentUser, participants, participantName]);
+  
   // Event-driven participant updates (replaces polling)
   useEffect(() => {
     if (!presenceManager) return;
@@ -221,6 +304,17 @@ export function usePresence({
     
     return combined;
   }, [currentUser, participants]);
+  
+  // NEW: Computed values for hybrid display data
+  const otherParticipantsForDisplay = useMemo(() => {
+    const others: ParticipantDisplayData[] = [];
+    for (const [participantId, participant] of participantsForDisplay) {
+      if (!participant.isCurrentUser) {
+        others.push(participant);
+      }
+    }
+    return others.sort((a, b) => a.name.localeCompare(b.name));
+  }, [participantsForDisplay]);
 
   // View reveal handler (placeholder for future reveal feature)
   const onViewReveal = useCallback((participantId: string, revealType: 'revealed-8' | 'revealed-3') => {
@@ -230,9 +324,14 @@ export function usePresence({
   }, []);
 
   return {
-    // Participant data
+    // NEW: Hybrid participant data (session + presence) - USE THIS FOR UI DISPLAY
+    participantsForDisplay, // All participants with consistent identity/step from session
+    currentUserForDisplay, // Self with session identity + presence status
+    otherParticipantsForDisplay, // Others with session identity + presence status
+    
+    // LEGACY: Raw presence data (for internal use only - DO NOT use for UI display)
     participants, // Others only (for internal use)
-    allParticipantsForDisplay, // Combined self + others (for UI components)
+    allParticipantsForDisplay, // Combined self + others (DEPRECATED)
     currentUser,
     participantCount,
     otherParticipants,
