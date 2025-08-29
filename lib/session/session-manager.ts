@@ -9,7 +9,7 @@ import {
   SESSION_VALIDATION_ERRORS,
   ValidationResult 
 } from './session-validator';
-import { getUniqueEmojiAndColor } from '../constants/participants';
+import { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } from '../constants/participants';
 import { generateUniqueId, createTimestamp } from '../utils/generators';
 
 export interface CreateSessionResult {
@@ -204,8 +204,9 @@ export class SessionManager {
     const existingNames = new Set(session.participants.map(p => p.name));
     const resolvedName = resolveNameConflict(sanitizedName, existingNames);
 
-    // Get unique emoji and color
-    const { emoji, color } = getUniqueEmojiAndColor(session.participants);
+    // Assign random emoji and color  
+    const emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
+    const color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
 
     // Create participant
     const participant: Participant = {
@@ -216,6 +217,14 @@ export class SessionManager {
       joinedAt: createTimestamp(),
       isActive: true,
       currentStep: 1,
+      status: 'sorting',
+      cardStates: {
+        step1: { more: [], less: [] },
+        step2: { top8: [], less: [] },
+        step3: { top3: [], less: [] }
+      },
+      revealed: { top8: false, top3: false },
+      isViewing: null,
       lastActivity: createTimestamp()
     };
 
@@ -297,6 +306,15 @@ export class SessionManager {
   async getSessionMetadata(sessionCode: string) {
     const sessions = await this.store.getAllActiveSessions();
     return sessions.find(s => s.sessionCode === sessionCode);
+  }
+
+  async getCurrentParticipant(sessionCode: string, participantName: string): Promise<Participant | null> {
+    const session = await this.getSession(sessionCode);
+    if (!session) {
+      return null;
+    }
+    
+    return session.participants.find(p => p.name === participantName && p.isActive) || null;
   }
 
   async cleanupExpiredSessions(): Promise<string[]> {

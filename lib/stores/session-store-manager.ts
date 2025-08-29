@@ -8,17 +8,21 @@
 import { generateStoreKey, validateSessionCode, validateParticipantId, extractSessionCode, getSessionParticipantKeys } from './store-key-utils';
 import { MemoryTracker, type MemoryStats } from './memory-tracker';
 
-// Import store factory functions (will be created in 04.5.2)
-// For now, we'll use type imports and implement the interface
-export interface StoreFactory<T> {
-  (): T;
-}
+// Import store factory functions from 04.5.2 implementation
+import { 
+  createStep1Store, 
+  createStep2Store, 
+  createStep3Store,
+  type Step1Store,
+  type Step2Store,
+  type Step3Store
+} from '@/state/local';
 
 // Store bundle interface - contains all store types for a participant
 export interface StoreBundle {
-  step1: any; // Will be properly typed in 04.5.2
-  step2: any; // Will be properly typed in 04.5.2  
-  step3: any; // Will be properly typed in 04.5.2
+  step1: Step1Store;
+  step2: Step2Store;  
+  step3: Step3Store;
   createdAt: number;
   lastAccessed: number;
 }
@@ -56,7 +60,7 @@ export class SessionStoreManager {
    * Gets Step1 store for specific session and participant
    * Creates new store if it doesn't exist
    */
-  getStep1Store(sessionCode: string, participantId: string): any {
+  getStep1Store(sessionCode: string, participantId: string): Step1Store {
     const key = this.getOrCreateStoreBundle(sessionCode, participantId);
     const bundle = this.stores.get(key)!;
     
@@ -70,7 +74,7 @@ export class SessionStoreManager {
    * Gets Step2 store for specific session and participant
    * Creates new store if it doesn't exist
    */
-  getStep2Store(sessionCode: string, participantId: string): any {
+  getStep2Store(sessionCode: string, participantId: string): Step2Store {
     const key = this.getOrCreateStoreBundle(sessionCode, participantId);
     const bundle = this.stores.get(key)!;
     
@@ -84,7 +88,7 @@ export class SessionStoreManager {
    * Gets Step3 store for specific session and participant  
    * Creates new store if it doesn't exist
    */
-  getStep3Store(sessionCode: string, participantId: string): any {
+  getStep3Store(sessionCode: string, participantId: string): Step3Store {
     const key = this.getOrCreateStoreBundle(sessionCode, participantId);
     const bundle = this.stores.get(key)!;
     
@@ -220,10 +224,9 @@ export class SessionStoreManager {
 
       // Create new store bundle
       const bundle: StoreBundle = {
-        // TODO: These will be replaced with actual factory functions in 04.5.2
-        step1: this.createMockStore('step1'),
-        step2: this.createMockStore('step2'),  
-        step3: this.createMockStore('step3'),
+        step1: createStep1Store(),
+        step2: createStep2Store(),  
+        step3: createStep3Store(),
         createdAt: Date.now(),
         lastAccessed: Date.now()
       };
@@ -297,14 +300,4 @@ export class SessionStoreManager {
     return existed;
   }
 
-  /**
-   * Temporary mock store creator - will be replaced with real factories in 04.5.2
-   */
-  private createMockStore(storeType: string): any {
-    return {
-      _mockStoreType: storeType,
-      _created: Date.now(),
-      _id: Math.random().toString(36).substr(2, 9)
-    };
-  }
 }

@@ -5,9 +5,131 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Step1Page } from '@/components/canvas/Step1Page';
 import { Step2Page } from '@/components/canvas/Step2Page';
 import { Step3Page } from '@/components/canvas/Step3Page';
-import { useStep1Store } from '@/state/local/step1-store';
-import { useStep2Store } from '@/state/local/step2-store';
-import { useStep3Store } from '@/state/local/step3-store';
+import { SessionStoreProvider } from '@/contexts/SessionStoreContext';
+import { useSessionStep1Store, useSessionStep2Store } from '@/hooks/stores/useSessionStores';
+
+// StepRouter component that uses session-scoped hooks (must be inside provider)
+function StepRouter({ 
+  currentStep, 
+  sessionData, 
+  onStepChange 
+}: { 
+  currentStep: 1 | 2 | 3; 
+  sessionData: { sessionCode: string; participantName: string }; 
+  onStepChange: (step: 1 | 2 | 3) => void;
+}) {
+  const { moreImportantPile, lessImportantPile } = useSessionStep1Store();
+  const { top8Pile, lessImportantPile: step2LessImportant, discardedPile: step2Discarded } = useSessionStep2Store();
+  
+  // Expose session stores globally for E2E testing
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.PLAYWRIGHT_TEST === 'true')) {
+      // Import and expose test utilities
+      import('@/lib/test-utils/browser-globals').then(() => {
+        const testWindow = window as typeof window & {
+          useSessionStep1Store: typeof useSessionStep1Store;
+          useSessionStep2Store: typeof useSessionStep2Store;
+        };
+        testWindow.useSessionStep1Store = useSessionStep1Store;
+        testWindow.useSessionStep2Store = useSessionStep2Store;
+        console.log('🧪 Session-scoped test utilities exposed for E2E testing');
+      });
+    }
+  }, []);
+
+  // Render appropriate step component
+  if (currentStep === 1) {
+    return (
+      <Step1Page
+        participantName={sessionData.participantName}
+        sessionCode={sessionData.sessionCode}
+        currentStep={currentStep}
+        onStepComplete={() => onStepChange(2)}
+      />
+    );
+  }
+
+  if (currentStep === 2) {
+    // If Step 1 data is empty, redirect back to Step 1 to complete it first
+    if (moreImportantPile.length === 0 && lessImportantPile.length === 0) {
+      return (
+        <Step1Page
+          participantName={sessionData.participantName}
+          sessionCode={sessionData.sessionCode}
+          onStepComplete={() => onStepChange(2)}
+        />
+      );
+    }
+    
+    return (
+      <Step2Page
+        participantName={sessionData.participantName}
+        sessionCode={sessionData.sessionCode}
+        currentStep={currentStep}
+        step1Data={{
+          moreImportantPile,
+          lessImportantPile
+        }}
+        onStepComplete={() => onStepChange(3)}
+      />
+    );
+  }
+
+  // Step 3 - Final selection of Top 3 values
+  if (currentStep === 3) {
+    // If Step 2 data is empty, redirect back to Step 2 to complete it first
+    if (top8Pile.length === 0) {
+      return (
+        <Step2Page
+          participantName={sessionData.participantName}
+          sessionCode={sessionData.sessionCode}
+          currentStep={currentStep}
+          step1Data={{
+            moreImportantPile,
+            lessImportantPile
+          }}
+          onStepComplete={() => onStepChange(3)}
+        />
+      );
+    }
+    
+    return (
+      <Step3Page
+        participantName={sessionData.participantName}
+        sessionCode={sessionData.sessionCode}
+        currentStep={currentStep}
+        step2Data={{
+          top8Pile,
+          lessImportantPile: step2LessImportant,
+          discardedPile: step2Discarded
+        }}
+        step1Data={{
+          lessImportantPile
+        }}
+        onStepComplete={() => {
+          console.log('Exercise completed!');
+          // TODO: Navigate to results/review page
+        }}
+      />
+    );
+  }
+
+  // Fallback - should never reach here
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Invalid Step</h1>
+        <p className="text-gray-600">Please start from Step 1</p>
+        <button 
+          onClick={() => onStepChange(1)}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          Back to Step 1
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function CanvasPage() {
   const searchParams = useSearchParams();
@@ -18,27 +140,6 @@ export default function CanvasPage() {
     sessionCode: string;
     participantName: string;
   } | null>(null);
-  
-  const { moreImportantPile, lessImportantPile } = useStep1Store();
-  const { top8Pile, lessImportantPile: step2LessImportant, discardedPile: step2Discarded } = useStep2Store();
-  
-  // Expose stores globally for E2E testing
-  useEffect(() => {
-    if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.PLAYWRIGHT_TEST === 'true')) {
-      // Import and expose test utilities
-      import('@/lib/test-utils/browser-globals').then(() => {
-        const testWindow = window as typeof window & {
-          useStep1Store: typeof useStep1Store;
-          useStep2Store: typeof useStep2Store;
-          useStep3Store: typeof useStep3Store;
-        };
-        testWindow.useStep1Store = useStep1Store;
-        testWindow.useStep2Store = useStep2Store;
-        testWindow.useStep3Store = useStep3Store;
-        console.log('🧪 Test utilities exposed for E2E testing');
-      });
-    }
-  }, []);
 
   useEffect(() => {
     const sessionCode = searchParams.get('session');
@@ -68,12 +169,40 @@ export default function CanvasPage() {
     setIsLoading(false);
   }, [searchParams, router]);
 
-  const handleStepNavigation = (step: 1 | 2 | 3) => {
-    setCurrentStep(step);
-    // Update URL to reflect the current step
-    const params = new URLSearchParams(searchParams);
-    params.set('step', step.toString());
-    router.replace(`/canvas?${params.toString()}`);
+  const handleStepNavigation = async (step: 1 | 2 | 3) => {
+    try {
+      // 1. Update local UI state immediately for responsiveness
+      setCurrentStep(step);
+      
+      // 2. Update session participant data for observers
+      if (sessionData) {
+        const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
+        
+        // Call the backend API to update session participant step
+        const response = await fetch(`/api/sessions/${sessionData.sessionCode}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId,
+            currentStep: step
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn(`⚠️ Failed to update participant step in session: ${response.status}`);
+        } else {
+          console.log(`✅ Updated participant step to ${step} in session ${sessionData.sessionCode}`);
+        }
+      }
+      
+      // 3. Update URL to reflect the current step
+      const params = new URLSearchParams(searchParams);
+      params.set('step', step.toString());
+      router.replace(`/canvas?${params.toString()}`);
+    } catch (error) {
+      console.error('❌ Failed to update step navigation:', error);
+      // Continue with local update even if session update fails
+    }
   };
 
   if (isLoading) {
@@ -91,92 +220,23 @@ export default function CanvasPage() {
     return null; // Will redirect to login
   }
 
-  // Render appropriate step component
-  if (currentStep === 1) {
-    return (
-      <Step1Page
-        participantName={sessionData.participantName}
-        sessionCode={sessionData.sessionCode}
-        onStepComplete={() => handleStepNavigation(2)}
-      />
-    );
-  }
+  // Generate a unique participant ID from session + name
+  const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
 
-  if (currentStep === 2) {
-    // If Step 1 data is empty, redirect back to Step 1 to complete it first
-    if (moreImportantPile.length === 0 && lessImportantPile.length === 0) {
-      return (
-        <Step1Page
-          participantName={sessionData.participantName}
-          sessionCode={sessionData.sessionCode}
-          onStepComplete={() => handleStepNavigation(2)}
-        />
-      );
-    }
-    
-    return (
-      <Step2Page
-        participantName={sessionData.participantName}
-        sessionCode={sessionData.sessionCode}
-        step1Data={{
-          moreImportantPile,
-          lessImportantPile
-        }}
-        onStepComplete={() => handleStepNavigation(3)}
-      />
-    );
-  }
-
-  // Step 3 - Final selection of Top 3 values
-  if (currentStep === 3) {
-    // If Step 2 data is empty, redirect back to Step 2 to complete it first
-    if (top8Pile.length === 0) {
-      return (
-        <Step2Page
-          participantName={sessionData.participantName}
-          sessionCode={sessionData.sessionCode}
-          step1Data={{
-            moreImportantPile,
-            lessImportantPile
-          }}
-          onStepComplete={() => handleStepNavigation(3)}
-        />
-      );
-    }
-    
-    return (
-      <Step3Page
-        participantName={sessionData.participantName}
-        sessionCode={sessionData.sessionCode}
-        step2Data={{
-          top8Pile,
-          lessImportantPile: step2LessImportant,
-          discardedPile: step2Discarded
-        }}
-        step1Data={{
-          lessImportantPile
-        }}
-        onStepComplete={() => {
-          console.log('Exercise completed!');
-          // TODO: Navigate to results/review page
-        }}
-      />
-    );
-  }
-
-  // Fallback - should never reach here
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Invalid Step</h1>
-        <p className="text-gray-600">Please start from Step 1</p>
-        <button 
-          onClick={() => handleStepNavigation(1)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
-        >
-          Back to Step 1
-        </button>
-      </div>
-    </div>
+    <SessionStoreProvider 
+      sessionCode={sessionData.sessionCode} 
+      participantId={participantId}
+      config={{
+        enableDebugLogging: process.env.NODE_ENV === 'development',
+        enableMemoryTracking: process.env.NODE_ENV === 'development'
+      }}
+    >
+      <StepRouter 
+        currentStep={currentStep}
+        sessionData={sessionData}
+        onStepChange={handleStepNavigation}
+      />
+    </SessionStoreProvider>
   );
 }

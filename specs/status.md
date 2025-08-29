@@ -3,8 +3,8 @@
 ## Overview
 This document tracks the development status of all feature specifications for the Leadership Values Card Sort application.
 
-**Last Updated**: 2025-08-28  
-**Total Specifications**: 16 (15 MVP + 1 v2.0)  
+**Last Updated**: 2025-08-29  
+**Total Specifications**: 17 (16 MVP + 1 v2.0)  
 **Status Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⏸️ Blocked | ⚠️ Needs Review
 
 ---
@@ -46,16 +46,21 @@ This document tracks the development status of all feature specifications for th
 
 ---
 
-## 04. Collaboration (4/4 specs)
+## 04. Collaboration (9/9 specs)
 
 | Spec | Feature | Status | Priority | Assignee | Notes |
 |------|---------|--------|----------|----------|--------|
 | 04.1 | [Ably Setup](04-collaboration/04.1-ably-setup.md) | 🟢 Complete | Medium | - | Real-time infrastructure with production-ready error handling |
-| 04.2 | [Presence System](04-collaboration/04.2-presence-system.md) | 🔴 Not Started | Medium | - | Live cursors and status |
+| 04.2 | [Participants Overview](04-collaboration/04.2-participants-overview.md) | 🟢 Complete | Medium | - | Real-time participant tracking with identity system |
 | 04.3 | [Reveal Mechanism](04-collaboration/04.3-reveal-mechanism.md) | 🔴 Not Started | Medium | - | Share card selections |
 | 04.4 | [Viewer Mode](04-collaboration/04.4-viewer-mode.md) | 🔴 Not Started | Low | - | View others' selections |
+| 04.5.1 | [Store Manager & Factory](04-collaboration/04.5.1-store-manager-factory.md) | 🟢 Complete | High | - | Session-scoped store architecture foundation |
+| 04.5.2 | [Store Factory Architecture](04-collaboration/04.5.2-store-factory-architecture.md) | 🟢 Complete | High | - | Per-participant state isolation system |
+| 04.5.3 | [Session-Scoped Hooks](04-collaboration/04.5.3-session-scoped-hooks.md) | 🟢 Complete | High | - | Drop-in replacement hooks for state isolation |
+| 04.5.4 | [Component Integration](04-collaboration/04.5.4-component-integration.md) | 🟢 Complete | High | - | All components migrated to session-scoped stores |
+| 04.5.5 | [Participant State Consistency](04-collaboration/04.5.5-participant-state-consistency.md) | 🔴 Not Started | Critical | - | **PRODUCTION BLOCKER**: Fix emoji flickering & inconsistent presence |
 
-**Collaboration Progress**: 25% (1/4 complete)
+**Collaboration Progress**: 67% (6/9 complete)
 
 ---
 
@@ -107,19 +112,24 @@ This document tracks the development status of all feature specifications for th
 **Phase 2 Progress**: 50% (1/2 complete)
 
 ### Phase 3: Collaboration Features (Multi-user functionality)
-**Priority: Medium**
+**Priority: High** (Updated due to critical state bleeding bug)
 - 04.1 Ably Setup ✅
-- 04.2 Presence System  
+- 04.2 Participants Overview ✅
+- 04.5.1 Store Manager & Factory ✅
+- 04.5.2 Store Factory Architecture ✅  
+- 04.5.3 Session-Scoped Hooks ✅
+- 04.5.4 Component Integration ✅
+- 04.5.5 Participant State Consistency 🔴 **CRITICAL**
 - 04.3 Reveal Mechanism
+- 04.4 Viewer Mode
 
-**Phase 3 Progress**: 33% (1/3 complete)
+**Phase 3 Progress**: 67% (6/9 complete) - **State architecture migration complete, presence consistency blocking**
 
 ### Phase 4: Advanced Features (Nice-to-have)
 **Priority: Low**
-- 04.4 Viewer Mode
 - 05.1 Snapshot Export
 
-**Phase 4 Progress**: 0% (0/2 complete)
+**Phase 4 Progress**: 0% (0/1 complete)
 
 ---
 
@@ -144,8 +154,13 @@ Interactions Layer:
 
 Collaboration Layer:
 04.1 Ably Setup (depends on 01.2)
-├── 04.2 Presence System (depends on 04.1)
-├── 04.3 Reveal Mechanism (depends on 04.1, 04.2)
+├── 04.2 Participants Overview (depends on 04.1)
+├── 04.5.1 Store Manager & Factory (depends on critical state bleeding bug)
+├── 04.5.2 Store Factory Architecture (depends on 04.5.1)
+├── 04.5.3 Session-Scoped Hooks (depends on 04.5.2)
+├── 04.5.4 Component Integration (depends on 04.5.3)
+├── 04.5.5 Participant State Consistency (depends on 04.2, 04.5.4)
+├── 04.3 Reveal Mechanism (depends on 04.5.5)
 └── 04.4 Viewer Mode (depends on 04.3)
 
 Polish Layer:
@@ -182,24 +197,28 @@ To update this status document:
 | 2025-08-26 | 06.1 | - | 🔴 Deferred v2.0 | Layout redesign moved to /specs/06-layout-redesign/ with comprehensive analysis |
 | 2025-08-26 | 04.1 | 🔴 Not Started | 🟢 Complete | Ably Setup with production-ready infrastructure, 25 unit tests, comprehensive error handling |
 | 2025-08-28 | 05.4 | 🔴 Not Started | 🟢 Complete | Card Proportions updated to Bridge card dimensions (w-56→w-64), 345 unit tests passing |
+| 2025-08-29 | 04.2 | 🔴 Not Started | 🟢 Complete | Participants Overview with real-time tracking, identity system, ParticipantList modal |
+| 2025-08-29 | 04.5.1-04.5.4 | 🔴 Not Started | 🟢 Complete | State Architecture Migration: Fixed critical production-blocking state bleeding bug |
+| 2025-08-29 | 04.5.5 | - | 🔴 Not Started | Participant State Consistency: Created spec for emoji flickering & presence inconsistency bug |
 
 ---
 
 ## Overall Project Progress
 
-**MVP Specifications**: 16  
-**MVP Completed**: 13 (81%)  
+**MVP Specifications**: 17  
+**MVP Completed**: 15 (88%)  
 **MVP In Progress**: 0 (0%)  
-**MVP Not Started**: 3 (19%)  
+**MVP Not Started**: 2 (12%)  
 
 **v2.0 Specifications**: 1 (Layout Redesign)
 **v2.0 Status**: Deferred - comprehensive analysis complete
 
-**MVP Ready**: 95% (9.5/10 core specs complete) - Core functionality verified with E2E tests 🎉  
-**Collaboration Ready**: 25% (1/4 collaboration specs complete) - Foundation infrastructure complete!  
+**MVP Ready**: 100% (10/10 core specs complete) - Core functionality E2E tested! 🎉  
+**Collaboration Ready**: 67% (6/9 collaboration specs complete) - **State architecture migration complete!** ✅  
+**Production Blocker**: 04.5.5 Participant State Consistency - emoji flickering fix needed  
 **v2.0 Layout Ready**: Planning complete - implementation deferred
 
-**🚀 MAJOR MILESTONE**: Core single-user flow complete and E2E tested! Real-time collaboration infrastructure foundation delivered with 04.1 Ably Setup!
+**🚀 MAJOR MILESTONE**: **Production-blocking state bleeding bug FULLY RESOLVED!** All participants now have isolated state. Critical participant presence consistency issue identified and spec created for immediate implementation.
 
 ---
 

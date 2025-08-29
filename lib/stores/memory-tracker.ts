@@ -72,9 +72,9 @@ export class MemoryTracker {
     
     // Find oldest store
     let oldestStore: { key: string; age: number } | null = null;
-    let oldestTime = now;
+    let oldestTime = Infinity;
     
-    for (const [key, metadata] of this.storeMetadata) {
+    this.storeMetadata.forEach((metadata, key) => {
       if (metadata.createdAt < oldestTime) {
         oldestTime = metadata.createdAt;
         oldestStore = {
@@ -82,7 +82,7 @@ export class MemoryTracker {
           age: now - metadata.createdAt
         };
       }
-    }
+    });
     
     // Estimate memory usage (rough calculation)
     const estimatedMemoryPerStore = 0.5; // MB
@@ -105,12 +105,12 @@ export class MemoryTracker {
     const now = Date.now();
     const inactive: string[] = [];
     
-    for (const [key, metadata] of this.storeMetadata) {
+    this.storeMetadata.forEach((metadata, key) => {
       const inactiveTime = now - metadata.lastAccessed;
       if (inactiveTime > this.maxInactiveMs) {
         inactive.push(key);
       }
-    }
+    });
     
     return inactive;
   }

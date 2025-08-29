@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { useStep1Store } from '@/state/local/step1-store';
+import { useSessionStep1Store } from '@/hooks/stores/useSessionStores';
 import { Deck } from '@/components/cards/Deck';
 import { StagingArea } from '@/components/cards/StagingArea';
 import { DroppableZone } from '@/components/cards/DroppableZone';
@@ -18,10 +18,11 @@ import { Card as CardType } from '@/lib/types/card';
 interface Step1PageProps {
   sessionCode: string;
   participantName: string;
+  currentStep?: 1 | 2 | 3; // Allow override of step for presence
   onStepComplete?: () => void;
 }
 
-export function Step1Page({ sessionCode, participantName, onStepComplete }: Step1PageProps) {
+export function Step1Page({ sessionCode, participantName, currentStep = 1, onStepComplete }: Step1PageProps) {
   const [showModal, setShowModal] = useState(true);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -30,7 +31,8 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
 
   // Initialize presence system
   const {
-    participants,
+    participantsForDisplay = new Map(), // NEW: Hybrid data with consistent identity/step
+    allParticipantsForDisplay = new Map(), // LEGACY: Fallback for backward compatibility
     currentUser,
     participantCount,
     isConnected,
@@ -39,7 +41,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
   } = usePresence({
     sessionCode,
     participantName,
-    currentStep: 1,
+    currentStep,
     enabled: true
   });
   
@@ -53,7 +55,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
     flipNextCard,
     moveCardToPile,
     moveCardBetweenPiles,
-  } = useStep1Store();
+  } = useSessionStep1Store();
 
   // Initialize deck on mount
   useEffect(() => {
@@ -389,7 +391,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
       <ParticipantsModal
         isOpen={showParticipants}
         onClose={handleCloseParticipants}
-        participants={participants}
+        participants={participantsForDisplay.size > 0 ? participantsForDisplay : allParticipantsForDisplay}
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}

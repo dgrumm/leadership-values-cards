@@ -60,7 +60,7 @@ export interface PresenceConfig {
 // Default configuration values
 export const DEFAULT_PRESENCE_CONFIG: PresenceConfig = {
   cursorThrottleMs: 50,      // 20fps cursor updates
-  heartbeatIntervalMs: 5000,  // 5 second heartbeat for responsive updates
-  idleTimeoutMs: 10000,       // 10 seconds idle timeout
-  inactiveTimeoutMs: 300000   // 5 minutes inactive timeout
+  heartbeatIntervalMs: 1000, // 1 second heartbeat for responsive updates
+  idleTimeoutMs: 10000,      // 10 seconds idle timeout
+  inactiveTimeoutMs: 300000  // 5 minutes inactive timeout
 };

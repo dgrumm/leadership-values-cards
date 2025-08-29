@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStep2Store } from '@/state/local/step2-store';
+import { useSessionStep2Store } from '@/hooks/stores/useSessionStores';
 import { Deck } from '@/components/cards/Deck';
 import { StagingArea } from '@/components/cards/StagingArea';
 import { DroppableZone } from '@/components/cards/DroppableZone';
@@ -20,6 +20,7 @@ import { cn, debounce } from '@/lib/utils';
 interface Step2PageProps {
   sessionCode: string;
   participantName: string;
+  currentStep?: 1 | 2 | 3; // Allow override of step for presence
   step1Data: {
     moreImportantPile: Card[];
     lessImportantPile: Card[];
@@ -27,7 +28,7 @@ interface Step2PageProps {
   onStepComplete?: () => void;
 }
 
-export function Step2Page({ sessionCode, participantName, step1Data, onStepComplete }: Step2PageProps) {
+export function Step2Page({ sessionCode, participantName, currentStep = 2, step1Data, onStepComplete }: Step2PageProps) {
   const [showModal, setShowModal] = useState(false); // Start false, show after transition
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [bounceAnimation, setBounceAnimation] = useState(false);
@@ -39,7 +40,8 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   
   // Initialize presence system
   const {
-    participants,
+    participantsForDisplay = new Map(), // NEW: Hybrid data with consistent identity/step
+    allParticipantsForDisplay = new Map(), // LEGACY: Fallback for backward compatibility
     currentUser,
     participantCount,
     isConnected,
@@ -48,7 +50,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   } = usePresence({
     sessionCode,
     participantName,
-    currentStep: 2,
+    currentStep,
     enabled: true
   });
   
@@ -73,7 +75,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
     moveCardBetweenPiles,
     showOverflowWarningMessage,
     hideOverflowWarningMessage,
-  } = useStep2Store();
+  } = useSessionStep2Store();
 
   // Comprehensive drag state clearing function
   const clearDragState = useCallback(() => {
@@ -688,7 +690,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
       <ParticipantsModal
         isOpen={showParticipants}
         onClose={handleCloseParticipants}
-        participants={participants}
+        participants={participantsForDisplay.size > 0 ? participantsForDisplay : allParticipantsForDisplay}
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}

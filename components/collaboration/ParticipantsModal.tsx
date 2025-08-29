@@ -3,13 +3,13 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ParticipantList } from './ParticipantList';
-import type { PresenceData } from '@/lib/presence/types';
+import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 
 export interface ParticipantsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  participants: Map<string, PresenceData>;
-  currentUserId: string;
+  participants: Map<string, ParticipantDisplayData>; // NOW: Hybrid data with consistent identity/step
+  currentUserId?: string; // DEPRECATED: ParticipantDisplayData includes isCurrentUser flag
   sessionCode?: string;
   onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
 }

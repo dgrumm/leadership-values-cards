@@ -8,7 +8,7 @@ import {
   DeckType,
   GameState
 } from '../../lib/types';
-import { getUniqueEmojiAndColor } from '../../lib/constants';
+import { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } from '../../lib/constants';
 
 describe('types', () => {
   describe('Card interface', () => {
@@ -105,25 +105,16 @@ describe('types', () => {
     });
   });
 
-  describe('getUniqueEmojiAndColor', () => {
-    it('should return unique emoji and color', () => {
-      const existing = [{ emoji: '🎯', color: '#FF6B6B' }];
-      const result = getUniqueEmojiAndColor(existing);
+  describe('PARTICIPANT_EMOJIS and PARTICIPANT_COLORS', () => {
+    it('should have valid emoji and color arrays', () => {
+      expect(Array.isArray(PARTICIPANT_EMOJIS)).toBe(true);
+      expect(Array.isArray(PARTICIPANT_COLORS)).toBe(true);
+      expect(PARTICIPANT_EMOJIS.length).toBeGreaterThan(0);
+      expect(PARTICIPANT_COLORS.length).toBeGreaterThan(0);
       
-      expect(result.emoji).not.toBe('🎯');
-      expect(result.color).not.toBe('#FF6B6B');
-      expect(typeof result.emoji).toBe('string');
-      expect(typeof result.color).toBe('string');
-    });
-
-    it('should throw error when no combinations available', () => {
-      const existing = Array.from({ length: 50 }, (_, i) => ({
-        emoji: `emoji-${i}`,
-        color: `color-${i}`
-      }));
-      
-      // This should work with our predefined sets
-      expect(() => getUniqueEmojiAndColor(existing)).not.toThrow();
+      // Test that they contain strings
+      expect(typeof PARTICIPANT_EMOJIS[0]).toBe('string');
+      expect(typeof PARTICIPANT_COLORS[0]).toBe('string');
     });
   });
 });

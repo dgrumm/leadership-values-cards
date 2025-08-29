@@ -10,6 +10,5 @@ export {
 
 export {
   PARTICIPANT_EMOJIS,
-  PARTICIPANT_COLORS,
-  getUniqueEmojiAndColor
+  PARTICIPANT_COLORS
 } from './participants';

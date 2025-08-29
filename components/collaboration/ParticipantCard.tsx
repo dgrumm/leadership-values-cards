@@ -4,12 +4,12 @@ import * as React from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import type { PresenceData } from '@/lib/presence/types';
+import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 
 export interface ParticipantCardProps {
-  participant: PresenceData;
+  participant: ParticipantDisplayData;
   onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
-  currentUserId?: string;
+  currentUserId?: string; // DEPRECATED: Use participant.isCurrentUser instead
   className?: string;
 }
 
@@ -24,13 +24,14 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
     name, 
     emoji, 
     color, 
-    currentStep, 
+    currentStep, // NOW AUTHORITATIVE: Always from session data (fixes screenshot inconsistency)
     status,
-    lastActive
+    lastActive,
+    isCurrentUser // NEW: Built into ParticipantDisplayData
   } = participant;
-
-  // Check if this is the current user
-  const isCurrentUser = participantId === currentUserId;
+  
+  // Backward compatibility (remove after migration complete)
+  const isCurrentUserComputed = currentUserId ? (participantId === currentUserId) : isCurrentUser;
   
   // Check if participant has revealed content that can be viewed
   const canViewReveal = status === 'revealed-8' || status === 'revealed-3';
@@ -95,9 +96,9 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
         <div className="flex-1 min-w-0">
           <h3 
             className="text-sm font-medium text-gray-900 truncate"
-            title={isCurrentUser ? `${name} (You)` : name}
+            title={isCurrentUserComputed ? `${name} (You)` : name}
           >
-            {name} {isCurrentUser && <span className="text-blue-600 font-semibold">(You)</span>}
+            {name} {isCurrentUserComputed && <span className="text-blue-600 font-semibold">(You)</span>}
           </h3>
           <p className="text-xs text-gray-500">
             Step {currentStep} of 3

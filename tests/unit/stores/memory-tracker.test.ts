@@ -17,7 +17,6 @@ describe('MemoryTracker', () => {
   let tracker: MemoryTracker;
 
   beforeEach(() => {
-    tracker = new MemoryTracker();
     jest.clearAllMocks();
     
     // Mock console methods
@@ -32,6 +31,10 @@ describe('MemoryTracker', () => {
   });
 
   describe('store lifecycle tracking', () => {
+    beforeEach(() => {
+      tracker = new MemoryTracker();
+    });
+
     it('should track store creation', () => {
       tracker.recordStoreCreation('ABC123:user1');
       
@@ -67,6 +70,8 @@ describe('MemoryTracker', () => {
 
   describe('memory statistics', () => {
     beforeEach(() => {
+      tracker = new MemoryTracker();
+      
       // Create some test stores
       tracker.recordStoreCreation('ABC123:user1');
       tracker.recordStoreCreation('ABC123:user2');
@@ -116,6 +121,10 @@ describe('MemoryTracker', () => {
   });
 
   describe('inactive store detection', () => {
+    beforeEach(() => {
+      tracker = new MemoryTracker();
+    });
+
     it('should identify inactive stores', () => {
       // Create stores with different access times
       tracker.recordStoreCreation('ABC123:user1');
@@ -138,6 +147,10 @@ describe('MemoryTracker', () => {
   });
 
   describe('memory warnings', () => {
+    beforeEach(() => {
+      tracker = new MemoryTracker();
+    });
+
     it('should warn about high store count', () => {
       // Create many stores
       for (let i = 0; i < 105; i++) {
@@ -184,6 +197,10 @@ describe('MemoryTracker', () => {
   });
 
   describe('sorted store access', () => {
+    beforeEach(() => {
+      tracker = new MemoryTracker();
+    });
+
     it('should sort stores by last access time', (done) => {
       tracker.recordStoreCreation('ABC123:user1');
       tracker.recordStoreCreation('ABC123:user2');
@@ -206,6 +223,10 @@ describe('MemoryTracker', () => {
   });
 
   describe('development logging', () => {
+    beforeEach(() => {
+      tracker = new MemoryTracker();
+    });
+
     it('should log memory stats in development mode', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';

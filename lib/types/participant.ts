@@ -2,6 +2,7 @@ import { Card } from './card';
 
 // Cold data - changes infrequently, stable for duration of session
 export interface ParticipantProfile {
+  id: string;
   name: string;
   emoji: string;
   color: string;
