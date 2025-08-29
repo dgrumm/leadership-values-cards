@@ -55,6 +55,9 @@ export function usePresence({
   // NEW: Hybrid display data state
   const [participantsForDisplay, setParticipantsForDisplay] = useState<Map<string, ParticipantDisplayData>>(new Map());
   const [currentUserForDisplay, setCurrentUserForDisplay] = useState<ParticipantDisplayData | null>(null);
+  
+  // Force refresh trigger for session data updates
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Initialize presence manager
   useEffect(() => {
@@ -222,7 +225,7 @@ export function usePresence({
     };
     
     createHybridDisplayData();
-  }, [sessionCode, currentUser, participants, participantName]);
+  }, [sessionCode, currentUser, participants, participantName, refreshTrigger]);
   
   // Event-driven participant updates (replaces polling)
   useEffect(() => {
@@ -251,6 +254,22 @@ export function usePresence({
 
     return unsubscribe;
   }, [presenceManager]);
+
+  // Periodic refresh of session data for step progress updates
+  useEffect(() => {
+    if (!sessionCode || !enabled) return;
+    
+    console.log('🔄 Setting up session data refresh for step progress updates');
+    
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Refreshing session data for step progress updates');
+      setRefreshTrigger(prev => prev + 1);
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [sessionCode, enabled]);
 
   // Update status function
   const updateStatus = useCallback(async (status: PresenceData['status']) => {

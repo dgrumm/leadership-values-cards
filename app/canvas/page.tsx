@@ -169,12 +169,40 @@ export default function CanvasPage() {
     setIsLoading(false);
   }, [searchParams, router]);
 
-  const handleStepNavigation = (step: 1 | 2 | 3) => {
-    setCurrentStep(step);
-    // Update URL to reflect the current step
-    const params = new URLSearchParams(searchParams);
-    params.set('step', step.toString());
-    router.replace(`/canvas?${params.toString()}`);
+  const handleStepNavigation = async (step: 1 | 2 | 3) => {
+    try {
+      // 1. Update local UI state immediately for responsiveness
+      setCurrentStep(step);
+      
+      // 2. Update session participant data for observers
+      if (sessionData) {
+        const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
+        
+        // Call the backend API to update session participant step
+        const response = await fetch(`/api/sessions/${sessionData.sessionCode}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId,
+            currentStep: step
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn(`⚠️ Failed to update participant step in session: ${response.status}`);
+        } else {
+          console.log(`✅ Updated participant step to ${step} in session ${sessionData.sessionCode}`);
+        }
+      }
+      
+      // 3. Update URL to reflect the current step
+      const params = new URLSearchParams(searchParams);
+      params.set('step', step.toString());
+      router.replace(`/canvas?${params.toString()}`);
+    } catch (error) {
+      console.error('❌ Failed to update step navigation:', error);
+      // Continue with local update even if session update fails
+    }
   };
 
   if (isLoading) {
