@@ -6,9 +6,21 @@
  * 
  * BEFORE: useStep1Store() was a global singleton shared by all users
  * AFTER: SessionStoreManager creates isolated instances per participant
+ * 
+ * UPDATED: Now uses real store factories instead of mock stores (Phase 04.5.2 complete)
  */
 
 import { SessionStoreManager } from '../../../lib/stores/session-store-manager';
+import type { Card } from '@/lib/types/card';
+
+// Mock card data for testing real store functionality
+const mockCards: Card[] = Array.from({ length: 40 }, (_, i) => ({
+  id: `card-${i + 1}`,
+  title: `Test Card ${i + 1}`,
+  description: `Description for test card ${i + 1}`,
+  category: 'test',
+  pile: 'deck' as const
+}));
 
 describe('State Isolation - CRITICAL BUG FIX', () => {
   let manager: SessionStoreManager;
@@ -20,7 +32,7 @@ describe('State Isolation - CRITICAL BUG FIX', () => {
   });
 
   describe('🚨 CRITICAL: Step completion state isolation', () => {
-    it('should prevent User1 Step2 completion from affecting User2 UI state', () => {
+    it('should prevent User1 Step2 completion from affecting User2 UI state', async () => {
       // SCENARIO: The original bug that made collaborative sessions unusable
       // User1 completing Step 2 would show "Continue to Step 3" button for User2
       
@@ -30,14 +42,26 @@ describe('State Isolation - CRITICAL BUG FIX', () => {
       
       // CRITICAL ASSERTION: Different participants get different store instances
       expect(user1Step2Store).not.toBe(user2Step2Store);
-      expect(user1Step2Store._id).not.toBe(user2Step2Store._id);
+      expect(user1Step2Store.getState).not.toBe(user2Step2Store.getState);
       
-      // VERIFICATION: Each store is completely independent
-      expect(user1Step2Store._mockStoreType).toBe('step2');
-      expect(user2Step2Store._mockStoreType).toBe('step2');
+      // REAL STORE VALIDATION: Initialize different states
+      const user1Cards = mockCards.slice(0, 10);
+      const user2Cards = mockCards.slice(10, 20);
       
-      // This test will be extended in 04.5.2 when real store logic is implemented
-      // For now, we validate the foundation: separate instances per participant
+      await user1Step2Store.getState().startTransition(user1Cards, []);
+      await user2Step2Store.getState().startTransition(user2Cards, []);
+      
+      // CRITICAL: User1 completing step should not affect User2's state
+      user1Step2Store.setState({ isTransitioning: false });
+      
+      // User2 should still be in their own independent state
+      expect(user1Step2Store.getState().deck[0].id).toBe(user1Cards[0].id);
+      expect(user2Step2Store.getState().deck[0].id).toBe(user2Cards[0].id);
+      expect(user1Step2Store.getState().isTransitioning).toBe(false);
+      expect(user2Step2Store.getState().isTransitioning).toBe(false);
+      
+      // VERIFICATION: Complete state isolation
+      expect(user1Step2Store.getState()).not.toBe(user2Step2Store.getState());
     });
 
     it('should isolate Step1 deck state between participants', () => {
@@ -48,11 +72,27 @@ describe('State Isolation - CRITICAL BUG FIX', () => {
       
       // CRITICAL ASSERTION: Completely separate store instances
       expect(user1Step1Store).not.toBe(user2Step1Store);
-      expect(user1Step1Store._id).not.toBe(user2Step1Store._id);
+      expect(user1Step1Store.getState).not.toBe(user2Step1Store.getState);
       
-      // VERIFICATION: Both users have their own Step1 stores
-      expect(user1Step1Store._mockStoreType).toBe('step1');
-      expect(user2Step1Store._mockStoreType).toBe('step1');
+      // REAL STORE VALIDATION: Set up different decks
+      const user1Cards = mockCards.slice(0, 5);
+      const user2Cards = mockCards.slice(5, 10);
+      
+      user1Step1Store.setState({ deck: user1Cards, deckPosition: 0 });
+      user2Step1Store.setState({ deck: user2Cards, deckPosition: 0 });
+      
+      // User1 flips card
+      user1Step1Store.getState().flipNextCard();
+      
+      // CRITICAL: User2 should be unaffected
+      expect(user1Step1Store.getState().stagingCard).not.toBeNull();
+      expect(user2Step1Store.getState().stagingCard).toBeNull();
+      expect(user1Step1Store.getState().deckPosition).toBe(1);
+      expect(user2Step1Store.getState().deckPosition).toBe(0);
+      
+      // VERIFICATION: Different deck contents
+      expect(user1Step1Store.getState().deck[0].id).toBe(user1Cards[0].id);
+      expect(user2Step1Store.getState().deck[0].id).toBe(user2Cards[0].id);
     });
 
     it('should isolate Step3 final selection state between participants', () => {
