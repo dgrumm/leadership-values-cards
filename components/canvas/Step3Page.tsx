@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStep3Store } from '@/state/local/step3-store';
+import { useSessionStep3Store } from '@/hooks/stores/useSessionStores';
 import { Deck } from '@/components/cards/Deck';
 import { StagingArea } from '@/components/cards/StagingArea';
 import { DroppableZone } from '@/components/cards/DroppableZone';
@@ -78,7 +78,7 @@ export function Step3Page({ sessionCode, participantName, step2Data, step1Data, 
     moveCardBetweenPiles,
     showOverflowWarningMessage,
     hideOverflowWarningMessage,
-  } = useStep3Store();
+  } = useSessionStep3Store();
 
   // Comprehensive drag state clearing function
   const clearDragState = useCallback(() => {

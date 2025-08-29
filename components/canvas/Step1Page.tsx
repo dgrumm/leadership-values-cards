@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { useStep1Store } from '@/state/local/step1-store';
+import { useSessionStep1Store } from '@/hooks/stores/useSessionStores';
 import { Deck } from '@/components/cards/Deck';
 import { StagingArea } from '@/components/cards/StagingArea';
 import { DroppableZone } from '@/components/cards/DroppableZone';
@@ -53,7 +53,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
     flipNextCard,
     moveCardToPile,
     moveCardBetweenPiles,
-  } = useStep1Store();
+  } = useSessionStep1Store();
 
   // Initialize deck on mount
   useEffect(() => {
