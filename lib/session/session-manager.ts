@@ -288,7 +288,7 @@ export class SessionManager {
     updatedParticipants[participantIndex] = {
       ...updatedParticipants[participantIndex],
       lastActivity: createTimestamp(),
-      ...(currentStep && { currentStep })
+      ...(currentStep !== undefined && { currentStep })
     };
 
     // Update session
