@@ -32,6 +32,9 @@ export class PresenceManager {
   private heartbeatInterval?: NodeJS.Timeout;
   private isDestroyed = false;
   
+  // Event callbacks for external subscribers
+  private participantChangeCallbacks = new Set<(participants: Map<string, PresenceData>) => void>();
+  
   private config: PresenceConfig;
 
   constructor(
@@ -161,15 +164,18 @@ export class PresenceManager {
         switch (action) {
           case 'enter':
             this.participants.set(data.participantId, data);
+            this.notifyParticipantChange();
             break;
             
           case 'leave':
             this.participants.delete(data.participantId);
             this.cursors.delete(data.participantId); // Clean up cursor too
+            this.notifyParticipantChange();
             break;
             
           case 'update':
             this.participants.set(data.participantId, data);
+            this.notifyParticipantChange();
             break;
             
           default:
@@ -300,6 +306,37 @@ export class PresenceManager {
   }
 
   /**
+   * Subscribe to participant changes for event-driven updates
+   */
+  onParticipantChange(callback: (participants: Map<string, PresenceData>) => void): () => void {
+    this.participantChangeCallbacks.add(callback);
+    
+    // Call immediately with current participants
+    callback(new Map(this.participants));
+    
+    // Return unsubscribe function
+    return () => {
+      this.participantChangeCallbacks.delete(callback);
+    };
+  }
+
+  /**
+   * Notify all subscribers of participant changes
+   */
+  private notifyParticipantChange(): void {
+    if (this.isDestroyed) return;
+    
+    const participantsCopy = new Map(this.participants);
+    for (const callback of this.participantChangeCallbacks) {
+      try {
+        callback(participantsCopy);
+      } catch (error) {
+        console.error('Error in participant change callback:', error);
+      }
+    }
+  }
+
+  /**
    * Clean up resources
    */
   cleanup(): void {
@@ -323,6 +360,9 @@ export class PresenceManager {
       this.cursorUnsubscribe = undefined;
     }
 
+    // Clear callbacks
+    this.participantChangeCallbacks.clear();
+    
     // Clear local state
     this.participants.clear();
     this.cursors.clear();

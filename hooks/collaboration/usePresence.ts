@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PresenceManager } from '@/lib/presence/presence-manager';
-import { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } from '@/lib/constants/participants';
 import { getAblyService } from '@/lib/ably/ably-service';
 import type { PresenceData } from '@/lib/presence/types';
 
@@ -15,7 +14,8 @@ export interface UsePresenceOptions {
 
 export interface UsePresenceReturn {
   // Participant data
-  participants: Map<string, PresenceData>;
+  participants: Map<string, PresenceData>; // Others only (filtered)
+  allParticipantsForDisplay: Map<string, PresenceData>; // Combined self + others for UI
   currentUser: PresenceData | null;
   participantCount: number;
   otherParticipants: PresenceData[];
@@ -62,11 +62,33 @@ export function usePresence({
         const ablyService = getAblyService();
         await ablyService.init();
 
-        // Simple random emoji and color assignment
-        const emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
-        const color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
+        // Get participant identity from session (single source of truth)
+        const { getSessionManager } = await import('@/lib/session/session-manager');
+        const sessionManager = getSessionManager();
+        const { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } = await import('@/lib/constants/participants');
         
-        console.log(`🎨 Randomly assigned identity for ${participantName}:`, { emoji, color });
+        console.log(`🔍 Looking for participant "${participantName}" in session "${sessionCode}"`);
+        const participant = await sessionManager.getCurrentParticipant(sessionCode, participantName);
+        
+        let emoji: string;
+        let color: string;
+        
+        if (participant) {
+          // Use session identity (preferred path)
+          emoji = participant.emoji;
+          color = participant.color;
+          console.log(`✅ Using session identity for ${participantName}:`, { emoji, color });
+        } else {
+          // Fallback: Debug info and temporary random assignment
+          const session = await sessionManager.getSession(sessionCode);
+          console.warn(`⚠️ Participant "${participantName}" not found in session "${sessionCode}" - using fallback`);
+          console.warn(`📋 Available participants:`, session?.participants?.map(p => ({ name: p.name, isActive: p.isActive })));
+          
+          // Temporary fallback to prevent complete failure
+          emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
+          color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
+          console.warn(`🔄 Fallback identity for ${participantName}:`, { emoji, color });
+        }
 
         // Create current user data
         const currentUserData: PresenceData = {
@@ -119,24 +141,32 @@ export function usePresence({
     };
   }, [enabled, sessionCode, participantName, currentStep]);
 
-  // Simple polling for participants
+  // Event-driven participant updates (replaces polling)
   useEffect(() => {
     if (!presenceManager) return;
 
-    const updateParticipants = () => {
-      const latestParticipants = presenceManager.getParticipants();
-      setParticipants(new Map(latestParticipants));
-    };
+    console.log('🎯 Setting up event-driven participant updates (no more polling!)');
+    
+    // Subscribe to real-time participant changes
+    const unsubscribe = presenceManager.onParticipantChange((latestParticipants) => {
+      console.log(`📋 Participant update received: ${latestParticipants.size} participants`);
+      
+      // Filter out current user to prevent race conditions
+      // Self should always come from local currentUser state, not Ably events
+      const currentUserId = presenceManager.getCurrentUserData()?.participantId;
+      const othersOnly = new Map<string, PresenceData>();
+      
+      for (const [id, participant] of latestParticipants) {
+        if (id !== currentUserId) {
+          othersOnly.set(id, participant);
+        }
+      }
+      
+      console.log(`👥 Others participants (excluding self): ${othersOnly.size}`);
+      setParticipants(othersOnly);
+    });
 
-    // Initial update
-    updateParticipants();
-
-    // Simple polling every 2 seconds
-    const interval = setInterval(updateParticipants, 2000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    return unsubscribe;
   }, [presenceManager]);
 
   // Update status function
@@ -163,18 +193,34 @@ export function usePresence({
     }
   }, [presenceManager, currentUser]);
 
-  // Computed values
-  const participantCount = participants.size;
+  // Computed values (participants now only contains others, not self)
+  const participantCount = participants.size + (currentUser ? 1 : 0); // Total = others + self
   
   const otherParticipants = useMemo(() => {
+    // Since participants now only contains others, we can use it directly
     const others: PresenceData[] = [];
-    for (const [participantId, participant] of participants) {
-      if (participantId !== currentUser?.participantId) {
-        others.push(participant);
-      }
+    for (const [, participant] of participants) {
+      others.push(participant);
     }
     return others.sort((a, b) => a.name.localeCompare(b.name));
-  }, [participants, currentUser?.participantId]);
+  }, [participants]);
+
+  // Combined participants for display (self from local state + others from Ably events)
+  const allParticipantsForDisplay = useMemo(() => {
+    const combined = new Map<string, PresenceData>();
+    
+    // Add current user from local state (single source of truth for self)
+    if (currentUser) {
+      combined.set(currentUser.participantId, currentUser);
+    }
+    
+    // Add others from Ably events
+    for (const [id, participant] of participants) {
+      combined.set(id, participant);
+    }
+    
+    return combined;
+  }, [currentUser, participants]);
 
   // View reveal handler (placeholder for future reveal feature)
   const onViewReveal = useCallback((participantId: string, revealType: 'revealed-8' | 'revealed-3') => {
@@ -185,7 +231,8 @@ export function usePresence({
 
   return {
     // Participant data
-    participants,
+    participants, // Others only (for internal use)
+    allParticipantsForDisplay, // Combined self + others (for UI components)
     currentUser,
     participantCount,
     otherParticipants,

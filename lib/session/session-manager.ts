@@ -308,6 +308,15 @@ export class SessionManager {
     return sessions.find(s => s.sessionCode === sessionCode);
   }
 
+  async getCurrentParticipant(sessionCode: string, participantName: string): Promise<Participant | null> {
+    const session = await this.getSession(sessionCode);
+    if (!session) {
+      return null;
+    }
+    
+    return session.participants.find(p => p.name === participantName && p.isActive) || null;
+  }
+
   async cleanupExpiredSessions(): Promise<string[]> {
     return this.store.cleanupExpiredSessions();
   }

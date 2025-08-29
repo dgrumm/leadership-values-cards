@@ -45,7 +45,7 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
   
   // Initialize presence system
   const {
-    participants,
+    allParticipantsForDisplay = new Map(),
     currentUser,
     participantCount,
     isConnected,
@@ -723,7 +723,7 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
       <ParticipantsModal
         isOpen={showParticipants}
         onClose={handleCloseParticipants}
-        participants={participants}
+        participants={allParticipantsForDisplay}
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}
