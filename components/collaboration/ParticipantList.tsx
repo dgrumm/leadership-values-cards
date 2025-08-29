@@ -18,7 +18,21 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
   onViewReveal,
   className
 }) => {
-  // Convert to array and include ALL participants (including self)
+  // Convert to array and exclude current user for display
+  const otherParticipants = React.useMemo(() => {
+    const filtered: PresenceData[] = [];
+    
+    participants.forEach((participant) => {
+      if (participant.participantId !== currentUserId) {
+        filtered.push(participant);
+      }
+    });
+    
+    // Sort by name for consistent display
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [participants, currentUserId]);
+
+  // Also keep all participants for internal logic that needs it
   const allParticipants = React.useMemo(() => {
     const filtered: PresenceData[] = [];
     
@@ -34,7 +48,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
     });
   }, [participants, currentUserId]);
 
-  const participantCount = allParticipants.length;
+  const participantCount = otherParticipants.length;
 
   if (participantCount === 0) {
     return (
@@ -51,7 +65,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           👥
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No participants yet
+          No other participants yet
         </h3>
         <p className="text-sm text-gray-600">
           Share your session code with others to collaborate!
@@ -90,7 +104,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           participantCount === 2 && 'lg:grid-cols-2'
         )}
       >
-        {allParticipants.map((participant) => (
+        {otherParticipants.map((participant) => (
           <ParticipantCard
             key={participant.participantId}
             participant={participant}

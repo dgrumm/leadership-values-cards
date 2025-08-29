@@ -41,6 +41,15 @@ describe('PresenceManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers(); // Mock timers for throttling and heartbeat tests
+    
+    // Reset all mock implementations to successful defaults
+    (mockChannel.presence.enter as jest.Mock).mockResolvedValue(undefined);
+    (mockChannel.presence.leave as jest.Mock).mockResolvedValue(undefined);
+    (mockChannel.presence.update as jest.Mock).mockResolvedValue(undefined);
+    (mockChannel.presence.get as jest.Mock).mockResolvedValue([]);
+    (mockChannel.publish as jest.Mock).mockResolvedValue(undefined);
+    
     (mockAblyService.getChannel as jest.Mock).mockReturnValue(mockChannel);
     (mockAblyService.subscribe as jest.Mock).mockReturnValue(jest.fn()); // Return unsubscribe function
     presenceManager = new PresenceManager(mockAblyService, mockSessionCode, mockCurrentUser);
@@ -146,6 +155,22 @@ describe('PresenceManager', () => {
 
   describe('updateStatus', () => {
     const mockStatus = 'revealed-8' as const;
+    const mockParticipantData = {
+      participantId: mockCurrentUser.id,
+      name: mockCurrentUser.name,
+      emoji: mockCurrentUser.emoji,
+      color: mockCurrentUser.color,
+      currentStep: 1,
+      status: 'sorting' as const,
+      cursor: { x: 0, y: 0, timestamp: Date.now() },
+      lastActive: Date.now(),
+      isViewing: null
+    };
+
+    beforeEach(async () => {
+      // Enter presence first so updateStatus works
+      await presenceManager.enter(mockParticipantData);
+    });
 
     it('should update presence with new status', async () => {
       await presenceManager.updateStatus(mockStatus);

@@ -3,6 +3,22 @@
  * Tests core functionality, state isolation, and memory management
  */
 
+// Mock the store factories
+jest.mock('@/state/local', () => ({
+  createStep1Store: jest.fn(() => ({
+    _mockStoreType: 'step1',
+    _id: `step1-${Date.now()}-${Math.random()}`
+  })),
+  createStep2Store: jest.fn(() => ({
+    _mockStoreType: 'step2', 
+    _id: `step2-${Date.now()}-${Math.random()}`
+  })),
+  createStep3Store: jest.fn(() => ({
+    _mockStoreType: 'step3',
+    _id: `step3-${Date.now()}-${Math.random()}`
+  }))
+}));
+
 import { SessionStoreManager } from '../../../lib/stores/session-store-manager';
 
 // Mock console methods for testing
@@ -17,6 +33,9 @@ describe('SessionStoreManager', () => {
   let manager: SessionStoreManager;
 
   beforeEach(() => {
+    // Use fake timers to control setTimeout/setInterval
+    jest.useFakeTimers();
+    
     manager = new SessionStoreManager({
       autoCleanupDelayMs: 100, // Short delay for testing
       maxStoresPerSession: 5,   // Lower limit for testing
@@ -33,9 +52,7 @@ describe('SessionStoreManager', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    // Clean up any pending timers and the manager
-    jest.clearAllTimers();
+    // Clean up the manager and its timers first
     if (manager) {
       // Clean up all sessions to prevent memory leaks
       const stats = manager.getMemoryStats();
@@ -45,6 +62,11 @@ describe('SessionStoreManager', () => {
         manager.cleanupSession(sessionCode);
       });
     }
+    
+    // Clear any pending timers and restore mocks
+    jest.clearAllTimers();
+    jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   describe('store creation and access', () => {
