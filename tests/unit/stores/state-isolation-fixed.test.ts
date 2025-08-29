@@ -31,6 +31,11 @@ describe('State Isolation - CRITICAL BUG FIX', () => {
     });
   });
 
+  afterEach(() => {
+    // Clear any lingering timers from SessionStoreManager cleanup
+    jest.clearAllTimers();
+  });
+
   describe('🚨 CRITICAL: Step completion state isolation', () => {
     it('should prevent User1 Step2 completion from affecting User2 UI state', async () => {
       // SCENARIO: The original bug that made collaborative sessions unusable
