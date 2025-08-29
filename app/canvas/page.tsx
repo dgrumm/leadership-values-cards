@@ -43,6 +43,7 @@ function StepRouter({
       <Step1Page
         participantName={sessionData.participantName}
         sessionCode={sessionData.sessionCode}
+        currentStep={currentStep}
         onStepComplete={() => onStepChange(2)}
       />
     );
@@ -64,6 +65,7 @@ function StepRouter({
       <Step2Page
         participantName={sessionData.participantName}
         sessionCode={sessionData.sessionCode}
+        currentStep={currentStep}
         step1Data={{
           moreImportantPile,
           lessImportantPile
@@ -81,6 +83,7 @@ function StepRouter({
         <Step2Page
           participantName={sessionData.participantName}
           sessionCode={sessionData.sessionCode}
+          currentStep={currentStep}
           step1Data={{
             moreImportantPile,
             lessImportantPile
@@ -94,6 +97,7 @@ function StepRouter({
       <Step3Page
         participantName={sessionData.participantName}
         sessionCode={sessionData.sessionCode}
+        currentStep={currentStep}
         step2Data={{
           top8Pile,
           lessImportantPile: step2LessImportant,

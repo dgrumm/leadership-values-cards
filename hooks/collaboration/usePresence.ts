@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PresenceManager } from '@/lib/presence/presence-manager';
-import { assignParticipantIdentity } from '@/lib/presence/participant-identity';
+import { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } from '@/lib/constants/participants';
 import { getAblyService } from '@/lib/ably/ably-service';
 import type { PresenceData } from '@/lib/presence/types';
 
@@ -62,16 +62,18 @@ export function usePresence({
         const ablyService = getAblyService();
         await ablyService.init();
 
-        // Generate unique participant identity
-        const currentParticipants = Array.from(participants.values());
-        const identity = assignParticipantIdentity(currentParticipants);
+        // Simple random emoji and color assignment
+        const emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
+        const color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
+        
+        console.log(`🎨 Randomly assigned identity for ${participantName}:`, { emoji, color });
 
         // Create current user data
         const currentUserData: PresenceData = {
           participantId: ablyService.client?.auth.clientId || `user-${Date.now()}`,
           name: participantName,
-          emoji: identity.emoji,
-          color: identity.color,
+          emoji,
+          color,
           currentStep,
           status: 'sorting',
           cursor: { x: 0, y: 0, timestamp: Date.now() },
@@ -86,8 +88,8 @@ export function usePresence({
           {
             id: currentUserData.participantId,
             name: participantName,
-            emoji: identity.emoji,
-            color: identity.color
+            emoji,
+            color
           }
         );
 
@@ -117,12 +119,10 @@ export function usePresence({
     };
   }, [enabled, sessionCode, participantName, currentStep]);
 
-  // Update participants when presence manager changes
+  // Simple polling for participants
   useEffect(() => {
     if (!presenceManager) return;
 
-    // Set up a polling mechanism to get latest participants
-    // In a real implementation, this would be event-driven
     const updateParticipants = () => {
       const latestParticipants = presenceManager.getParticipants();
       setParticipants(new Map(latestParticipants));
@@ -131,9 +131,8 @@ export function usePresence({
     // Initial update
     updateParticipants();
 
-    // Poll for updates (temporary until we fix the test mocking issues)
-    // Reduced to 200ms for more responsive UI during manual testing
-    const interval = setInterval(updateParticipants, 200);
+    // Simple polling every 2 seconds
+    const interval = setInterval(updateParticipants, 2000);
 
     return () => {
       clearInterval(interval);

@@ -1,115 +1,34 @@
 import type { ParticipantIdentity } from './types';
-
-// Participant color palette (15 colors from spec)
-export const PARTICIPANT_COLORS = [
-  '#FF6B6B', // Red
-  '#4ECDC4', // Teal
-  '#45B7D1', // Blue
-  '#96CEB4', // Mint
-  '#FECA57', // Yellow
-  '#FF9FF3', // Pink
-  '#54A0FF', // Light Blue
-  '#5F27CD', // Purple
-  '#00D2D3', // Cyan
-  '#FF9F43', // Orange
-  '#10AC84', // Green
-  '#EE5A24', // Red Orange
-  '#0984E3', // Blue
-  '#6C5CE7', // Light Purple
-  '#FD79A8'  // Light Pink
-] as const;
-
-// Participant emoji palette (20 emojis from spec)
-export const PARTICIPANT_EMOJIS = [
-  '😊', // Smiling Face
-  '🎨', // Artist Palette
-  '🎭', // Performing Arts
-  '🎪', // Circus Tent
-  '🎯', // Direct Hit
-  '🎸', // Guitar
-  '🎺', // Trumpet
-  '🌟', // Glowing Star
-  '💫', // Dizzy Symbol
-  '🚀', // Rocket
-  '🎲', // Game Die
-  '🎈', // Balloon
-  '🎊', // Confetti Ball
-  '🎉', // Party Popper
-  '🎁', // Wrapped Gift
-  '🌈', // Rainbow
-  '⭐', // White Medium Star
-  '🎋', // Tanabata Tree
-  '🎃', // Jack-O-Lantern
-  '🎄'  // Christmas Tree
-] as const;
+import { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } from '@/lib/constants';
 
 /**
  * Assigns a unique color and emoji combination to a new participant
- * Avoids conflicts with existing participants by finding the first available combination
+ * Uses deterministic selection based on participant count for consistency
  */
 export function assignParticipantIdentity(
   existingParticipants: ParticipantIdentity[]
 ): ParticipantIdentity {
-  // Handle empty participants array
-  if (!existingParticipants || existingParticipants.length === 0) {
-    return {
-      color: PARTICIPANT_COLORS[0],
-      emoji: PARTICIPANT_EMOJIS[0]
-    };
+  const usedEmojis = new Set((existingParticipants || []).map(p => p?.emoji).filter(Boolean));
+  const usedColors = new Set((existingParticipants || []).map(p => p?.color).filter(Boolean));
+  
+  const availableEmojis = PARTICIPANT_EMOJIS.filter(emoji => !usedEmojis.has(emoji));
+  const availableColors = PARTICIPANT_COLORS.filter(color => !usedColors.has(color));
+  
+  if (availableEmojis.length === 0 || availableColors.length === 0) {
+    throw new Error('No more unique emoji/color combinations available');
   }
-
-  // Extract used colors and emojis, filtering out invalid entries
-  const usedColors = existingParticipants
-    .filter(p => p && typeof p.color === 'string' && p.color.length > 0)
-    .map(p => p.color);
-    
-  const usedEmojis = existingParticipants
-    .filter(p => p && typeof p.emoji === 'string' && p.emoji.length > 0)
-    .map(p => p.emoji);
-
-  // Find first available color
-  const availableColor = PARTICIPANT_COLORS.find(color => 
-    !usedColors.includes(color)
-  );
-
-  // Find first available emoji
-  const availableEmoji = PARTICIPANT_EMOJIS.find(emoji => 
-    !usedEmojis.includes(emoji)
-  );
-
-  // If we have both available color and emoji, use them
-  if (availableColor && availableEmoji) {
-    return {
-      color: availableColor,
-      emoji: availableEmoji
-    };
-  }
-
-  // If we're out of unique combinations, fall back to cycling through
-  // This handles the case where we have more than 15*20 = 300 participants
-  // or when all combinations are used
   
-  // Find the least used color
-  const colorUsageCounts = PARTICIPANT_COLORS.map(color => ({
-    color,
-    count: usedColors.filter(used => used === color).length
-  }));
+  // Use deterministic selection based on number of existing participants
+  // This provides consistency while still appearing varied
+  const participantIndex = existingParticipants?.length || 0;
   
-  const leastUsedColor = colorUsageCounts
-    .sort((a, b) => a.count - b.count)[0]?.color || PARTICIPANT_COLORS[0];
-
-  // Find the least used emoji  
-  const emojiUsageCounts = PARTICIPANT_EMOJIS.map(emoji => ({
-    emoji,
-    count: usedEmojis.filter(used => used === emoji).length
-  }));
+  // Create pseudo-random but deterministic indices
+  const emojiIndex = (participantIndex * 7 + 13) % availableEmojis.length;
+  const colorIndex = (participantIndex * 11 + 19) % availableColors.length;
   
-  const leastUsedEmoji = emojiUsageCounts
-    .sort((a, b) => a.count - b.count)[0]?.emoji || PARTICIPANT_EMOJIS[0];
-
   return {
-    color: leastUsedColor,
-    emoji: leastUsedEmoji
+    emoji: availableEmojis[emojiIndex],
+    color: availableColors[colorIndex]
   };
 }
 

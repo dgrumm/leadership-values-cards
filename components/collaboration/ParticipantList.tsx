@@ -18,21 +18,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
   onViewReveal,
   className
 }) => {
-  // Convert to array and exclude current user for display
-  const otherParticipants = React.useMemo(() => {
-    const filtered: PresenceData[] = [];
-    
-    participants.forEach((participant) => {
-      if (participant.participantId !== currentUserId) {
-        filtered.push(participant);
-      }
-    });
-    
-    // Sort by name for consistent display
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [participants, currentUserId]);
-
-  // Also keep all participants for internal logic that needs it
+  // Convert to array with all participants including self
   const allParticipants = React.useMemo(() => {
     const filtered: PresenceData[] = [];
     
@@ -48,7 +34,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
     });
   }, [participants, currentUserId]);
 
-  const participantCount = otherParticipants.length;
+  const participantCount = allParticipants.length;
 
   if (participantCount === 0) {
     return (
@@ -65,7 +51,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           👥
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No other participants yet
+          It's just you here. No other participants yet.
         </h3>
         <p className="text-sm text-gray-600">
           Share your session code with others to collaborate!
@@ -86,7 +72,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           <span className="mr-2" aria-hidden="true">👥</span>
           <span 
             aria-live="polite"
-            aria-label={`${participantCount} other participant${participantCount !== 1 ? 's' : ''}`}
+            aria-label={`${participantCount} participant${participantCount !== 1 ? 's' : ''} total`}
           >
             {participantCount} Participant{participantCount !== 1 ? 's' : ''}
           </span>
@@ -104,7 +90,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           participantCount === 2 && 'lg:grid-cols-2'
         )}
       >
-        {otherParticipants.map((participant) => (
+        {allParticipants.map((participant) => (
           <ParticipantCard
             key={participant.participantId}
             participant={participant}
@@ -121,28 +107,28 @@ const ParticipantList: React.FC<ParticipantListProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {otherParticipants.filter(p => p.status === 'sorting').length}
+                {allParticipants.filter(p => p.status === 'sorting').length}
               </div>
               <div className="text-gray-600">Sorting</div>
             </div>
             
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {otherParticipants.filter(p => p.status === 'revealed-8').length}
+                {allParticipants.filter(p => p.status === 'revealed-8').length}
               </div>
               <div className="text-gray-600">Revealed Top 8</div>
             </div>
             
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {otherParticipants.filter(p => p.status === 'revealed-3').length}
+                {allParticipants.filter(p => p.status === 'revealed-3').length}
               </div>
               <div className="text-gray-600">Revealed Top 3</div>
             </div>
             
             <div className="text-center">
               <div className="text-2xl font-bold text-emerald-600">
-                {otherParticipants.filter(p => p.status === 'completed').length}
+                {allParticipants.filter(p => p.status === 'completed').length}
               </div>
               <div className="text-gray-600">Completed</div>
             </div>

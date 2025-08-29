@@ -198,6 +198,55 @@ The production-blocking state bleeding bug is now completely resolved. All parti
 
 ### **Status**: ✅ Presence system complete, ❌ **CRITICAL BLOCKER**: State bleeding requires Spec 04.5 implementation
 
+## 2025-08-29 - 04-5-5-participant-state-consistency
+
+**Spec**: 04.5.5 Participant State Consistency  
+**Status**: 🔴 Not Started - **CRITICAL PRODUCTION BLOCKER**  
+
+**Implementation Decision**: Discovered fundamental architecture flaw causing participant emoji/color flickering and inconsistent presence state. User testing revealed emojis changing every 2 seconds (🍒 ↔ 🥑) and different participants seeing different identity values.
+
+### **Root Cause Analysis**:
+- **Multiple Assignment Points**: Random emoji/color generated in both `session-manager.ts:208-209` AND `usePresence.ts:66-67` 
+- **Conflicting Sources of Truth**: Self sees local random assignment, others see different Ably random assignment
+- **Polling Architecture**: 2-second polling causes constant re-assignment and flickering
+- **No Identity Persistence**: Each presence update generates new random values
+
+### **User Impact** (Critical):
+- Confusing participant identification - emoji keeps changing
+- Poor real-time collaboration experience  
+- Unreliable presence indicators causing user frustration
+- Step status inconsistencies between participants
+
+### **Solution Architecture Designed**:
+**Core Principle**: Single Source of Truth with Event-Driven Updates
+- **Identity Assignment**: ONCE at session join in SessionManager only
+- **Self vs Others Separation**: Self from local participant data, others from Ably events
+- **Event-Driven**: Replace 2s polling with real-time Ably presence subscriptions
+- **Immutable Identity**: Emoji/color fixed for participant's entire session
+
+### **Implementation Plan Created**:
+**Phase 1**: Fix identity assignment (30 min) - Stop flickering immediately
+**Phase 2**: Event-driven architecture (45 min) - Replace polling with real-time
+**Phase 3**: Separate self vs others (30 min) - Fix data source confusion  
+**Phase 4**: Testing & validation (30 min) - Verify consistency across participants
+
+### **Files Requiring Changes**:
+- `/lib/session/session-manager.ts` - Single identity assignment authority
+- `/hooks/collaboration/usePresence.ts` - Remove random assignment, add events
+- `/lib/presence/presence-manager.ts` - Add event subscription methods  
+- `/app/canvas/page.tsx` - Thread participant identity to presence system
+- `/components/collaboration/ParticipantList.tsx` - Separate self vs others data
+
+### **Success Criteria Defined**:
+- Emoji/color never changes for participant during session
+- Status/step changes appear instantly for all participants
+- Self data from local state, others from Ably events
+- Zero polling - all updates via presence events
+
+### **Status**: 🔴 Spec created, ready for immediate implementation to resolve critical user experience issue
+
+---
+
 ## 2025-08-29 - 04-5-3-session-scoped-hooks
 
 **Spec**: 04.5.3 Session-Scoped Hooks  

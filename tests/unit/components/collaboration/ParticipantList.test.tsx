@@ -6,21 +6,26 @@ import type { PresenceData } from '../../../../lib/presence/types';
 // Mock child components
 jest.mock('../../../../components/collaboration/ParticipantCard', () => {
   return {
-    ParticipantCard: ({ participant, onViewReveal }: any) => (
-      <div data-testid={`participant-card-${participant.participantId}`}>
-        <span data-testid="participant-name">{participant.name}</span>
-        <span data-testid="participant-status">{participant.status}</span>
-        <span data-testid="participant-step">Step {participant.currentStep}</span>
-        {(participant.status === 'revealed-8' || participant.status === 'revealed-3') && (
-          <button 
-            onClick={() => onViewReveal(participant.participantId, participant.status)}
-            data-testid="view-reveal-button"
-          >
-            View {participant.name}'s Cards
-          </button>
-        )}
-      </div>
-    )
+    ParticipantCard: ({ participant, onViewReveal, currentUserId }: any) => {
+      const isCurrentUser = participant.participantId === currentUserId;
+      return (
+        <div data-testid={`participant-card-${participant.participantId}`}>
+          <span data-testid="participant-name">
+            {participant.name} {isCurrentUser && <span>(You)</span>}
+          </span>
+          <span data-testid="participant-status">{participant.status}</span>
+          <span data-testid="participant-step">Step {participant.currentStep}</span>
+          {(participant.status === 'revealed-8' || participant.status === 'revealed-3') && (
+            <button 
+              onClick={() => onViewReveal(participant.participantId, participant.status)}
+              data-testid="view-reveal-button"
+            >
+              View {participant.name}'s Cards
+            </button>
+          )}
+        </div>
+      );
+    }
   };
 });
 
@@ -55,7 +60,7 @@ describe('ParticipantList', () => {
         />
       );
 
-      expect(screen.getByText('No other participants yet')).toBeInTheDocument();
+      expect(screen.getByText('It\'s just you here. No other participants yet.')).toBeInTheDocument();
     });
 
     it('should render participant count', () => {
@@ -92,7 +97,7 @@ describe('ParticipantList', () => {
       expect(screen.getByText('1 Participant')).toBeInTheDocument();
     });
 
-    it('should exclude current user from participant list', () => {
+    it('should include current user with "you" indicator in participant list', () => {
       const participants = new Map([
         ['current-user-123', createMockParticipant({ participantId: 'current-user-123', name: 'Current User' })],
         ['other-user', createMockParticipant({ participantId: 'other-user', name: 'Other User' })]
@@ -106,9 +111,13 @@ describe('ParticipantList', () => {
         />
       );
 
-      expect(screen.queryByTestId('participant-card-current-user-123')).not.toBeInTheDocument();
+      expect(screen.getByTestId('participant-card-current-user-123')).toBeInTheDocument();
       expect(screen.getByTestId('participant-card-other-user')).toBeInTheDocument();
-      expect(screen.getByText('1 Participant')).toBeInTheDocument();
+      expect(screen.getByText('2 Participants')).toBeInTheDocument();
+      
+      // Check for "you" indicator
+      expect(screen.getByText('Current User')).toBeInTheDocument();
+      expect(screen.getByText('(You)')).toBeInTheDocument();
     });
 
     it('should render participant cards for each participant', () => {

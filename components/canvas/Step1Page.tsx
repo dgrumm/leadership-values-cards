@@ -18,10 +18,11 @@ import { Card as CardType } from '@/lib/types/card';
 interface Step1PageProps {
   sessionCode: string;
   participantName: string;
+  currentStep?: 1 | 2 | 3; // Allow override of step for presence
   onStepComplete?: () => void;
 }
 
-export function Step1Page({ sessionCode, participantName, onStepComplete }: Step1PageProps) {
+export function Step1Page({ sessionCode, participantName, currentStep = 1, onStepComplete }: Step1PageProps) {
   const [showModal, setShowModal] = useState(true);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -39,7 +40,7 @@ export function Step1Page({ sessionCode, participantName, onStepComplete }: Step
   } = usePresence({
     sessionCode,
     participantName,
-    currentStep: 1,
+    currentStep,
     enabled: true
   });
   

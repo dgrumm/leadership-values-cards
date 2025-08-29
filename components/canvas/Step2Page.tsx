@@ -20,6 +20,7 @@ import { cn, debounce } from '@/lib/utils';
 interface Step2PageProps {
   sessionCode: string;
   participantName: string;
+  currentStep?: 1 | 2 | 3; // Allow override of step for presence
   step1Data: {
     moreImportantPile: Card[];
     lessImportantPile: Card[];
@@ -27,7 +28,7 @@ interface Step2PageProps {
   onStepComplete?: () => void;
 }
 
-export function Step2Page({ sessionCode, participantName, step1Data, onStepComplete }: Step2PageProps) {
+export function Step2Page({ sessionCode, participantName, currentStep = 2, step1Data, onStepComplete }: Step2PageProps) {
   const [showModal, setShowModal] = useState(false); // Start false, show after transition
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [bounceAnimation, setBounceAnimation] = useState(false);
@@ -48,7 +49,7 @@ export function Step2Page({ sessionCode, participantName, step1Data, onStepCompl
   } = usePresence({
     sessionCode,
     participantName,
-    currentStep: 2,
+    currentStep,
     enabled: true
   });
   
