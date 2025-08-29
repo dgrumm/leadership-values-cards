@@ -11,7 +11,7 @@ export interface ParticipantsModalProps {
   participants: Map<string, ParticipantDisplayData>; // NOW: Hybrid data with consistent identity/step
   currentUserId?: string; // DEPRECATED: ParticipantDisplayData includes isCurrentUser flag
   sessionCode?: string;
-  onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
+  onViewReveal?: (participantId: string, revealType: 'top8' | 'top3') => void;
 }
 
 export function ParticipantsModal({

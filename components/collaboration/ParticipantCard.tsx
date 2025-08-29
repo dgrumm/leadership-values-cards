@@ -8,7 +8,7 @@ import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 
 export interface ParticipantCardProps {
   participant: ParticipantDisplayData;
-  onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
+  onViewReveal?: (participantId: string, revealType: 'top8' | 'top3') => void;
   currentUserId?: string; // DEPRECATED: Use participant.isCurrentUser instead
   className?: string;
 }
@@ -27,14 +27,14 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
     currentStep, // NOW AUTHORITATIVE: Always from session data (fixes screenshot inconsistency)
     status,
     lastActive,
-    isCurrentUser // NEW: Built into ParticipantDisplayData
+    isCurrentUser, // NEW: Built into ParticipantDisplayData
+    canViewTop8,
+    canViewTop3,
+    hasAnyReveals
   } = participant;
   
   // Backward compatibility (remove after migration complete)
   const isCurrentUserComputed = currentUserId ? (participantId === currentUserId) : isCurrentUser;
-  
-  // Check if participant has revealed content that can be viewed
-  const canViewReveal = status === 'revealed-8' || status === 'revealed-3';
   
   // Determine activity status based on lastActive timestamp
   const getActivityStatus = () => {
@@ -52,10 +52,15 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
 
   const activityStatus = getActivityStatus();
 
-  const handleViewClick = () => {
-    if (canViewReveal && onViewReveal) {
-      const revealType = status as 'revealed-8' | 'revealed-3';
-      onViewReveal(participantId, revealType);
+  const handleViewTop8Click = () => {
+    if (canViewTop8 && onViewReveal) {
+      onViewReveal(participantId, 'top8');
+    }
+  };
+
+  const handleViewTop3Click = () => {
+    if (canViewTop3 && onViewReveal) {
+      onViewReveal(participantId, 'top3');
     }
   };
 
@@ -114,22 +119,39 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
         />
       </div>
 
-      {/* View reveal button */}
-      {canViewReveal && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleViewClick}
-          className="w-full text-xs"
-          aria-label={`View ${name}'s ${status === 'revealed-8' ? 'Top 8' : 'Top 3'} values`}
-        >
-          <span className="mr-1.5" aria-hidden="true">👁️</span>
-          See {status === 'revealed-8' ? 'Top 8' : 'Top 3'}
-        </Button>
+      {/* View reveal buttons */}
+      {hasAnyReveals && (
+        <div className="space-y-2">
+          {canViewTop8 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewTop8Click}
+              className="w-full text-xs"
+              aria-label={`View ${name}'s Top 8 values`}
+            >
+              <span className="mr-1.5" aria-hidden="true">👁️</span>
+              See {name}'s Top 8
+            </Button>
+          )}
+          
+          {canViewTop3 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewTop3Click}
+              className="w-full text-xs"
+              aria-label={`View ${name}'s Top 3 values`}
+            >
+              <span className="mr-1.5" aria-hidden="true">👁️</span>
+              See {name}'s Top 3
+            </Button>
+          )}
+        </div>
       )}
 
-      {/* No reveal available message */}
-      {!canViewReveal && status === 'sorting' && (
+      {/* Status messages */}
+      {!hasAnyReveals && status === 'sorting' && (
         <div className="text-xs text-gray-500 text-center py-2">
           Still sorting cards...
         </div>

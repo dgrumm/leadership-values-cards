@@ -32,6 +32,17 @@ export interface ParticipantDisplayData {
   lastActive: number;
   isViewing: string | null;
   
+  // Reveal status (FROM SESSION - authoritative reveal data)
+  revealedSelections?: {
+    top8?: boolean;
+    top3?: boolean;
+  };
+  
+  // Computed reveal helpers (derived from session data)
+  canViewTop8: boolean;
+  canViewTop3: boolean;
+  hasAnyReveals: boolean;
+  
   // Metadata
   isCurrentUser: boolean;
   joinedAt: string; // From session
@@ -45,6 +56,17 @@ export function createParticipantDisplayData(
   presenceData: PresenceData | null,
   currentUserId: string
 ): ParticipantDisplayData {
+  // Extract reveal status from session participant (authoritative source)
+  const revealedSelections = sessionParticipant.revealed ? {
+    top8: sessionParticipant.revealed.top8,
+    top3: sessionParticipant.revealed.top3
+  } : undefined;
+
+  // Compute reveal helpers
+  const canViewTop8 = Boolean(revealedSelections?.top8);
+  const canViewTop3 = Boolean(revealedSelections?.top3);
+  const hasAnyReveals = canViewTop8 || canViewTop3;
+
   return {
     // Identity from session (single source of truth)
     participantId: sessionParticipant.id,
@@ -61,6 +83,12 @@ export function createParticipantDisplayData(
     lastActive: presenceData?.lastActive || new Date(sessionParticipant.lastActivity).getTime(),
     isViewing: presenceData?.isViewing || null,
     
+    // Reveal status from session (authoritative)
+    revealedSelections,
+    canViewTop8,
+    canViewTop3,
+    hasAnyReveals,
+    
     // Metadata
     isCurrentUser: sessionParticipant.id === currentUserId
   };
@@ -75,6 +103,18 @@ export function createParticipantDisplayDataFromPresence(
   currentUserId: string
 ): ParticipantDisplayData {
   console.warn(`⚠️ Creating display data from presence only for ${presenceData.name} - session data unavailable`);
+  
+  // Without session data, we can't know reveal status definitively
+  const hasRevealedStatus = presenceData.status === 'revealed-8' || presenceData.status === 'revealed-3';
+  const revealedSelections = hasRevealedStatus ? {
+    top8: presenceData.status === 'revealed-8',
+    top3: presenceData.status === 'revealed-3'
+  } : undefined;
+
+  // Compute reveal helpers (best guess from presence status)
+  const canViewTop8 = Boolean(revealedSelections?.top8);
+  const canViewTop3 = Boolean(revealedSelections?.top3);
+  const hasAnyReveals = canViewTop8 || canViewTop3;
   
   return {
     participantId: presenceData.participantId,
@@ -92,6 +132,12 @@ export function createParticipantDisplayDataFromPresence(
     status: presenceData.status,
     lastActive: presenceData.lastActive,
     isViewing: presenceData.isViewing,
+    
+    // Reveal status (best guess from presence)
+    revealedSelections,
+    canViewTop8,
+    canViewTop3,
+    hasAnyReveals,
     
     // Metadata
     isCurrentUser: presenceData.participantId === currentUserId

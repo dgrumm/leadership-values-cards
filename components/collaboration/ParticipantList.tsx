@@ -8,7 +8,7 @@ import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 export interface ParticipantListProps {
   participants: Map<string, ParticipantDisplayData>; // NOW: Hybrid data with consistent identity/step
   currentUserId?: string; // DEPRECATED: ParticipantDisplayData includes isCurrentUser flag
-  onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
+  onViewReveal?: (participantId: string, revealType: 'top8' | 'top3') => void;
   className?: string;
 }
 
