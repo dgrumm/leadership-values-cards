@@ -240,6 +240,7 @@ export function Step1Page({ sessionCode, participantName, currentStep = 1, onSte
       {/* Header */}
       <SessionHeader
         sessionCode={sessionCode}
+        participantId={currentUser?.participantId || ''}
         participantName={participantName}
         currentStep={1}
         totalSteps={3}

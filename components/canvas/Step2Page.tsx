@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSessionStep2Store } from '@/hooks/stores/useSessionStores';
+import { useSessionStoreContext } from '@/contexts/SessionStoreContext';
 import { Deck } from '@/components/cards/Deck';
 import { StagingArea } from '@/components/cards/StagingArea';
 import { DroppableZone } from '@/components/cards/DroppableZone';
@@ -60,6 +61,9 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
   const top8Ref = useRef<HTMLDivElement>(null);
   const lessImportantRef = useRef<HTMLDivElement>(null);
   
+  // Get session store context for consistent participant ID
+  const { participantId: sessionParticipantId } = useSessionStoreContext();
+  
   const {
     deck,
     deckPosition,
@@ -76,6 +80,9 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     showOverflowWarningMessage,
     hideOverflowWarningMessage,
   } = useSessionStep2Store();
+
+  // Calculate if step is complete (exactly 8 cards in top8Pile)
+  const isStepComplete = top8Pile.length === 8;
 
   // Comprehensive drag state clearing function
   const clearDragState = useCallback(() => {
@@ -350,15 +357,18 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
       {/* Header */}
       <SessionHeader
         sessionCode={sessionCode}
+        participantId={sessionParticipantId}
         participantName={participantName}
         currentStep={2}
         totalSteps={3}
         participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
-        onReveal={handleReveal}
         isRevealed={isRevealed}
         showRevealButton={true}
+        stepComplete={isStepComplete}
         onParticipantsClick={handleShowParticipants}
+        onRevealSuccess={() => setIsRevealed(true)}
+        onRevealError={(error) => console.error('Reveal error:', error)}
       />
 
       {/* Transition overlay */}

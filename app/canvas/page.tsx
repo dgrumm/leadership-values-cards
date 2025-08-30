@@ -139,6 +139,7 @@ export default function CanvasPage() {
   const [sessionData, setSessionData] = useState<{
     sessionCode: string;
     participantName: string;
+    participantId?: string; // Real participant ID from API
   } | null>(null);
 
   useEffect(() => {
@@ -152,10 +153,46 @@ export default function CanvasPage() {
       return;
     }
 
-    setSessionData({
-      sessionCode,
-      participantName: decodeURIComponent(participantName)
-    });
+    // Fetch real participant ID from API
+    const fetchParticipantId = async () => {
+      try {
+        const sessionResponse = await fetch(`/api/sessions/${sessionCode}`);
+        if (sessionResponse.ok) {
+          const sessionDataResponse = await sessionResponse.json();
+          const participant = sessionDataResponse.session?.participants?.find(
+            (p: any) => p.name === decodeURIComponent(participantName) && p.isActive
+          );
+          
+          if (participant) {
+            setSessionData({
+              sessionCode,
+              participantName: decodeURIComponent(participantName),
+              participantId: participant.id
+            });
+          } else {
+            console.warn(`⚠️ Participant ${participantName} not found in session ${sessionCode}`);
+            setSessionData({
+              sessionCode,
+              participantName: decodeURIComponent(participantName)
+            });
+          }
+        } else {
+          console.warn(`⚠️ Failed to fetch session ${sessionCode} for participant ID lookup`);
+          setSessionData({
+            sessionCode,
+            participantName: decodeURIComponent(participantName)
+          });
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch participant ID:', error);
+        setSessionData({
+          sessionCode,
+          participantName: decodeURIComponent(participantName)
+        });
+      }
+    };
+
+    fetchParticipantId();
     
     // Set current step from URL or default to 1
     if (step === '2') {
@@ -176,22 +213,39 @@ export default function CanvasPage() {
       
       // 2. Update session participant data for observers
       if (sessionData) {
-        const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
+        // Get participant from session instead of constructing ID manually
+        try {
+          const sessionResponse = await fetch(`/api/sessions/${sessionData.sessionCode}`);
+          if (sessionResponse.ok) {
+            const sessionDataResponse = await sessionResponse.json();
+            const participant = sessionDataResponse.session?.participants?.find(
+              (p: any) => p.name === sessionData.participantName && p.isActive
+            );
+            
+            if (participant) {
+              // Call the backend API to update session participant step
+              const response = await fetch(`/api/sessions/${sessionData.sessionCode}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  participantId: participant.id,
+                  currentStep: step
+                })
+              });
         
-        // Call the backend API to update session participant step
-        const response = await fetch(`/api/sessions/${sessionData.sessionCode}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            participantId,
-            currentStep: step
-          })
-        });
-        
-        if (!response.ok) {
-          console.warn(`⚠️ Failed to update participant step in session: ${response.status}`);
-        } else {
-          console.log(`✅ Updated participant step to ${step} in session ${sessionData.sessionCode}`);
+              if (!response.ok) {
+                console.warn(`⚠️ Failed to update participant step in session: ${response.status}`);
+              } else {
+                console.log(`✅ Updated participant step to ${step} in session ${sessionData.sessionCode}`);
+              }
+            } else {
+              console.warn(`⚠️ Participant ${sessionData.participantName} not found in session`);
+            }
+          } else {
+            console.warn(`⚠️ Failed to fetch session data for participant lookup`);
+          }
+        } catch (sessionError) {
+          console.error('❌ Failed to get participant from session:', sessionError);
         }
       }
       
@@ -220,9 +274,9 @@ export default function CanvasPage() {
     return null; // Will redirect to login
   }
 
-  // Generate a unique participant ID from session + name
-  const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
-
+  // Use real participant ID if available, fallback to manual construction
+  const participantId = sessionData.participantId || `${sessionData.sessionCode}-${sessionData.participantName}`;
+  
   return (
     <SessionStoreProvider 
       sessionCode={sessionData.sessionCode} 

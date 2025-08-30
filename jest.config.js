@@ -27,7 +27,7 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: [
         '<rootDir>/tests/unit/{utils,stores,session}/**/*.test.ts',
-        '<rootDir>/tests/unit/lib/{ably,animations,constraints,session,constants}/**/*.test.ts',
+        '<rootDir>/tests/unit/lib/{ably,animations,constraints,session,constants,reveal}/**/*.test.ts',
         '<rootDir>/tests/unit/lib/presence/{presence-manager,participant-identity}.test.ts',
         '<rootDir>/lib/**/*.test.ts',
       ],

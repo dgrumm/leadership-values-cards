@@ -82,6 +82,9 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     hideOverflowWarningMessage,
   } = useSessionStep3Store();
 
+  // Calculate if step is complete (exactly 3 cards in top3Pile)
+  const isStepComplete = top3Pile.length === 3;
+
   // Comprehensive drag state clearing function
   const clearDragState = useCallback(() => {
     setDraggedCardId(null);
@@ -371,15 +374,18 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
       {/* Header */}
       <SessionHeader
         sessionCode={sessionCode}
+        participantId={currentUser?.participantId || ''}
         participantName={participantName}
         currentStep={3}
         totalSteps={3}
         participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
-        onReveal={handleReveal}
         isRevealed={isRevealed}
         showRevealButton={true}
+        stepComplete={isStepComplete}
         onParticipantsClick={handleShowParticipants}
+        onRevealSuccess={() => setIsRevealed(true)}
+        onRevealError={(error) => console.error('Reveal error:', error)}
       />
 
       {/* Transition overlay */}

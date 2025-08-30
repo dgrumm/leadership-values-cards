@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { createRevealManager } from '@/lib/reveal/reveal-manager';
 import { RevealResult } from '@/lib/reveal/types';
+import { useSessionManager } from '@/contexts/SessionStoreContext';
 
 export interface UseRevealManagerResult {
   // State
@@ -27,10 +28,13 @@ export function useRevealManager(
   const [isRevealing, setIsRevealing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Get the same SessionStoreManager instance that the UI uses
+  const sessionManager = useSessionManager();
+
   // Create reveal manager instance (memoized)
   const revealManager = useMemo(() => {
-    return createRevealManager(sessionCode, participantId);
-  }, [sessionCode, participantId]);
+    return createRevealManager(sessionCode, participantId, sessionManager);
+  }, [sessionCode, participantId, sessionManager]);
 
   // Reveal a selection
   const revealSelection = useCallback(async (type: 'top8' | 'top3'): Promise<RevealResult> => {

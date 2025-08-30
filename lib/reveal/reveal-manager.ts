@@ -1,8 +1,6 @@
 import { Card } from '../types/card';
 import { Session } from '../types/session';
-import { getSessionManager } from '../session/session-manager';
-import { getSessionStoreManager } from '../stores/session-store-manager';
-import { getSessionStore } from '../session/session-store';
+import { SessionStoreManager } from '../stores/session-store-manager';
 import { RevealedSelections, RevealResult } from './types';
 
 /**
@@ -10,17 +8,14 @@ import { RevealedSelections, RevealResult } from './types';
  * 
  * Architecture:
  * - Card positions: Retrieved from session-scoped stores (source of truth for arrangements)
- * - Reveal status: Stored in session participant data (persistent)
+ * - Reveal status: Stored in session participant data via API (persistent)
  * - Real-time updates: Handled via presence system (ephemeral status broadcasting)
  */
 export class RevealManager {
-  private sessionManager = getSessionManager();
-  private storeManager = getSessionStoreManager();
-  private sessionStore = getSessionStore();
-
   constructor(
     private sessionCode: string,
-    private participantId: string
+    private participantId: string,
+    private storeManager: SessionStoreManager
   ) {}
 
   /**
@@ -53,10 +48,18 @@ export class RevealManager {
         };
       }
 
-      // 2. Store revealed selection in session participant data
-      const session = await this.sessionManager.getSession(this.sessionCode);
-      if (!session) {
-        return { success: false, error: 'Session not found' };
+      // 2. Get session data via API 
+      let session;
+      try {
+        const response = await fetch(`/api/sessions/${this.sessionCode}`);
+        if (!response.ok) {
+          return { success: false, error: 'Session not found' };
+        }
+        const data = await response.json();
+        session = data.session;
+      } catch (error) {
+        console.error('Error fetching session:', error);
+        return { success: false, error: 'Failed to fetch session data' };
       }
 
       const participantIndex = session.participants.findIndex(p => p.id === this.participantId);
@@ -90,13 +93,27 @@ export class RevealManager {
 
       participant.lastActivity = new Date().toISOString();
 
-      // Update session with new participant data
-      const updatedSession = await this.sessionStore.updateSession(this.sessionCode, {
-        participants: updatedParticipants,
-        lastActivity: new Date().toISOString()
-      });
+      // Update session with new participant data via API
+      try {
+        const response = await fetch(`/api/sessions/${this.sessionCode}/reveal`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: this.participantId,
+            type,
+            cards,
+            revealed: type === 'top8' ? participant.revealed.top8 : participant.revealed.top3,
+            status: participant.status,
+            cardStates: participant.cardStates
+          })
+        });
 
-      if (!updatedSession) {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          return { success: false, error: errorData.error || 'Failed to update session' };
+        }
+      } catch (error) {
+        console.error('Error updating session:', error);
         return { success: false, error: 'Failed to update session' };
       }
 
@@ -116,9 +133,18 @@ export class RevealManager {
    */
   async unrevelSelection(type: 'top8' | 'top3'): Promise<RevealResult> {
     try {
-      const session = await this.sessionManager.getSession(this.sessionCode);
-      if (!session) {
-        return { success: false, error: 'Session not found' };
+      // Get session data via API
+      let session;
+      try {
+        const response = await fetch(`/api/sessions/${this.sessionCode}`);
+        if (!response.ok) {
+          return { success: false, error: 'Session not found' };
+        }
+        const data = await response.json();
+        session = data.session;
+      } catch (error) {
+        console.error('Error fetching session:', error);
+        return { success: false, error: 'Failed to fetch session data' };
       }
 
       const participantIndex = session.participants.findIndex(p => p.id === this.participantId);
@@ -143,13 +169,26 @@ export class RevealManager {
 
       participant.lastActivity = new Date().toISOString();
 
-      // Update session
-      const updatedSession = await this.sessionStore.updateSession(this.sessionCode, {
-        participants: updatedParticipants,
-        lastActivity: new Date().toISOString()
-      });
+      // Update session via API
+      try {
+        const response = await fetch(`/api/sessions/${this.sessionCode}/reveal`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: this.participantId,
+            type,
+            revealed: participant.revealed[type],
+            status: participant.status,
+            unrevel: true
+          })
+        });
 
-      if (!updatedSession) {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          return { success: false, error: errorData.error || 'Failed to update session' };
+        }
+      } catch (error) {
+        console.error('Error updating session:', error);
         return { success: false, error: 'Failed to update session' };
       }
 
@@ -169,8 +208,17 @@ export class RevealManager {
    */
   async getRevealedSelection(targetParticipantId: string, type: 'top8' | 'top3'): Promise<Card[] | null> {
     try {
-      const session = await this.sessionManager.getSession(this.sessionCode);
-      if (!session) {
+      // Get session data via API
+      let session;
+      try {
+        const response = await fetch(`/api/sessions/${this.sessionCode}`);
+        if (!response.ok) {
+          return null;
+        }
+        const data = await response.json();
+        session = data.session;
+      } catch (error) {
+        console.error('Error fetching session:', error);
         return null;
       }
 
@@ -196,8 +244,17 @@ export class RevealManager {
    */
   async isRevealed(type: 'top8' | 'top3', targetParticipantId?: string): Promise<boolean> {
     try {
-      const session = await this.sessionManager.getSession(this.sessionCode);
-      if (!session) {
+      // Get session data via API
+      let session;
+      try {
+        const response = await fetch(`/api/sessions/${this.sessionCode}`);
+        if (!response.ok) {
+          return false;
+        }
+        const data = await response.json();
+        session = data.session;
+      } catch (error) {
+        console.error('Error fetching session:', error);
         return false;
       }
 
@@ -215,7 +272,17 @@ export class RevealManager {
    * Get session data for external access (used by viewer manager)
    */
   async getSession(): Promise<Session | null> {
-    return this.sessionManager.getSession(this.sessionCode);
+    try {
+      const response = await fetch(`/api/sessions/${this.sessionCode}`);
+      if (!response.ok) {
+        return null;
+      }
+      const data = await response.json();
+      return data.session;
+    } catch (error) {
+      console.error('Error fetching session:', error);
+      return null;
+    }
   }
 
   /**
@@ -223,14 +290,14 @@ export class RevealManager {
    */
   private async getCardsForReveal(type: 'top8' | 'top3'): Promise<Card[] | null> {
     try {
-      const stores = this.storeManager.getStores(this.sessionCode, this.participantId);
-      
       if (type === 'top8') {
-        const step2Store = stores.step2;
-        return step2Store.getState().topEightPile;
+        const step2Store = this.storeManager.getStep2Store(this.sessionCode, this.participantId);
+        const state = step2Store.getState();
+        return state.top8Pile;
       } else {
-        const step3Store = stores.step3;
-        return step3Store.getState().topThreePile;
+        const step3Store = this.storeManager.getStep3Store(this.sessionCode, this.participantId);
+        const state = step3Store.getState();
+        return state.top3Pile;
       }
     } catch (error) {
       console.error('Error getting cards for reveal:', error);
@@ -242,6 +309,6 @@ export class RevealManager {
 /**
  * Factory function to create reveal manager instances
  */
-export function createRevealManager(sessionCode: string, participantId: string): RevealManager {
-  return new RevealManager(sessionCode, participantId);
+export function createRevealManager(sessionCode: string, participantId: string, storeManager: SessionStoreManager): RevealManager {
+  return new RevealManager(sessionCode, participantId, storeManager);
 }

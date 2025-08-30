@@ -48,6 +48,13 @@ export async function PUT(
     const sessionManager = getSessionManager();
     
     if (participantId) {
+      // DEBUG: Log what we're trying to update
+      const session = await sessionManager.getSession(sessionCode);
+      console.log(`🔧 PUT /api/sessions/${sessionCode}:`);
+      console.log(`   📝 Trying to update participantId: ${participantId}`);
+      console.log(`   📝 CurrentStep: ${currentStep}`);
+      console.log(`   👥 Available participants:`, session?.participants?.map(p => ({ id: p.id, name: p.name, isActive: p.isActive })));
+      
       const success = await sessionManager.updateParticipantActivity(
         sessionCode, 
         participantId, 
@@ -55,9 +62,12 @@ export async function PUT(
       );
       
       if (!success) {
+        console.log(`❌ Failed to update participant ${participantId} in session ${sessionCode}`);
         return NextResponse.json({
           error: 'Failed to update participant activity'
         }, { status: 400 });
+      } else {
+        console.log(`✅ Successfully updated participant ${participantId} in session ${sessionCode}`);
       }
     }
 

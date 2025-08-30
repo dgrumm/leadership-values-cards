@@ -3,11 +3,10 @@
  * Session-scoped state management to prevent participant state bleeding
  */
 
-export { SessionStoreManager } from './session-store-manager';
+export { SessionStoreManager, getSessionStoreManager, resetSessionStoreManager } from './session-store-manager';
 export type { 
   StoreBundle, 
-  SessionStoreManagerConfig, 
-  StoreFactory 
+  SessionStoreManagerConfig
 } from './session-store-manager';
 
 export { MemoryTracker } from './memory-tracker';

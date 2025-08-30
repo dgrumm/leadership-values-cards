@@ -8,26 +8,33 @@ import { RevealButton } from './RevealButton';
 
 interface SessionHeaderProps {
   sessionCode: string;
+  participantId: string;
   participantName: string;
   currentStep: number;
   totalSteps: number;
   participantCount?: number;
   onStepClick?: () => void;
-  onReveal?: () => void;
   isRevealed?: boolean;
   showRevealButton?: boolean;
+  stepComplete?: boolean;  // NEW: Only show reveal when step is complete
   onParticipantsClick?: () => void;
+  onRevealSuccess?: () => void;
+  onRevealError?: (error: string) => void;
 }
 
 export function SessionHeader({ 
+  sessionCode,
+  participantId,
   currentStep, 
   totalSteps, 
   participantCount,
   onStepClick,
-  onReveal,
   isRevealed,
   showRevealButton,
-  onParticipantsClick
+  stepComplete,
+  onParticipantsClick,
+  onRevealSuccess,
+  onRevealError
 }: SessionHeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -39,10 +46,14 @@ export function SessionHeader({
             participantCount={participantCount}
             onClick={onParticipantsClick}
           />
-          {showRevealButton && (
+          {showRevealButton && stepComplete && (
             <RevealButton 
-              onClick={onReveal}
+              sessionCode={sessionCode}
+              participantId={participantId}
+              revealType={currentStep === 2 ? 'top8' : 'top3'}
               isRevealed={isRevealed}
+              onRevealSuccess={onRevealSuccess}
+              onRevealError={onRevealError}
             />
           )}
         </div>

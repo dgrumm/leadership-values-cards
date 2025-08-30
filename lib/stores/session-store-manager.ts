@@ -301,3 +301,17 @@ export class SessionStoreManager {
   }
 
 }
+
+// Singleton instance
+let sessionStoreManager: SessionStoreManager | null = null;
+
+export function getSessionStoreManager(): SessionStoreManager {
+  if (!sessionStoreManager) {
+    sessionStoreManager = new SessionStoreManager();
+  }
+  return sessionStoreManager;
+}
+
+export function resetSessionStoreManager(): void {
+  sessionStoreManager = null;
+}

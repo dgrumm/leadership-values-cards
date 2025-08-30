@@ -1,4 +1,5 @@
 import { Session, Participant, SessionConfig } from '../types';
+import { Card } from '../types/card';
 import { getSessionStore } from './session-store';
 import { 
   validateSessionCode, 
@@ -157,12 +158,14 @@ export class SessionManager {
     }
     
     const session = await this.store.getSession(sanitizedCode);
+    console.log(`🔍 SessionManager ${(this as any).instanceId} looking for session ${sanitizedCode}: ${session ? 'FOUND' : 'NOT_FOUND'}`);
     if (!session) {
       return null;
     }
     
     // Check if session is expired
     if (!session.isActive || new Date(session.expiresAt) <= new Date()) {
+      console.log(`⏰ Session ${sanitizedCode} is expired or inactive`);
       return null;
     }
     
@@ -317,17 +320,96 @@ export class SessionManager {
     return session.participants.find(p => p.name === participantName && p.isActive) || null;
   }
 
+  async updateParticipantReveal(sessionCode: string, participantId: string, revealData: {
+    type: 'top8' | 'top3';
+    revealed: boolean;
+    status: string;
+    cards?: Card[];
+    cardStates?: any;
+    unrevel?: boolean;
+  }): Promise<boolean> {
+    const session = await this.getSession(sessionCode);
+    if (!session) {
+      return false;
+    }
+
+    const participantIndex = session.participants.findIndex(p => p.id === participantId);
+    if (participantIndex === -1) {
+      return false;
+    }
+
+    // Update participant data
+    const updatedParticipants = [...session.participants];
+    const participant = updatedParticipants[participantIndex];
+
+    // Initialize cardStates if not present
+    if (!participant.cardStates) {
+      participant.cardStates = {
+        step1: { more: [], less: [] },
+        step2: { top8: [], less: [] },
+        step3: { top3: [], less: [] }
+      };
+    }
+
+    if (revealData.unrevel) {
+      // Unreveal operation
+      participant.revealed[revealData.type] = false;
+    } else {
+      // Reveal operation
+      participant.revealed[revealData.type] = true;
+      
+      // Store the revealed cards in participant data
+      if (revealData.cards) {
+        if (revealData.type === 'top8') {
+          participant.cardStates.step2.top8 = revealData.cards;
+        } else {
+          participant.cardStates.step3.top3 = revealData.cards;
+        }
+      }
+    }
+
+    participant.status = revealData.status;
+    participant.lastActivity = new Date().toISOString();
+
+    // Update the session
+    const updatedSession = await this.store.updateSession(sessionCode, {
+      participants: updatedParticipants,
+      lastActivity: new Date().toISOString()
+    });
+
+    return updatedSession !== null;
+  }
+
   async cleanupExpiredSessions(): Promise<string[]> {
     return this.store.cleanupExpiredSessions();
   }
 }
 
-// Singleton instance
+// Global singleton instance to prevent multiple instances across API requests
+declare global {
+  var __sessionManager: SessionManager | undefined;
+}
+
 let sessionManager: SessionManager | null = null;
 
 export function getSessionManager(): SessionManager {
+  // Use global in server environment to persist across API requests
+  if (typeof window === 'undefined') {
+    if (!global.__sessionManager) {
+      const instanceId = Math.random().toString(36).substring(7);
+      console.log(`🏗️ Creating new SessionManager instance: ${instanceId} (env: server)`);
+      global.__sessionManager = new SessionManager();
+      (global.__sessionManager as any).instanceId = instanceId;
+    }
+    return global.__sessionManager;
+  }
+  
+  // Use local variable in client environment
   if (!sessionManager) {
+    const instanceId = Math.random().toString(36).substring(7);
+    console.log(`🏗️ Creating new SessionManager instance: ${instanceId} (env: client)`);
     sessionManager = new SessionManager();
+    (sessionManager as any).instanceId = instanceId;
   }
   return sessionManager;
 }

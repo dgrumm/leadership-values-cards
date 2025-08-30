@@ -76,13 +76,21 @@ export function usePresence({
         const ablyService = getAblyService();
         await ablyService.init();
 
-        // Get participant identity from session (single source of truth)
-        const { getSessionManager } = await import('@/lib/session/session-manager');
-        const sessionManager = getSessionManager();
-        const { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } = await import('@/lib/constants/participants');
-        
+        // Get participant identity from session via API (single source of truth)
         console.log(`🔍 Looking for participant "${participantName}" in session "${sessionCode}"`);
-        const participant = await sessionManager.getCurrentParticipant(sessionCode, participantName);
+        
+        let participant = null;
+        try {
+          const response = await fetch(`/api/sessions/${sessionCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            participant = data.session?.participants?.find((p: any) => p.name === participantName && p.isActive);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch session data: ${error}`);
+        }
+        
+        const { PARTICIPANT_EMOJIS, PARTICIPANT_COLORS } = await import('@/lib/constants/participants');
         
         let emoji: string;
         let color: string;
@@ -94,9 +102,7 @@ export function usePresence({
           console.log(`✅ Using session identity for ${participantName}:`, { emoji, color });
         } else {
           // Fallback: Debug info and temporary random assignment
-          const session = await sessionManager.getSession(sessionCode);
           console.warn(`⚠️ Participant "${participantName}" not found in session "${sessionCode}" - using fallback`);
-          console.warn(`📋 Available participants:`, session?.participants?.map(p => ({ name: p.name, isActive: p.isActive })));
           
           // Deterministic fallback based on participant name to ensure consistency across observers
           const nameHash = participantName.split('').reduce((hash, char) => {
@@ -167,11 +173,17 @@ export function usePresence({
     
     const createHybridDisplayData = async () => {
       try {
-        const { getSessionManager } = await import('@/lib/session/session-manager');
-        const sessionManager = getSessionManager();
-        
-        // Get current session to access all participants
-        const session = await sessionManager.getSession(sessionCode);
+        // Get current session via API instead of direct SessionManager access
+        let session = null;
+        try {
+          const response = await fetch(`/api/sessions/${sessionCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            session = data.session;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch session for hybrid data: ${error}`);
+        }
         if (!session) {
           console.warn(`⚠️ Session ${sessionCode} not found for display data creation`);
           return;
@@ -264,7 +276,7 @@ export function usePresence({
     const refreshInterval = setInterval(() => {
       console.log('🔄 Refreshing session data for step progress updates');
       setRefreshTrigger(prev => prev + 1);
-    }, 5000); // Refresh every 5 seconds
+    }, 30000); // Refresh every 30 seconds (reduced from 5s)
     
     return () => {
       clearInterval(refreshInterval);
