@@ -215,15 +215,12 @@ export function usePresence({
           }
         }
         
-        // Handle presence-only participants (shouldn't happen in normal flow, but defensive)
+        // Skip presence-only participants - only show participants that exist in session
+        // This prevents old participants from previous sessions from appearing in UI
         for (const [participantId, presenceData] of participants) {
           if (!hybridParticipants.has(participantId)) {
-            console.warn(`⚠️ Found presence-only participant: ${presenceData.name}`);
-            const fallbackDisplayData = createParticipantDisplayDataFromPresence(
-              presenceData,
-              currentUser.participantId
-            );
-            hybridParticipants.set(participantId, fallbackDisplayData);
+            console.log(`🧹 Skipping presence-only participant: ${presenceData.name} (not in current session)`);
+            // Do not add to hybridParticipants - presence-only participants should not appear in UI
           }
         }
         

@@ -102,7 +102,7 @@ export function createParticipantDisplayDataFromPresence(
   presenceData: PresenceData,
   currentUserId: string
 ): ParticipantDisplayData {
-  console.warn(`⚠️ Creating display data from presence only for ${presenceData.name} - session data unavailable`);
+  console.log(`🔍 Creating display data from presence only for ${presenceData.name} - session data unavailable`);
   
   // Without session data, we can't know reveal status definitively
   const hasRevealedStatus = presenceData.status === 'revealed-8' || presenceData.status === 'revealed-3';
