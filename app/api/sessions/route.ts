@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionManager } from '@/lib/session/session-manager';
 import { SessionConfig } from '@/lib/types';
 import { getRateLimiter, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/utils/rate-limiter';
+import { getOrCreateClientId, setClientIdCookie } from '@/lib/utils/client-id-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,18 +37,29 @@ export async function POST(request: NextRequest) {
 
     // Check if this is a join-or-create request (atomic operation to prevent race conditions)
     if (body.participantName && body.sessionCode) {
+      // Get or create client ID for persistent identity
+      const { clientId, isNew } = await getOrCreateClientId(request);
+      console.log(`🍪 ${isNew ? 'Generated new' : 'Found existing'} client ID: ${clientId.substring(0, 8)}... for join-or-create ${body.participantName}`);
+
       const result = await sessionManager.joinOrCreateSession(
         body.sessionCode,
         body.participantName,
-        config
+        config,
+        clientId
       );
 
       if (result.success && result.session && result.participant) {
-        return NextResponse.json({
+        // Create response with cookie
+        const response = NextResponse.json({
           sessionCode: result.session.sessionCode,
           session: result.session,
           participant: result.participant
         }, { status: 201 });
+
+        // Set client ID cookie for future requests
+        setClientIdCookie(response, clientId);
+
+        return response;
       } else {
         return NextResponse.json({
           error: result.error || 'Failed to join or create session'
@@ -57,18 +69,29 @@ export async function POST(request: NextRequest) {
 
     // Check if this is a create-with-creator request (for simplified flow)
     if (body.creatorName) {
+      // Get or create client ID for persistent identity
+      const { clientId, isNew } = await getOrCreateClientId(request);
+      console.log(`🍪 ${isNew ? 'Generated new' : 'Found existing'} client ID: ${clientId.substring(0, 8)}... for creator ${body.creatorName}`);
+
       const result = await sessionManager.createSessionWithCreator(
         body.creatorName,
         config,
-        body.customCode
+        body.customCode,
+        clientId
       );
 
       if (result.success && result.session && result.participant) {
-        return NextResponse.json({
+        // Create response with cookie
+        const response = NextResponse.json({
           sessionCode: result.session.sessionCode,
           session: result.session,
           participant: result.participant
         }, { status: 201 });
+
+        // Set client ID cookie for future requests
+        setClientIdCookie(response, clientId);
+
+        return response;
       } else {
         return NextResponse.json({
           error: result.error || 'Failed to create session'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PresenceManager } from '@/lib/presence/presence-manager';
 import { getAblyService } from '@/lib/ably/ably-service';
 import type { PresenceData } from '@/lib/presence/types';
@@ -56,8 +56,13 @@ export function usePresence({
   const [participantsForDisplay, setParticipantsForDisplay] = useState<Map<string, ParticipantDisplayData>>(new Map());
   const [currentUserForDisplay, setCurrentUserForDisplay] = useState<ParticipantDisplayData | null>(null);
   
-  // Force refresh trigger for session data updates
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Refs to avoid stale closures
+  const participantsRef = useRef<Map<string, PresenceData>>(participants);
+  
+  // Keep ref current
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
 
   // Initialize presence manager
   useEffect(() => {
@@ -76,10 +81,27 @@ export function usePresence({
         const ablyService = getAblyService();
         await ablyService.init();
 
-        // Get participant identity from session via API (single source of truth)
-        console.log(`🔍 Looking for participant "${participantName}" in session "${sessionCode}"`);
-        
+        // Check for existing participant cookie to reuse identity on refresh
+        const cookieName = `participant-${sessionCode}-${participantName}`;
         let participant = null;
+        let existingIdentity = null;
+        
+        // Check cookie first for existing identity
+        if (typeof document !== 'undefined') {
+          const cookies = document.cookie.split(';');
+          const participantCookie = cookies.find(c => c.trim().startsWith(`${cookieName}=`));
+          if (participantCookie) {
+            try {
+              existingIdentity = JSON.parse(decodeURIComponent(participantCookie.split('=')[1]));
+              console.log(`🍪 Found existing identity for ${participantName}:`, existingIdentity);
+            } catch (error) {
+              console.warn('Failed to parse participant cookie:', error);
+            }
+          }
+        }
+        
+        // Get participant identity from session via API
+        console.log(`🔍 Looking for participant "${participantName}" in session "${sessionCode}"`);
         try {
           const response = await fetch(`/api/sessions/${sessionCode}`);
           if (response.ok) {
@@ -100,6 +122,11 @@ export function usePresence({
           emoji = participant.emoji;
           color = participant.color;
           console.log(`✅ Using session identity for ${participantName}:`, { emoji, color });
+        } else if (existingIdentity) {
+          // Use cookie identity (for browser refresh)
+          emoji = existingIdentity.emoji;
+          color = existingIdentity.color;
+          console.log(`🍪 Using cookie identity for ${participantName}:`, { emoji, color });
         } else {
           // Fallback: Debug info and temporary random assignment
           console.warn(`⚠️ Participant "${participantName}" not found in session "${sessionCode}" - using fallback`);
@@ -118,7 +145,7 @@ export function usePresence({
 
         // Create current user data
         const currentUserData: PresenceData = {
-          participantId: ablyService.client?.auth.clientId || `user-${Date.now()}`,
+          participantId: ablyService.getClientId() || `user-${Date.now()}`,
           name: participantName,
           emoji,
           color,
@@ -128,6 +155,14 @@ export function usePresence({
           lastActive: Date.now(),
           isViewing: null
         };
+        
+        // Save identity to cookie for browser refresh (expires in 60 minutes)
+        if (typeof document !== 'undefined') {
+          const identityData = { emoji, color };
+          const expires = new Date(Date.now() + 60 * 60 * 1000).toUTCString();
+          document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(identityData))}; expires=${expires}; path=/`;
+          console.log(`🍪 Saved identity cookie for ${participantName}`);
+        }
 
         // Create presence manager
         manager = new PresenceManager(
@@ -165,120 +200,209 @@ export function usePresence({
         manager.cleanup();
       }
     };
-  }, [enabled, sessionCode, participantName, currentStep]);
+  }, [enabled, sessionCode, participantName]); // Removed currentStep to prevent PresenceManager recreation
 
-  // NEW: Create hybrid display data by merging session + presence 
-  useEffect(() => {
+  // THROTTLED: Only update display data when presence actually changes
+  const updateDisplayDataImmediate = useCallback(async () => {
     if (!sessionCode || !currentUser) return;
     
-    const createHybridDisplayData = async () => {
-      try {
-        // Get current session via API instead of direct SessionManager access
-        let session = null;
-        try {
-          const response = await fetch(`/api/sessions/${sessionCode}`);
-          if (response.ok) {
-            const data = await response.json();
-            session = data.session;
-          }
-        } catch (error) {
-          console.error(`Failed to fetch session for hybrid data: ${error}`);
-        }
-        if (!session) {
-          console.warn(`⚠️ Session ${sessionCode} not found for display data creation`);
-          return;
-        }
-        
-        const hybridParticipants = new Map<string, ParticipantDisplayData>();
-        let hybridCurrentUser: ParticipantDisplayData | null = null;
-        
-        // Process each session participant
-        for (const sessionParticipant of session.participants) {
-          if (!sessionParticipant.isActive) continue;
-          
-          // Find corresponding presence data
-          const presenceData = sessionParticipant.name === participantName 
-            ? currentUser // Use local current user for self
-            : participants.get(sessionParticipant.id); // Lookup others in presence map
-          
-          // Create hybrid display data
-          const displayData = createParticipantDisplayData(
-            sessionParticipant,
-            presenceData || null,
-            currentUser.participantId
-          );
-          
-          hybridParticipants.set(sessionParticipant.id, displayData);
-          
-          if (sessionParticipant.name === participantName) {
-            hybridCurrentUser = displayData;
-          }
-        }
-        
-        // Skip presence-only participants - only show participants that exist in session
-        // This prevents old participants from previous sessions from appearing in UI
-        for (const [participantId, presenceData] of participants) {
-          if (!hybridParticipants.has(participantId)) {
-            console.log(`🧹 Skipping presence-only participant: ${presenceData.name} (not in current session)`);
-            // Do not add to hybridParticipants - presence-only participants should not appear in UI
-          }
-        }
-        
-        console.log(`🎯 Created hybrid display data for ${hybridParticipants.size} participants`);
-        setParticipantsForDisplay(hybridParticipants);
-        setCurrentUserForDisplay(hybridCurrentUser);
-        
-      } catch (error) {
-        console.error('❌ Failed to create hybrid display data:', error);
+    try {
+      // OPTION 3: Always fetch fresh session data - no cache for step transitions
+      // This eliminates flip-flopping by ensuring we always have the latest step data
+      const response = await fetch(`/api/sessions/${sessionCode}`);
+      if (!response.ok) {
+        console.log(`🧹 Session ${sessionCode} no longer exists`);
+        setParticipantsForDisplay(new Map());
+        setCurrentUserForDisplay(null);
+        return;
       }
-    };
-    
-    createHybridDisplayData();
-  }, [sessionCode, currentUser, participants, participantName, refreshTrigger]);
+      
+      const session = await response.json();
+      
+      const hybridParticipants = new Map<string, ParticipantDisplayData>();
+      let hybridCurrentUser: ParticipantDisplayData | null = null;
+      
+      // NAME-BASED USER MERGING: Group participants by base name and show most recent session for each unique user
+      const participantsByBaseName = new Map<string, any[]>();
+      
+      session.participants?.forEach((sessionParticipant: any) => {
+        if (!sessionParticipant.isActive) return;
+        
+        // Extract base name (Dave-2 → Dave, Bob-5 → Bob, Frank → Frank)
+        const baseName = sessionParticipant.name.replace(/-\d+$/, '');
+        if (!participantsByBaseName.has(baseName)) {
+          participantsByBaseName.set(baseName, []);
+        }
+        participantsByBaseName.get(baseName)!.push(sessionParticipant);
+      });
+      
+      // For each unique base name, show only the most recent session
+      participantsByBaseName.forEach((participantSessions: any[]) => {
+        const mostRecentSession = participantSessions.sort((a: any, b: any) => 
+          new Date(b.lastActivity || 0).getTime() - new Date(a.lastActivity || 0).getTime()
+        )[0];
+        
+        // Find corresponding presence data - match by base name for current user
+        const currentUserBaseName = participantName.replace(/-\d+$/, '');
+        const sessionBaseName = mostRecentSession.name.replace(/-\d+$/, '');
+        
+        // Find presence data for this participant
+        let presenceData: PresenceData | null = null;
+        
+        if (sessionBaseName === currentUserBaseName) {
+          // Use local current user for self (base name match)
+          presenceData = currentUser;
+        } else {
+          // For others, find by matching name (not participant ID which differs between session/presence)
+          participantsRef.current.forEach((participant) => {
+            // Match by name - presence and session should have same participant name
+            if (participant.name === mostRecentSession.name) {
+              presenceData = participant;
+            }
+          });
+        }
+        
+        // NOTE: No conflict resolution needed here - createParticipantDisplayData() 
+        // already uses session data as authoritative source for currentStep/identity
+        
+        // DEBUG: Log the data sources being merged to understand flip-flopping
+        if (mostRecentSession.name === 'Dave') {
+          console.log(`🔍 DAVE DEBUG - Session says Step ${mostRecentSession.currentStep}, Presence says Step ${presenceData?.currentStep || 'null'}`);
+        }
+        
+        // Show all session participants, but mark presence status
+        // During step transitions, presence data may be temporarily unavailable
+        const displayData = createParticipantDisplayData(
+          mostRecentSession,
+          presenceData || null,
+          currentUser.participantId
+        );
+        
+        hybridParticipants.set(mostRecentSession.id, displayData);
+        if (sessionBaseName === currentUserBaseName) {
+          hybridCurrentUser = displayData;
+        }
+        
+        // Log when presence is missing (for debugging, but still show participant)
+        if (sessionBaseName !== currentUserBaseName && !presenceData) {
+          console.log(`⚠️ No presence data for ${mostRecentSession.name} (may be transitioning)`);
+        }
+      });
+      
+      // Only log when participant count actually changes to reduce noise
+      const prevCount = participantsForDisplay.size;
+      const newCount = hybridParticipants.size;
+      if (newCount !== prevCount) {
+        console.log(`🎯 Hybrid display data: ${prevCount} → ${newCount} participants`);
+      }
+      setParticipantsForDisplay(hybridParticipants);
+      setCurrentUserForDisplay(hybridCurrentUser);
+      
+    } catch (error) {
+      console.error('❌ Failed to create hybrid display data:', error);
+    }
+  }, [sessionCode, currentUser, participantName]); // Removed participants from callback deps
   
-  // Event-driven participant updates (replaces polling)
+  // Throttled version to prevent API spam
+  const updateDisplayDataThrottled = useRef<NodeJS.Timeout | null>(null);
+  const updateDisplayData = useCallback((immediate: boolean = false) => {
+    // Clear any existing timeout
+    if (updateDisplayDataThrottled.current) {
+      clearTimeout(updateDisplayDataThrottled.current);
+    }
+    
+    if (immediate) {
+      // For critical updates like step changes, update immediately
+      updateDisplayDataImmediate();
+    } else {
+      // Throttle API calls to max once every 500ms for other updates
+      updateDisplayDataThrottled.current = setTimeout(() => {
+        updateDisplayDataImmediate();
+      }, 500);
+    }
+  }, [updateDisplayDataImmediate]);
+  
+  // TRIGGER: Only update when presence actually changes (not reactive session state)
+  useEffect(() => {
+    updateDisplayData();
+  }, [updateDisplayData, participants]); // Only presence changes trigger updates
+  
+  // Update current step in existing presence manager (no recreation)
+  useEffect(() => {
+    if (!presenceManager || !currentUser) return;
+    
+    // Only update if step actually changed to prevent loops
+    if (currentUser.currentStep === currentStep) return;
+    
+    console.log(`🔄 Updating step from ${currentUser.currentStep} to ${currentStep} for ${currentUser.name}`);
+    
+    // Update local state first
+    const updatedUserData = {
+      ...currentUser,
+      currentStep,
+      lastActive: Date.now()
+    };
+    setCurrentUser(updatedUserData);
+    
+    // Update presence without recreating the manager (no await to prevent blocking)
+    presenceManager.updateCurrentStep(currentStep).catch((error) => {
+      console.warn('Failed to update step in presence:', error);
+    });
+  }, [currentStep, presenceManager, currentUser?.currentStep]); // Only react to actual step changes
+  
+  // Event-driven participant updates (no polling)
   useEffect(() => {
     if (!presenceManager) return;
 
-    console.log('🎯 Setting up event-driven participant updates (no more polling!)');
+    console.log('🎯 Setting up event-driven participant updates');
     
     // Subscribe to real-time participant changes
     const unsubscribe = presenceManager.onParticipantChange((latestParticipants) => {
-      console.log(`📋 Participant update received: ${latestParticipants.size} participants`);
-      
       // Filter out current user to prevent race conditions
       // Self should always come from local currentUser state, not Ably events
       const currentUserId = presenceManager.getCurrentUserData()?.participantId;
       const othersOnly = new Map<string, PresenceData>();
+      let hasStepChanges = false;
       
-      for (const [id, participant] of latestParticipants) {
+      latestParticipants.forEach((participant: PresenceData, id: string) => {
         if (id !== currentUserId) {
+          // Check if this participant had a step change
+          const previousParticipant = participantsRef.current.get(id);
+          if (previousParticipant && previousParticipant.currentStep !== participant.currentStep) {
+            hasStepChanges = true;
+            console.log(`🚀 STEP CHANGE DETECTED: ${participant.name} ${previousParticipant.currentStep} → ${participant.currentStep}`);
+          }
           othersOnly.set(id, participant);
         }
+      });
+      
+      // Only log significant changes to reduce noise
+      const prevSize = participantsRef.current.size;
+      const newSize = othersOnly.size;
+      if (newSize !== prevSize) {
+        console.log(`👥 Participants changed: ${prevSize} → ${newSize}`);
       }
       
-      console.log(`👥 Others participants (excluding self): ${othersOnly.size}`);
       setParticipants(othersOnly);
+      
+      // If step changes detected, update display immediately (bypass throttling)
+      if (hasStepChanges) {
+        console.log(`⚡ Immediate update triggered by step changes`);
+        updateDisplayData(true); // immediate = true
+      }
     });
 
     return unsubscribe;
-  }, [presenceManager]);
-
-  // Periodic refresh of session data for step progress updates
+  }, [presenceManager, updateDisplayData]);
+  
+  // Cleanup throttled timeout on unmount
   useEffect(() => {
-    if (!sessionCode || !enabled) return;
-    
-    console.log('🔄 Setting up session data refresh for step progress updates');
-    
-    const refreshInterval = setInterval(() => {
-      console.log('🔄 Refreshing session data for step progress updates');
-      setRefreshTrigger(prev => prev + 1);
-    }, 30000); // Refresh every 30 seconds (reduced from 5s)
-    
     return () => {
-      clearInterval(refreshInterval);
+      if (updateDisplayDataThrottled.current) {
+        clearTimeout(updateDisplayDataThrottled.current);
+      }
     };
-  }, [sessionCode, enabled]);
+  }, []);
 
   // Update status function
   const updateStatus = useCallback(async (status: PresenceData['status']) => {
@@ -310,9 +434,9 @@ export function usePresence({
   const otherParticipants = useMemo(() => {
     // Since participants now only contains others, we can use it directly
     const others: PresenceData[] = [];
-    for (const [, participant] of participants) {
+    participants.forEach((participant: PresenceData) => {
       others.push(participant);
-    }
+    });
     return others.sort((a, b) => a.name.localeCompare(b.name));
   }, [participants]);
 
@@ -326,9 +450,9 @@ export function usePresence({
     }
     
     // Add others from Ably events
-    for (const [id, participant] of participants) {
+    participants.forEach((participant: PresenceData, id: string) => {
       combined.set(id, participant);
-    }
+    });
     
     return combined;
   }, [currentUser, participants]);
@@ -336,11 +460,11 @@ export function usePresence({
   // NEW: Computed values for hybrid display data
   const otherParticipantsForDisplay = useMemo(() => {
     const others: ParticipantDisplayData[] = [];
-    for (const [participantId, participant] of participantsForDisplay) {
+    participantsForDisplay.forEach((participant: ParticipantDisplayData) => {
       if (!participant.isCurrentUser) {
         others.push(participant);
       }
-    }
+    });
     return others.sort((a, b) => a.name.localeCompare(b.name));
   }, [participantsForDisplay]);
 

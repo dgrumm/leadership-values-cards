@@ -3,6 +3,7 @@ import { getSessionManager } from '@/lib/session/session-manager';
 import { getSessionLifecycle } from '@/lib/session/session-lifecycle';
 import { getRateLimiter, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/utils/rate-limiter';
 import { sanitizeSessionCode, sanitizeParticipantName } from '@/lib/session/session-validator';
+import { getOrCreateClientId, setClientIdCookie } from '@/lib/utils/client-id-manager';
 
 export async function POST(
   request: NextRequest,
@@ -40,19 +41,29 @@ export async function POST(
       }, { status: 400 });
     }
 
+    // Get or create client ID for persistent identity
+    const { clientId, isNew } = await getOrCreateClientId(request);
+    console.log(`🍪 ${isNew ? 'Generated new' : 'Found existing'} client ID: ${clientId.substring(0, 8)}... for participant ${participantName}`);
+
     const sessionManager = getSessionManager();
-    const result = await sessionManager.joinSession(sessionCode, participantName);
+    const result = await sessionManager.joinSession(sessionCode, participantName, clientId);
 
     if (result.success && result.session && result.participant) {
       // Start monitoring the session for timeouts
       const sessionLifecycle = getSessionLifecycle();
       sessionLifecycle.monitorSession(sessionCode);
 
-      return NextResponse.json({
+      // Create response with cookie
+      const response = NextResponse.json({
         session: result.session,
         participant: result.participant,
         message: 'Successfully joined session'
       }, { status: 200 });
+
+      // Set client ID cookie for future requests
+      setClientIdCookie(response, clientId);
+
+      return response;
     } else {
       // Determine appropriate status code based on error type
       let status = 400;

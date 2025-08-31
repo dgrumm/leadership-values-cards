@@ -3,10 +3,12 @@ import { Card } from './card';
 // Cold data - changes infrequently, stable for duration of session
 export interface ParticipantProfile {
   id: string;
+  clientId: string; // Persistent browser identity for session continuity
   name: string;
   emoji: string;
   color: string;
   joinedAt: string;
+  isReactivated?: boolean; // Track if participant was reactivated vs new
 }
 
 // Hot data - changes frequently during active participation  

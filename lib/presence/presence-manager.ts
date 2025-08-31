@@ -123,6 +123,34 @@ export class PresenceManager {
   }
 
   /**
+   * Update current step in presence (for step transitions)
+   */
+  async updateCurrentStep(currentStep: PresenceData['currentStep']): Promise<void> {
+    if (!this.currentUserData) {
+      throw new Error('Cannot update step: not in presence');
+    }
+
+    const updatedData = {
+      ...this.currentUserData,
+      currentStep,
+      lastActive: Date.now()
+    };
+
+    try {
+      await this.presenceChannel.presence.update(updatedData);
+      
+      // Update local state
+      this.currentUserData = updatedData;
+      this.participants.set(updatedData.participantId, updatedData);
+      
+      console.log(`✅ Updated step to ${currentStep} in presence`);
+    } catch (error) {
+      console.error('Failed to update current step in presence:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update cursor position (throttled via AblyService)
    */
   updateCursor(x: number, y: number): void {
@@ -205,7 +233,8 @@ export class PresenceManager {
           return;
         }
 
-        const { participantId, x, y, timestamp } = message.data;
+        const { participantId, x, y } = message.data;
+        const timestamp = Date.now(); // Generate timestamp on receive
         
         // Don't update our own cursor from network messages
         if (participantId === this.currentUser.id) {
@@ -282,11 +311,11 @@ export class PresenceManager {
     const now = Date.now();
     const activeThreshold = now - this.config.idleTimeoutMs;
 
-    for (const [participantId, cursor] of this.cursors) {
+    this.cursors.forEach((cursor, participantId) => {
       if (cursor.timestamp > activeThreshold) {
         activeCursors.set(participantId, cursor);
       }
-    }
+    });
 
     return activeCursors;
   }
@@ -327,13 +356,13 @@ export class PresenceManager {
     if (this.isDestroyed) return;
     
     const participantsCopy = new Map(this.participants);
-    for (const callback of this.participantChangeCallbacks) {
+    this.participantChangeCallbacks.forEach(callback => {
       try {
         callback(participantsCopy);
       } catch (error) {
         console.error('Error in participant change callback:', error);
       }
-    }
+    });
   }
 
   /**

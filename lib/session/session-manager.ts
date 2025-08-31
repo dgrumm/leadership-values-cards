@@ -54,7 +54,8 @@ export class SessionManager {
   async createSessionWithCreator(
     creatorName: string, 
     config?: Partial<SessionConfig>,
-    customCode?: string
+    customCode?: string,
+    clientId?: string
   ): Promise<CreateSessionResult> {
     try {
       // Create the session first
@@ -64,7 +65,7 @@ export class SessionManager {
       }
 
       // Add creator as first participant
-      const joinResult = await this.joinSession(sessionResult.session.sessionCode, creatorName);
+      const joinResult = await this.joinSession(sessionResult.session.sessionCode, creatorName, clientId);
       if (!joinResult.success) {
         // If join fails, clean up the session
         await this.store.deleteSession(sessionResult.session.sessionCode);
@@ -94,7 +95,8 @@ export class SessionManager {
   async joinOrCreateSession(
     sessionCode: string, 
     participantName: string, 
-    config?: Partial<SessionConfig>
+    config?: Partial<SessionConfig>,
+    clientId?: string
   ): Promise<JoinSessionResult> {
     // Sanitize and validate inputs
     const sanitizedCode = sanitizeSessionCode(sessionCode);
@@ -114,7 +116,7 @@ export class SessionManager {
       const existingSession = await this.getSession(sanitizedCode);
       if (existingSession) {
         // Session exists, try to join it
-        return await this.joinSession(sanitizedCode, sanitizedName);
+        return await this.joinSession(sanitizedCode, sanitizedName, clientId);
       }
 
       // Session doesn't exist, create it atomically
@@ -122,11 +124,11 @@ export class SessionManager {
       
       if (!atomicResult.created) {
         // Another user just created the session, try to join it
-        return await this.joinSession(sanitizedCode, sanitizedName);
+        return await this.joinSession(sanitizedCode, sanitizedName, clientId);
       }
 
       // We successfully created the session, now join it as the first participant
-      const joinResult = await this.joinSession(sanitizedCode, sanitizedName);
+      const joinResult = await this.joinSession(sanitizedCode, sanitizedName, clientId);
       if (!joinResult.success) {
         // If join fails, clean up the session we just created
         await this.store.deleteSession(sanitizedCode);
@@ -172,7 +174,7 @@ export class SessionManager {
     return session;
   }
 
-  async joinSession(sessionCode: string, participantName: string): Promise<JoinSessionResult> {
+  async joinSession(sessionCode: string, participantName: string, clientId?: string): Promise<JoinSessionResult> {
     // Sanitize and validate session code
     const sanitizedCode = sanitizeSessionCode(sessionCode);
     const codeValidation = validateSessionCode(sanitizedCode);
@@ -203,37 +205,82 @@ export class SessionManager {
       return { success: false, error: nameValidation.error };
     }
 
-    // Resolve name conflicts
-    const existingNames = new Set(session.participants.map(p => p.name));
-    const resolvedName = resolveNameConflict(sanitizedName, existingNames);
+    // Check for existing participant with same clientId (reactivation case)
+    let participant: Participant;
+    let isReactivation = false;
+    
+    // DEBUG: Enhanced logging for duplicate participant debugging
+    console.log(`🔍 JOIN DEBUG - Looking for existing participant with clientId: ${clientId?.substring(0, 8)}...`);
+    console.log(`🔍 JOIN DEBUG - Session has ${session.participants.length} participants:`, 
+      session.participants.map(p => `${p.name} (${p.clientId?.substring(0, 8)}...)`));
+    
+    if (clientId) {
+      const existingParticipant = session.participants.find(p => p.clientId === clientId);
+      if (existingParticipant) {
+        // Reactivate existing participant
+        participant = {
+          ...existingParticipant,
+          name: sanitizedName, // Update name in case it changed
+          isActive: true,
+          isReactivated: true,
+          lastActivity: createTimestamp()
+        };
+        isReactivation = true;
+        console.log(`🔄 REACTIVATION SUCCESS: participant ${participant.id} (${sanitizedName}) with clientId ${clientId.substring(0, 8)}...`);
+      } else {
+        console.log(`⚠️ REACTIVATION FAILED: No existing participant found with clientId ${clientId.substring(0, 8)}... Will create new participant`);
+      }
+    } else {
+      console.log(`⚠️ NO CLIENT ID: Cannot perform reactivation without clientId. Will create new participant`);
+    }
+    
+    if (!isReactivation) {
+      // Resolve name conflicts for new participants
+      const existingNames = new Set(session.participants.map(p => p.name));
+      const resolvedName = resolveNameConflict(sanitizedName, existingNames);
 
-    // Assign random emoji and color  
-    const emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
-    const color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
+      // Assign random emoji and color  
+      const emoji = PARTICIPANT_EMOJIS[Math.floor(Math.random() * PARTICIPANT_EMOJIS.length)];
+      const color = PARTICIPANT_COLORS[Math.floor(Math.random() * PARTICIPANT_COLORS.length)];
 
-    // Create participant
-    const participant: Participant = {
-      id: generateUniqueId('participant'),
-      name: resolvedName,
-      emoji,
-      color,
-      joinedAt: createTimestamp(),
-      isActive: true,
-      currentStep: 1,
-      status: 'sorting',
-      cardStates: {
-        step1: { more: [], less: [] },
-        step2: { top8: [], less: [] },
-        step3: { top3: [], less: [] }
-      },
-      revealed: { top8: false, top3: false },
-      isViewing: null,
-      lastActivity: createTimestamp()
-    };
+      // Create new participant
+      participant = {
+        id: generateUniqueId('participant'),
+        clientId: clientId || generateUniqueId('client'),
+        name: resolvedName,
+        emoji,
+        color,
+        joinedAt: createTimestamp(),
+        isActive: true,
+        isReactivated: false,
+        currentStep: 1,
+        status: 'sorting',
+        cardStates: {
+          step1: { more: [], less: [] },
+          step2: { top8: [], less: [] },
+          step3: { top3: [], less: [] }
+        },
+        revealed: { top8: false, top3: false },
+        isViewing: null,
+        lastActivity: createTimestamp()
+      };
+      console.log(`✨ Creating new participant ${participant.id} (${resolvedName}) with clientId ${participant.clientId.substring(0, 8)}...`);
+    }
 
-    // Add participant to session
+    // Update session participants list
+    let updatedParticipants: Participant[];
+    if (isReactivation) {
+      // Replace existing participant with reactivated one
+      updatedParticipants = session.participants.map(p => 
+        p.clientId === participant.clientId ? participant : p
+      );
+    } else {
+      // Add new participant to list
+      updatedParticipants = [...session.participants, participant];
+    }
+    
     const updatedSession = await this.store.updateSession(sessionCode, {
-      participants: [...session.participants, participant],
+      participants: updatedParticipants,
       lastActivity: createTimestamp()
     });
 

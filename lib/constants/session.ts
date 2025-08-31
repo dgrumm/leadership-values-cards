@@ -2,8 +2,8 @@ import { SessionConfig } from '../types';
 
 export const SESSION_CONFIG: SessionConfig = {
   maxParticipants: 50,
-  timeoutMinutes: 60,
-  warningMinutes: 55,
+  timeoutMinutes: 5,
+  warningMinutes: 4,
   deckType: 'dev'
 };
 

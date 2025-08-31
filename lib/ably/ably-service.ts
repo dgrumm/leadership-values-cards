@@ -85,6 +85,11 @@ export class AblyService {
   private messageHandler = new MessageHandler();
   private isInitialized = false;
 
+  /** Returns the clientId for the current Ably connection, or null if not initialized */
+  getClientId(): string | null {
+    return this.client?.auth?.clientId ?? null;
+  }
+
   constructor(private apiKey?: string) {
     // Don't initialize immediately - wait for explicit init() call
   }
@@ -102,17 +107,8 @@ export class AblyService {
     try {
       this.client = new Ably.Realtime({
         key,
-        clientId: `participant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        connectionOptions: {
-          heartbeatInterval: 30000, // 30 seconds
-          realtimeRequestTimeout: 10000, // 10 seconds
-          disconnectedRetryTimeout: 15000, // 15 seconds
-        },
-        autoConnect: true,
-        recover: true, // Recover from connection interruptions
-        transportParams: {
-          remainPresentFor: 30000, // 30 seconds after disconnect
-        }
+        clientId: `participant-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+        autoConnect: true
       });
 
       this.setupConnectionListeners();
@@ -143,7 +139,8 @@ export class AblyService {
         // Handle connection failure
         const handleFailed = (error: unknown) => {
           clearTimeout(timeout);
-          reject(new Error(`Ably connection failed: ${error?.message || 'Unknown error'}`));
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          reject(new Error(`Ably connection failed: ${errorMessage}`));
         };
 
         // Handle unexpected disconnection during setup
@@ -166,8 +163,8 @@ export class AblyService {
         // Clean up on both success and failure
         const originalResolve = resolve;
         const originalReject = reject;
-        resolve = (...args: unknown[]) => { cleanup(); originalResolve(...args); };
-        reject = (...args: unknown[]) => { cleanup(); originalReject(...args); };
+        resolve = () => { cleanup(); originalResolve(); };
+        reject = (error: unknown) => { cleanup(); originalReject(error); };
       });
 
     } catch (error) {
@@ -327,7 +324,7 @@ export class AblyService {
   subscribeAll(
     sessionCode: string, 
     channelType: ChannelType, 
-    callback: (message: { name: string; data: unknown }) => void
+    callback: (message: any) => void
   ): () => void {
     const channel = this.getChannel(sessionCode, channelType);
     channel.subscribe(callback);

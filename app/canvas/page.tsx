@@ -274,8 +274,25 @@ export default function CanvasPage() {
     return null; // Will redirect to login
   }
 
-  // Use real participant ID if available, fallback to manual construction
-  const participantId = sessionData.participantId || `${sessionData.sessionCode}-${sessionData.participantName}`;
+  // Always use server-provided participant ID (no manual construction fallback)
+  const participantId = sessionData.participantId;
+  
+  if (!participantId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Session Error</h1>
+          <p className="text-gray-600 mb-4">Unable to identify participant. Please rejoin the session.</p>
+          <button 
+            onClick={() => router.replace('/')}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <SessionStoreProvider 
