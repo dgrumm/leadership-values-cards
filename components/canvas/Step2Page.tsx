@@ -217,20 +217,22 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     }, 400); // Match spec: 400ms elastic bounce
   };
 
-  // Debounced card movement for better performance
-  const debouncedMoveCardToPile = useMemo(
-    () => debounce((cardId: string, pile: 'top8' | 'less') => {
-      moveCardToPile(cardId, pile);
-    }, 200),
-    [moveCardToPile]
-  );
+  // Better typed debounced functions
+  const debouncedMoveCardToPile = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (cardId: string, pile: 'top8' | 'less') => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => moveCardToPile(cardId, pile), 200);
+    };
+  }, [moveCardToPile]);
   
-  const debouncedMoveCardBetweenPiles = useMemo(
-    () => debounce((cardId: string, fromPile: 'top8' | 'less', toPile: 'top8' | 'less') => {
-      moveCardBetweenPiles(cardId, fromPile, toPile);
-    }, 200),
-    [moveCardBetweenPiles]
-  );
+  const debouncedMoveCardBetweenPiles = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (cardId: string, fromPile: 'top8' | 'less', toPile: 'top8' | 'less') => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => moveCardBetweenPiles(cardId, fromPile, toPile), 200);
+    };
+  }, [moveCardBetweenPiles]);
 
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -636,7 +638,6 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
             >
               <StagingArea
                 card={stagingCard}
-                isDragging={draggedCardId === stagingCard?.id}
                 ref={stagingRef}
                 tabIndex={stagingCard ? 0 : -1}
                 role="group"
