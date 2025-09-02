@@ -176,5 +176,140 @@ npm run test:e2e:ui
 
 **Remember**: Tests are not obstacles - they're confidence builders. Good tests catch bugs early and enable fearless refactoring.
 
-*Last Updated: 2025-08-26*
-*Next Review: After collaboration features implementation*
+---
+
+## Event-Driven Architecture Testing Protocol
+
+### TDD Mandatory for Event System Migration
+
+**CRITICAL**: Event architecture changes MUST follow strict Test-Driven Development.
+
+#### Red-Green-Refactor Cycle Requirements
+
+**RED Phase** (Write Failing Tests First):
+- Write comprehensive test for expected behavior BEFORE any implementation
+- Test must fail for the right reason (missing implementation, not syntax error)
+- Include edge cases, error scenarios, and integration points
+- Target 100% test coverage for all event system components
+
+**GREEN Phase** (Minimal Implementation):
+- Implement ONLY enough code to make the failing test pass
+- No additional features or "nice-to-have" functionality
+- Focus on making tests pass with simplest possible implementation
+- Verify test passes and no existing tests break
+
+**REFACTOR Phase** (Clean Up):
+- Improve code quality without changing functionality
+- Extract reusable utilities, optimize performance
+- Ensure all tests still pass after refactoring
+- Update documentation if architecture patterns change
+
+#### Event System Testing Strategy
+
+**Phase 1: Event Foundation (Test-First)**
+```typescript
+// 1. RED: Write event validation tests
+describe('BaseEvent', () => {
+  it('should validate required event properties', () => {
+    expect(() => createEvent({})).toThrow('Missing required fields')
+  })
+})
+
+// 2. GREEN: Implement BaseEvent validation
+// 3. REFACTOR: Extract validation utilities
+```
+
+**Phase 2: EventBus Integration (Test-First)**
+```typescript
+// 1. RED: Write Ably integration tests with mocks
+describe('EventBus', () => {
+  it('should publish events to correct Ably channel', async () => {
+    await eventBus.publish(stepEvent)
+    expect(mockAblyChannel.publish).toHaveBeenCalledWith('STEP_TRANSITIONED', stepEvent)
+  })
+})
+
+// 2. GREEN: Implement EventBus with Ably
+// 3. REFACTOR: Add error handling, performance optimizations
+```
+
+**Phase 3: State Integration (Test-First)**
+```typescript
+// 1. RED: Write state reducer tests
+describe('sessionReducer', () => {
+  it('should update participant step on StepTransitionedEvent', () => {
+    const result = sessionReducer(initialState, stepTransitionEvent)
+    expect(result.currentStep['participant-123']).toBe(2)
+  })
+})
+
+// 2. GREEN: Implement event reducers
+// 3. REFACTOR: Optimize state update performance
+```
+
+#### Mandatory Test Gates
+
+**Before Any Implementation**:
+- [ ] Write failing test for expected behavior
+- [ ] Verify test fails for correct reason
+- [ ] Run existing test suite to establish baseline
+
+**After Each Implementation**:
+- [ ] Verify new test passes
+- [ ] Verify NO existing tests break
+- [ ] Run full test suite to check for regressions
+
+**Before Moving to Next Feature**:
+- [ ] All unit tests pass (100%)
+- [ ] Integration tests pass for component
+- [ ] Performance tests meet <50ms criteria
+- [ ] Memory leak tests pass (no timer/subscription leaks)
+
+#### Test Categories for Event Architecture
+
+**1. Event Type Tests (Unit)**
+- Event validation and serialization
+- TypeScript type checking
+- Event ID generation and uniqueness
+- Timestamp and version handling
+
+**2. EventBus Tests (Integration)**  
+- Ably channel integration with mocks
+- Event publishing and subscription
+- Error handling and reconnection
+- Message ordering and deduplication
+
+**3. State Reducer Tests (Unit)**
+- Event → state transformation logic
+- Optimistic update handling
+- Conflict resolution scenarios
+- State validation and consistency
+
+**4. Component Integration Tests (E2E)**
+- Step transitions work across participants
+- Zero flip-flopping behavior
+- <50ms latency requirements
+- Real-time consistency validation
+
+#### Test-First Development Discipline
+
+**NEVER Code Without Tests**:
+- Every single function must have tests before implementation
+- No implementation code without failing test first
+- No "quick fixes" without corresponding tests
+- No commits until all tests pass
+
+**Mandatory Test Coverage**:
+- 100% function coverage for event system
+- 100% branch coverage for critical paths
+- Edge case coverage for all error scenarios  
+- Performance test coverage for latency requirements
+
+**Quality Gates (All Must Pass)**:
+- Unit tests: All event components, <5 seconds execution
+- Integration tests: Ably mocks, error scenarios, <30 seconds execution
+- E2E tests: Multi-participant scenarios, race condition validation, <2 minutes per spec
+- Performance tests: <50ms latency, memory leak validation
+
+*Last Updated: 2025-09-01*
+*Critical Priority: Event-Driven Architecture TDD Implementation*

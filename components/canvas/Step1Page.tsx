@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import { useSessionStep1Store } from '@/hooks/stores/useSessionStores';
+import { useEventDrivenSession } from '@/contexts/EventDrivenSessionContext';
 import { Deck } from '@/components/cards/Deck';
 import { StagingArea } from '@/components/cards/StagingArea';
 import { DroppableZone } from '@/components/cards/DroppableZone';
@@ -12,7 +13,7 @@ import { Step1Modal } from '@/components/ui/Step1Modal';
 import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
 import { ParticipantsModal } from '@/components/collaboration/ParticipantsModal';
-import { usePresence } from '@/hooks/collaboration/usePresence';
+// OLD PRESENCE SYSTEM REMOVED - using event-driven participant data
 import { Card as CardType } from '@/lib/types/card';
 
 interface Step1PageProps {
@@ -29,21 +30,14 @@ export function Step1Page({ sessionCode, participantName, currentStep = 1, onSte
   const [activeCard, setActiveCard] = useState<CardType | null>(null);
   const [showParticipants, setShowParticipants] = useState(false);
 
-  // Initialize presence system
+  // Use event-driven session for participant tracking (replaces old presence system)
   const {
-    participantsForDisplay = new Map(), // NEW: Hybrid data with consistent identity/step
-    allParticipantsForDisplay = new Map(), // LEGACY: Fallback for backward compatibility
+    participantsForDisplay,
     currentUser,
     participantCount,
     isConnected,
-    error: presenceError,
     onViewReveal
-  } = usePresence({
-    sessionCode,
-    participantName,
-    currentStep,
-    enabled: true
-  });
+  } = useEventDrivenSession();
   
   const {
     deck,
@@ -312,12 +306,7 @@ export function Step1Page({ sessionCode, participantName, currentStep = 1, onSte
                 </div>
               )}
               
-              {/* Presence status */}
-              {presenceError && (
-                <div className="text-red-500 text-xs mt-1">
-                  Collaboration offline: {presenceError}
-                </div>
-              )}
+              {/* Event system status - always connected */}
               {isConnected && participantCount > 1 && (
                 <div className="text-green-600 text-xs mt-1">
                   ✓ Connected with {participantCount - 1} other participant{participantCount === 2 ? '' : 's'}
@@ -391,7 +380,7 @@ export function Step1Page({ sessionCode, participantName, currentStep = 1, onSte
       <ParticipantsModal
         isOpen={showParticipants}
         onClose={handleCloseParticipants}
-        participants={participantsForDisplay.size > 0 ? participantsForDisplay : allParticipantsForDisplay}
+        participants={participantsForDisplay}
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}

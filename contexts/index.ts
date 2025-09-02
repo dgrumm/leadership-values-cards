@@ -3,8 +3,8 @@
  */
 
 export {
-  SessionStoreProvider,
-  useSessionStoreContext,
-  useSessionManager,
-  useSessionInfo
-} from './SessionStoreContext';
+  EventDrivenSessionProvider,
+  useEventDrivenSession,
+  useEventPublisher,
+  useSessionStoreContext
+} from './EventDrivenSessionContext';

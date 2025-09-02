@@ -17,7 +17,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSessionStoreContext } from '@/contexts/SessionStoreContext';
+import { useSessionStoreContext } from '@/contexts/EventDrivenSessionContext';
 import type { Step1Store, Step2Store, Step3Store } from '@/state/local';
 
 /**
@@ -82,6 +82,7 @@ export function useSessionStep3Store() {
   // Use the Zustand store as a hook to get reactive state
   return store();
 }
+
 
 /**
  * Development utilities for debugging session-scoped stores

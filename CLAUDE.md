@@ -136,6 +136,23 @@ npm run test:coverage   # Unit tests with coverage report
 	- Test evidence (passing test runs)
 	- Notes/decisions (link to memory file)
 
+# MANDATORY DEVELOPMENT PRACTICES - VIOLATION = STOP IMMEDIATELY
+
+## Test-First Debugging Protocol
+1. **BEFORE ANY CHANGES**: Run `npm run test:unit` to establish baseline
+2. **ONE CHANGE AT A TIME**: Never modify multiple systems simultaneously
+3. **AFTER EACH CHANGE**: Run tests immediately to verify no regressions
+4. **BROKEN TESTS = STOP**: If ANY test breaks, revert change immediately
+5. **NO SPECULATION**: Debug from first principles, understand root cause before fixes
+6. **RUN e2e TESTS**: Ensure front-end works as expected rather than relying on user manual testing, leverage e2e tests to get insights into browser console data. 
+
+## Prohibited Practices
+- ❌ Making multiple changes without testing each
+- ❌ Adding new dependencies/files without explicit need
+- ❌ Modifying test configurations during debugging
+- ❌ "Fixing" symptoms without understanding root cause
+- ❌ Continuing when tests break (STOP and revert)
+
 ## Spec Status Key
 - 🔴 Not Started
 - 🟡 In Progress  

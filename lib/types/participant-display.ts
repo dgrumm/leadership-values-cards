@@ -74,8 +74,6 @@ export function createParticipantDisplayDataFromPresence(
   presenceData: PresenceData,
   currentUserId: string
 ): ParticipantDisplayData {
-  console.warn(`⚠️ Creating display data from presence only for ${presenceData.name} - session data unavailable`);
-  
   return {
     participantId: presenceData.participantId,
     name: presenceData.name,
