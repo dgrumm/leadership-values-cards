@@ -16,6 +16,8 @@ import {
   type ParticipantLeftEvent
 } from '@/lib/events/types';
 import { useAbly } from '@/hooks/collaboration/useAbly';
+import { RevealManager } from '@/lib/reveals/reveal-manager';
+import { useRevealManager } from '@/hooks/reveals/useRevealManager';
 
 // Import the old context interface for backward compatibility
 interface SessionStoreContextValue {
@@ -42,12 +44,18 @@ interface EventDrivenSessionContextValue {
   isConnected: boolean;
   connectionError: string | null;
   // Participant state (replaces old presence system)
-  participantSteps: Map<string, { currentStep: 1 | 2 | 3; participantName: string }>;
+  participantSteps: Map<string, { currentStep: 1 | 2 | 3; participantName: string; status: string }>;
   participantCount: number;
   // For UI compatibility with old usePresence
   participantsForDisplay: Map<string, any>;
   currentUser: { participantId: string; name: string } | null;
   onViewReveal: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
+  // Reveal functionality
+  revealManager: RevealManager | null;
+  revealSelection: (revealType: 'top8' | 'top3', cardPositions: any[]) => Promise<void>;
+  unrevealSelection: (revealType: 'top8' | 'top3') => Promise<void>;
+  isRevealed: (revealType: 'top8' | 'top3') => boolean;
+  canReveal: (revealType: 'top8' | 'top3', cardCount: number) => boolean;
 }
 
 const EventDrivenSessionContext = createContext<EventDrivenSessionContextValue | null>(null);
@@ -95,7 +103,7 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
   const { service: ably, isConnected, error: connectionError } = useAbly({ autoInit: true });
 
   // Participant state tracking (replaces old presence system)
-  const [participantSteps, setParticipantSteps] = useState<Map<string, { currentStep: 1 | 2 | 3; participantName: string }>>(new Map());
+  const [participantSteps, setParticipantSteps] = useState<Map<string, { currentStep: 1 | 2 | 3; participantName: string; status: string }>>(new Map());
   
   // Compute participant count from actual participants
   const participantCount = useMemo(() => participantSteps.size, [participantSteps]);
@@ -117,17 +125,71 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     return new EventBus(ably, sessionCode);
   }, [ably, sessionCode]);
 
+  // Initialize RevealManager when EventBus is ready
+  const { revealManager } = useRevealManager({
+    eventBus,
+    sessionCode,
+    participantId,
+    participantName
+  });
+
   // Remove EventStoreIntegration - no longer needed
 
   // Initialize event system when ready
   useEffect(() => {
-    if (!eventBus || !isConnected) return;
+    if (!eventBus || !isConnected || !ably) return;
 
     try {
       if (config.enableDebugLogging !== false) {
         console.log(`🚀 [EventDrivenSession] Initialized for ${sessionCode}:${participantId}`);
       }
 
+      // Subscribe to presence events for real-time status updates
+      const sessionChannel = ably.getChannel(sessionCode, 'presence');
+      
+      const handlePresenceUpdate = (presenceMessage: any) => {
+        console.log(`📍 [PresenceListener] Presence update:`, presenceMessage);
+        
+        if (presenceMessage.data && presenceMessage.data.participantId && presenceMessage.data.status) {
+          setParticipantSteps(prev => {
+            const newSteps = new Map(prev);
+            const existing = newSteps.get(presenceMessage.data.participantId);
+            
+            if (existing) {
+              // Update existing participant with new status
+              newSteps.set(presenceMessage.data.participantId, {
+                ...existing,
+                status: presenceMessage.data.status,
+                currentStep: presenceMessage.data.currentStep || existing.currentStep
+              });
+              console.log(`📊 [PresenceListener] Updated ${existing.participantName} status to ${presenceMessage.data.status}`);
+            }
+            
+            return newSteps;
+          });
+        }
+      };
+      
+      // Listen to all presence events (enter, update, leave) - with safety check for tests
+      if (sessionChannel.presence && typeof sessionChannel.presence.subscribe === 'function') {
+        sessionChannel.presence.subscribe('enter', handlePresenceUpdate);
+        sessionChannel.presence.subscribe('update', handlePresenceUpdate);
+        
+        // Handle participant leaving
+        sessionChannel.presence.subscribe('leave', (presenceMessage: any) => {
+          console.log(`👋 [PresenceListener] Participant left:`, presenceMessage.data?.name || 'Unknown');
+          
+          if (presenceMessage.data?.participantId) {
+            setParticipantSteps(prev => {
+              const newSteps = new Map(prev);
+              newSteps.delete(presenceMessage.data.participantId);
+              console.log(`🗑️ [PresenceListener] Removed participant: ${presenceMessage.data?.name}, remaining: ${newSteps.size}`);
+              return newSteps;
+            });
+          }
+        });
+      }
+      
       // Subscribe to step transition events
       console.log(`👂 [EventListener] Setting up event listener for ${sessionCode}:${participantId}`);
       const unsubscribe = eventBus.subscribeToEvents((event) => {
@@ -140,9 +202,11 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
           // Update participant step state
           setParticipantSteps(prev => {
             const newSteps = new Map(prev);
+            const existing = newSteps.get(stepEvent.participantId);
             newSteps.set(stepEvent.participantId, {
               currentStep: stepEvent.payload.toStep,
-              participantName: stepEvent.payload.participantName
+              participantName: stepEvent.payload.participantName,
+              status: existing?.status || 'sorting' // Preserve existing status or default to sorting
             });
             console.log(`📊 [EventListener] Updated participant steps:`, Array.from(newSteps.entries()));
             return newSteps;
@@ -158,7 +222,8 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
             const newSteps = new Map(prev);
             newSteps.set(joinEvent.participantId, {
               currentStep: joinEvent.payload.participant.currentStep,
-              participantName: joinEvent.payload.participant.name
+              participantName: joinEvent.payload.participant.name,
+              status: joinEvent.payload.participant.status || 'sorting'
             });
             return newSteps;
           });
@@ -188,12 +253,25 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
         if (config.enableDebugLogging !== false) {
           console.log(`🧹 [EventDrivenSession] Cleaned up for ${sessionCode}:${participantId}`);
         }
-        unsubscribe();
+        try {
+          // Cleanup presence event listeners - with safety check
+          if (sessionChannel && sessionChannel.presence && typeof sessionChannel.presence.unsubscribe === 'function') {
+            sessionChannel.presence.unsubscribe('enter', handlePresenceUpdate);
+            sessionChannel.presence.unsubscribe('update', handlePresenceUpdate);
+          }
+          
+          // Cleanup event bus subscription
+          if (typeof unsubscribe === 'function') {
+            unsubscribe();
+          }
+        } catch (error) {
+          console.warn('Failed to unsubscribe from EventDrivenSession events:', error);
+        }
       };
     } catch (error) {
       console.error('❌ [EventDrivenSession] Failed to initialize:', error);
     }
-  }, [eventBus, isConnected, sessionCode, participantId, config.enableDebugLogging]);
+  }, [eventBus, isConnected, ably, sessionCode, participantId, config.enableDebugLogging]);
 
   // Event publishing functions
   const publishStepTransition = async (fromStep: 1 | 2 | 3, toStep: 1 | 2 | 3) => {
@@ -362,11 +440,17 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
         console.log(`✅ [LeaveSession] Left Ably presence successfully`);
       }
       
-      // 3. Clean up session stores
-      console.log(`🧹 [LeaveSession] Cleaning up session stores...`);
-      sessionManager.cleanup();
+      // 3. Clean up RevealManager
+      if (revealManager) {
+        console.log(`🧹 [LeaveSession] Cleaning up RevealManager...`);
+        revealManager.cleanup();
+      }
       
-      // 4. Clear participant localStorage
+      // 4. Clean up session stores for this participant
+      console.log(`🧹 [LeaveSession] Cleaning up stores for participant ${participantId}...`);
+      sessionManager.cleanupParticipant(sessionCode, participantId);
+      
+      // 5. Clear participant localStorage
       if (typeof window !== 'undefined') {
         const storageKey = `participant-id-${sessionCode}-${participantName}`;
         localStorage.removeItem(storageKey);
@@ -378,7 +462,7 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       console.error('❌ [LeaveSession] Failed to leave session cleanly:', error);
       // Continue with cleanup even if some steps fail
     }
-  }, [publishParticipantLeft, ably, sessionCode, participantName, sessionManager]);
+  }, [publishParticipantLeft, ably, sessionCode, participantName, sessionManager, revealManager]);
 
   // Auto-sync session state and publish participant joined on connection
   useEffect(() => {
@@ -417,9 +501,10 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
                   if (!newSteps.has(member.data.participantId)) {
                     newSteps.set(member.data.participantId, {
                       currentStep: member.data.currentStep || 1,
-                      participantName: member.data.name
+                      participantName: member.data.name,
+                      status: member.data.status || 'sorting'
                     });
-                    console.log(`👤 [SessionSync] Added existing participant: ${member.data.name} (Step ${member.data.currentStep || 1})`);
+                    console.log(`👤 [SessionSync] Added existing participant: ${member.data.name} (Step ${member.data.currentStep || 1}, Status: ${member.data.status || 'sorting'})`);
                   } else {
                     console.log(`🔄 [SessionSync] Participant already synced: ${member.data.name}`);
                   }
@@ -459,7 +544,7 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
         currentStep: stepData.currentStep,
         emoji: '🎯', // Default emoji
         color: 'blue', // Default color
-        status: 'sorting',
+        status: stepData.status, // Use actual status from presence data
         isActive: true,
         lastActive: Date.now()
       });
@@ -471,6 +556,88 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     participantId,
     name: participantName
   }), [participantId, participantName]);
+
+  // Reveal functions
+  const revealSelection = useCallback(async (revealType: 'top8' | 'top3', cardPositions: any[]) => {
+    if (!revealManager) {
+      console.warn('RevealManager not ready');
+      return;
+    }
+    
+    try {
+      await revealManager.revealSelection(revealType, cardPositions);
+      
+      // Update presence status to show reveal state
+      if (ably) {
+        const sessionChannel = ably.getChannel(sessionCode, 'presence');
+        const revealStatus = revealType === 'top8' ? 'revealed-8' : 'revealed-3';
+        
+        await sessionChannel.presence.update({
+          participantId,
+          name: participantName,
+          currentStep: revealType === 'top8' ? 2 : 3, // Step 2 for top8, Step 3 for top3
+          emoji: '🎯',
+          color: 'blue',
+          status: revealStatus,
+          joinedAt: new Date().toISOString(),
+          lastActivity: new Date().toISOString()
+        });
+        
+        console.log(`📍 [PresenceSync] Updated presence status to ${revealStatus} for ${participantName}`);
+      }
+    } catch (error) {
+      console.error('❌ [RevealSelection] Failed to reveal selection:', error);
+      throw error;
+    }
+  }, [revealManager, ably, sessionCode, participantId, participantName]);
+
+  const unrevealSelection = useCallback(async (revealType: 'top8' | 'top3') => {
+    if (!revealManager) {
+      console.warn('RevealManager not ready');
+      return;
+    }
+    
+    try {
+      await revealManager.unrevealSelection(revealType);
+      
+      // Update presence status back to sorting
+      if (ably) {
+        const sessionChannel = ably.getChannel(sessionCode, 'presence');
+        
+        await sessionChannel.presence.update({
+          participantId,
+          name: participantName,
+          currentStep: revealType === 'top8' ? 2 : 3, // Step 2 for top8, Step 3 for top3
+          emoji: '🎯',
+          color: 'blue',
+          status: 'sorting',
+          joinedAt: new Date().toISOString(),
+          lastActivity: new Date().toISOString()
+        });
+        
+        console.log(`📍 [PresenceSync] Updated presence status back to sorting for ${participantName}`);
+      }
+    } catch (error) {
+      console.error('❌ [UnrevealSelection] Failed to unreveal selection:', error);
+      throw error;
+    }
+  }, [revealManager, ably, sessionCode, participantId, participantName]);
+
+  const isRevealed = useCallback((revealType: 'top8' | 'top3') => {
+    if (!revealManager) return false;
+    return revealManager.isRevealed(revealType);
+  }, [revealManager]);
+
+  const canReveal = useCallback((revealType: 'top8' | 'top3', cardCount: number) => {
+    // Constraint logic: Step2 needs 8 cards for top8, Step3 needs 3 cards for top3
+    if (revealType === 'top8') {
+      return cardCount === 8;
+    }
+    if (revealType === 'top3') {
+      return cardCount === 3;
+    }
+    return false;
+  }, []);
 
   const onViewReveal = useCallback((participantId: string, revealType: 'revealed-8' | 'revealed-3') => {
     console.log(`👁️ Viewing ${revealType} for participant: ${participantId}`);
@@ -497,7 +664,13 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
         participantCount: 0, // No participants during initialization
         participantsForDisplay: new Map(),
         currentUser,
-        onViewReveal
+        onViewReveal,
+        // Reveal functionality (disabled during initialization)
+        revealManager: null,
+        revealSelection: async () => {},
+        unrevealSelection: async () => {},
+        isRevealed: () => false,
+        canReveal: () => false
       };
     }
 
@@ -517,7 +690,13 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       participantCount,
       participantsForDisplay,
       currentUser,
-      onViewReveal
+      onViewReveal,
+      // Reveal functionality
+      revealManager,
+      revealSelection,
+      unrevealSelection,
+      isRevealed,
+      canReveal
     };
   }, [
     sessionManager, 
@@ -535,7 +714,12 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     participantCount,
     participantsForDisplay,
     currentUser,
-    onViewReveal
+    onViewReveal,
+    revealManager,
+    revealSelection,
+    unrevealSelection,
+    isRevealed,
+    canReveal
   ]);
 
   // Development debugging

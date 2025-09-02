@@ -26,9 +26,8 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: [
-        '<rootDir>/tests/unit/{utils,stores,session}/**/*.test.ts',
-        '<rootDir>/tests/unit/lib/{ably,animations,constraints,session,constants,events}/**/*.test.ts',
-        '<rootDir>/tests/unit/lib/presence/{presence-manager,participant-identity}.test.ts',
+        '<rootDir>/tests/unit/{utils,stores,session,integration}/**/*.test.ts',
+        '<rootDir>/tests/unit/lib/{ably,animations,constraints,session,constants,events,reveals}/**/*.test.ts',
         '<rootDir>/lib/**/*.test.ts',
       ],
       transform: {
@@ -44,7 +43,6 @@ module.exports = {
       testEnvironment: 'jsdom',
       testMatch: [
         '<rootDir>/tests/unit/{hooks,components}/**/*.test.{ts,tsx}',
-        '<rootDir>/tests/unit/lib/presence/cursor-tracker.test.ts',
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
       transform: {

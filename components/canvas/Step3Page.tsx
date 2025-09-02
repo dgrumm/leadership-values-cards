@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
 import { ParticipantsModal } from '@/components/collaboration/ParticipantsModal';
 import { DragErrorBoundary } from '@/components/ui/DragErrorBoundary';
+import { RevealEducationModal } from '@/components/reveals/RevealEducationModal';
+import { RevealButtonToast } from '@/components/reveals/RevealButtonToast';
+import { useRevealEducation } from '@/hooks/reveals/useRevealEducation';
+import { useRevealToast } from '@/hooks/reveals/useRevealToast';
 // OLD PRESENCE SYSTEM REMOVED - using event-driven participant data
 import { Card } from '@/lib/types/card';
 import { cn, debounce } from '@/lib/utils';
@@ -37,12 +41,20 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
   const [showModal, setShowModal] = useState(false); // Start false, show after transition
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [bounceAnimation, setBounceAnimation] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(false);
+  // Reveal state is now managed by RevealManager in EventDrivenSessionContext
   const [showCelebration, setShowCelebration] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [showEducationModal, setShowEducationModal] = useState(false);
+  const [showRevealToast, setShowRevealToast] = useState(false);
   const isDraggingRef = useRef(false);
+  
+  // Reveal education modal tracking per session
+  const { shouldShowEducation, markEducationShown } = useRevealEducation(sessionCode);
+  
+  // Reveal button toast tracking per session
+  const { shouldShowToast, markToastShown } = useRevealToast(sessionCode);
   
   // Use event-driven session for participant tracking (replaces old presence system)
   const {
@@ -50,7 +62,12 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     currentUser,
     participantCount,
     isConnected,
-    onViewReveal
+    onViewReveal,
+    // Reveal functionality
+    revealSelection,
+    unrevealSelection,
+    isRevealed,
+    canReveal
   } = useEventDrivenSession();
   
   // Refs for focus management
@@ -58,6 +75,7 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
   const stagingRef = useRef<HTMLDivElement>(null);
   const top3Ref = useRef<HTMLDivElement>(null);
   const lessImportantRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   
   const {
     deck,
@@ -327,11 +345,85 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     }
   }, [onStepComplete]);
 
-  const handleReveal = useCallback(() => {
-    setIsRevealed(!isRevealed);
-    // TODO: Implement actual reveal functionality (send to other participants)
-    console.log('Reveal toggled:', !isRevealed);
-  }, [isRevealed]);
+  const handleReveal = useCallback(async () => {
+    if (isRevealed('top3')) {
+      // Unreveal if already revealed
+      await unrevealSelection('top3');
+      console.log('Top 3 unrevealed');
+    } else {
+      // Show education modal on first reveal attempt
+      if (shouldShowEducation) {
+        setShowEducationModal(true);
+        return;
+      }
+      
+      // Generate card positions from current top3Pile
+      const cardPositions = top3Pile.map((card, index) => ({
+        cardId: card.id,
+        x: 100 + index * 80, // 3 cards in a row
+        y: 200,
+        pile: 'top3' as const
+      }));
+      
+      await revealSelection('top3', cardPositions);
+      console.log('Top 3 revealed with positions:', cardPositions);
+    }
+  }, [isRevealed, unrevealSelection, revealSelection, top3Pile, shouldShowEducation]);
+
+  // Handle education modal actions
+  const handleEducationContinue = useCallback(async () => {
+    setShowEducationModal(false);
+    markEducationShown();
+    // Now proceed with the actual reveal
+    const cardPositions = top3Pile.map((card, index) => ({
+      cardId: card.id,
+      x: 100 + index * 80,
+      y: 200,
+      pile: 'top3' as const
+    }));
+    
+    await revealSelection('top3', cardPositions);
+    console.log('Top 3 revealed after education modal');
+  }, [markEducationShown, top3Pile, revealSelection]);
+
+  const handleEducationCancel = useCallback(() => {
+    setShowEducationModal(false);
+    // Don't mark as shown, so they see the modal again next time
+  }, []);
+
+  // Handle reveal toast dismiss
+  const handleToastDismiss = useCallback(() => {
+    setShowRevealToast(false);
+  }, []);
+
+  // Detect first-time reveal button availability
+  const prevCanReveal = useRef(false);
+  
+  useEffect(() => {
+    const currentCanReveal = canReveal('top3', top3Pile.length);
+    
+    // Show toast on first transition from false -> true
+    if (!prevCanReveal.current && currentCanReveal && shouldShowToast('step3')) {
+      setShowRevealToast(true);
+      markToastShown('step3');
+      console.log('🎯 [Step3Page] Showing reveal button toast - 3 cards reached');
+    }
+    
+    prevCanReveal.current = currentCanReveal;
+  }, [top3Pile.length, canReveal, shouldShowToast, markToastShown]);
+
+  // Calculate toast position relative to header
+  const toastPosition = useMemo(() => {
+    if (!headerRef.current) {
+      return { top: '5rem', right: '1rem' }; // Fallback position
+    }
+    
+    const headerRect = headerRef.current.getBoundingClientRect();
+    return {
+      top: `${headerRect.bottom + 12}px`,
+      left: '12rem' // Align with Reveal button left edge
+    };
+  }, [showRevealToast]); // Recalculate when toast shows
 
   // Participants modal handlers
   const handleShowParticipants = useCallback(() => {
@@ -364,6 +456,7 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     >
       {/* Header */}
       <SessionHeader
+        ref={headerRef}
         sessionCode={sessionCode}
         participantName={participantName}
         currentStep={3}
@@ -371,9 +464,17 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
         participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
         onReveal={handleReveal}
-        isRevealed={isRevealed}
-        showRevealButton={true}
+        isRevealed={isRevealed('top3')}
+        showRevealButton={canReveal('top3', top3Pile.length) || isRevealed('top3')}
         onParticipantsClick={handleShowParticipants}
+      />
+      
+      {/* Reveal button toast notification */}
+      <RevealButtonToast
+        isVisible={showRevealToast}
+        step="step3"
+        onDismiss={handleToastDismiss}
+        position={toastPosition}
       />
 
       {/* Transition overlay */}
@@ -717,6 +818,14 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}
+      />
+
+      {/* Reveal education modal */}
+      <RevealEducationModal
+        isOpen={showEducationModal}
+        step="top3"
+        onContinue={handleEducationContinue}
+        onCancel={handleEducationCancel}
       />
     </div>
   );

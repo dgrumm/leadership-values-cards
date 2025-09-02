@@ -51,9 +51,9 @@ export class EventBus {
     }
 
     try {
-      (this.channel as { publish: (type: string, data: BaseEvent) => void }).publish(event.type, event);
+      await (this.channel as { publish: (type: string, data: BaseEvent) => Promise<void> }).publish(event.type, event);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to publish event: ${message}`);
     }
   }
@@ -93,10 +93,15 @@ export class EventBus {
         this.handleIncomingEvent(ablyMessage, handler);
       };
 
-      const unsubscribe = (this.channel as { subscribe: (eventType: string, handler: (message: AblyMessage) => void) => () => void }).subscribe(eventType, wrappedHandler);
+      const unsubscribeResult = (this.channel as { subscribe: (eventType: string, handler: (message: AblyMessage) => void) => any }).subscribe(eventType, wrappedHandler);
       
       const trackingUnsubscribe = () => {
-        unsubscribe();
+        // Handle different return types from Ably subscribe
+        if (typeof unsubscribeResult === 'function') {
+          unsubscribeResult();
+        } else if (unsubscribeResult && typeof unsubscribeResult.unsubscribe === 'function') {
+          unsubscribeResult.unsubscribe();
+        }
         this.subscriptions = this.subscriptions.filter(sub => sub !== trackingUnsubscribe);
       };
 
@@ -117,8 +122,16 @@ export class EventBus {
   }
 
   cleanup(): void {
-    // Unsubscribe from all subscriptions
-    this.subscriptions.forEach(unsubscribe => unsubscribe());
+    // Unsubscribe from all subscriptions with error handling
+    this.subscriptions.forEach(unsubscribe => {
+      try {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      } catch (error) {
+        console.warn('Failed to unsubscribe from event:', error);
+      }
+    });
     this.subscriptions = [];
 
     // Clear deduplication cache

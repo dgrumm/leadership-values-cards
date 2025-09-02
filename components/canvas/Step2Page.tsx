@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSessionStep2Store } from '@/hooks/stores/useSessionStores';
@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/Button';
 import { SessionHeader } from '@/components/header/SessionHeader';
 import { ParticipantsModal } from '@/components/collaboration/ParticipantsModal';
 import { DragErrorBoundary } from '@/components/ui/DragErrorBoundary';
+import { RevealEducationModal } from '@/components/reveals/RevealEducationModal';
+import { RevealButtonToast } from '@/components/reveals/RevealButtonToast';
+import { useRevealEducation } from '@/hooks/reveals/useRevealEducation';
+import { useRevealToast } from '@/hooks/reveals/useRevealToast';
 // OLD PRESENCE SYSTEM REMOVED - using event-driven participant data
 import { Card } from '@/lib/types/card';
 import { cn, debounce } from '@/lib/utils';
@@ -33,11 +37,19 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
   const [showModal, setShowModal] = useState(false); // Start false, show after transition
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [bounceAnimation, setBounceAnimation] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(false);
+  // Reveal state is now managed by RevealManager in EventDrivenSessionContext
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [dragTimeout, setDragTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [showEducationModal, setShowEducationModal] = useState(false);
+  const [showRevealToast, setShowRevealToast] = useState(false);
   const isDraggingRef = useRef(false);
+  
+  // Reveal education modal tracking per session
+  const { shouldShowEducation, markEducationShown } = useRevealEducation(sessionCode);
+  
+  // Reveal button toast tracking per session
+  const { shouldShowToast, markToastShown } = useRevealToast(sessionCode);
   
   // Use event-driven session for participant tracking (replaces old presence system)
   const {
@@ -45,7 +57,12 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     currentUser,
     participantCount,
     isConnected,
-    onViewReveal
+    onViewReveal,
+    // Reveal functionality
+    revealSelection,
+    unrevealSelection,
+    isRevealed,
+    canReveal
   } = useEventDrivenSession();
   
   // Refs for focus management
@@ -53,6 +70,7 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
   const stagingRef = useRef<HTMLDivElement>(null);
   const top8Ref = useRef<HTMLDivElement>(null);
   const lessImportantRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   
   const {
     deck,
@@ -199,20 +217,22 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     }, 400); // Match spec: 400ms elastic bounce
   };
 
-  // Debounced card movement for better performance
-  const debouncedMoveCardToPile = useMemo(
-    () => debounce((cardId: string, pile: 'top8' | 'less') => {
-      moveCardToPile(cardId, pile);
-    }, 200),
-    [moveCardToPile]
-  );
+  // Better typed debounced functions
+  const debouncedMoveCardToPile = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (cardId: string, pile: 'top8' | 'less') => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => moveCardToPile(cardId, pile), 200);
+    };
+  }, [moveCardToPile]);
   
-  const debouncedMoveCardBetweenPiles = useMemo(
-    () => debounce((cardId: string, fromPile: 'top8' | 'less', toPile: 'top8' | 'less') => {
-      moveCardBetweenPiles(cardId, fromPile, toPile);
-    }, 200),
-    [moveCardBetweenPiles]
-  );
+  const debouncedMoveCardBetweenPiles = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (cardId: string, fromPile: 'top8' | 'less', toPile: 'top8' | 'less') => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => moveCardBetweenPiles(cardId, fromPile, toPile), 200);
+    };
+  }, [moveCardBetweenPiles]);
 
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -306,11 +326,85 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     }
   };
 
-  const handleReveal = () => {
-    setIsRevealed(!isRevealed);
-    // TODO: Implement actual reveal functionality (send to other participants)
-    console.log('Reveal toggled:', !isRevealed);
+  const handleReveal = async () => {
+    if (isRevealed('top8')) {
+      // Unreveal if already revealed
+      await unrevealSelection('top8');
+      console.log('Top 8 unrevealed');
+    } else {
+      // Show education modal on first reveal attempt
+      if (shouldShowEducation) {
+        setShowEducationModal(true);
+        return;
+      }
+      
+      // Generate card positions from current top8Pile
+      const cardPositions = top8Pile.map((card, index) => ({
+        cardId: card.id,
+        x: 100 + (index % 4) * 60, // 4 cards per row
+        y: 200 + Math.floor(index / 4) * 80, // 2 rows
+        pile: 'top8' as const
+      }));
+      
+      await revealSelection('top8', cardPositions);
+      console.log('Top 8 revealed with positions:', cardPositions);
+    }
   };
+
+  // Handle education modal actions
+  const handleEducationContinue = async () => {
+    setShowEducationModal(false);
+    markEducationShown();
+    // Now proceed with the actual reveal
+    const cardPositions = top8Pile.map((card, index) => ({
+      cardId: card.id,
+      x: 100 + (index % 4) * 60,
+      y: 200 + Math.floor(index / 4) * 80,
+      pile: 'top8' as const
+    }));
+    
+    await revealSelection('top8', cardPositions);
+    console.log('Top 8 revealed after education modal');
+  };
+
+  const handleEducationCancel = () => {
+    setShowEducationModal(false);
+    // Don't mark as shown, so they see the modal again next time
+  };
+
+  // Handle reveal toast dismiss
+  const handleToastDismiss = () => {
+    setShowRevealToast(false);
+  };
+
+  // Detect first-time reveal button availability
+  const prevCanReveal = useRef(false);
+  
+  useEffect(() => {
+    const currentCanReveal = canReveal('top8', top8Pile.length);
+    
+    // Show toast on first transition from false -> true
+    if (!prevCanReveal.current && currentCanReveal && shouldShowToast('step2')) {
+      setShowRevealToast(true);
+      markToastShown('step2');
+      console.log('🎯 [Step2Page] Showing reveal button toast - 8 cards reached');
+    }
+    
+    prevCanReveal.current = currentCanReveal;
+  }, [top8Pile.length, canReveal, shouldShowToast, markToastShown]);
+
+  // Calculate toast position relative to header
+  const toastPosition = React.useMemo(() => {
+    if (!headerRef.current) {
+      return { top: '5rem', right: '1rem' }; // Fallback position
+    }
+    
+    const headerRect = headerRef.current.getBoundingClientRect();
+    return {
+      top: `${headerRect.bottom + 12}px`,
+      left: '12rem' // Align with Reveal button left edge
+    };
+  }, [showRevealToast]); // Recalculate when toast shows
 
   // Participants modal handlers
   const handleShowParticipants = () => {
@@ -343,6 +437,7 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     >
       {/* Header */}
       <SessionHeader
+        ref={headerRef}
         sessionCode={sessionCode}
         participantName={participantName}
         currentStep={2}
@@ -350,9 +445,17 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
         participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
         onReveal={handleReveal}
-        isRevealed={isRevealed}
-        showRevealButton={true}
+        isRevealed={isRevealed('top8')}
+        showRevealButton={canReveal('top8', top8Pile.length) || isRevealed('top8')}
         onParticipantsClick={handleShowParticipants}
+      />
+      
+      {/* Reveal button toast notification */}
+      <RevealButtonToast
+        isVisible={showRevealToast}
+        step="step2"
+        onDismiss={handleToastDismiss}
+        position={toastPosition}
       />
 
       {/* Transition overlay */}
@@ -535,7 +638,6 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
             >
               <StagingArea
                 card={stagingCard}
-                isDragging={draggedCardId === stagingCard?.id}
                 ref={stagingRef}
                 tabIndex={stagingCard ? 0 : -1}
                 role="group"
@@ -609,12 +711,16 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
                   >
                     Keep All & Continue to Step 3 ➜
                   </Button>
-                  <Button
-                    onClick={handleReveal}
-                    className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg"
-                  >
-                    Reveal My Choices
-                  </Button>
+                  {/* For edge case, allow reveal if we have any cards in top8 pile */}
+                  {top8Pile.length > 0 && (
+                    <Button
+                      onClick={handleReveal}
+                      className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg"
+                      disabled={top8Pile.length === 0}
+                    >
+                      {isRevealed('top8') ? 'Unrevealed' : 'Reveal My Choices'}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <Button
@@ -683,6 +789,14 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
         currentUserId={currentUser?.participantId || ''}
         sessionCode={sessionCode}
         onViewReveal={onViewReveal}
+      />
+
+      {/* Reveal education modal */}
+      <RevealEducationModal
+        isOpen={showEducationModal}
+        step="top8"
+        onContinue={handleEducationContinue}
+        onCancel={handleEducationCancel}
       />
     </div>
   );

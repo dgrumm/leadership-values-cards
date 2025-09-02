@@ -25,7 +25,11 @@ export const EVENT_TYPES = {
   PARTICIPANT_JOINED: 'PARTICIPANT_JOINED',
   PARTICIPANT_LEFT: 'PARTICIPANT_LEFT',
   CARD_MOVED: 'CARD_MOVED',
-  SELECTION_REVEALED: 'SELECTION_REVEALED'
+  SELECTION_REVEALED: 'SELECTION_REVEALED',
+  SELECTION_UNREVEALED: 'SELECTION_UNREVEALED',
+  ARRANGEMENT_UPDATED: 'ARRANGEMENT_UPDATED',
+  VIEWER_JOINED: 'VIEWER_JOINED',
+  VIEWER_LEFT: 'VIEWER_LEFT'
 } as const;
 
 export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES];
@@ -60,8 +64,67 @@ export interface ParticipantLeftEvent extends BaseEvent {
   };
 }
 
+// Selection revealed event
+export interface SelectionRevealedEvent extends BaseEvent {
+  type: typeof EVENT_TYPES.SELECTION_REVEALED;
+  payload: {
+    revealType: 'top8' | 'top3';
+    cardPositions: Array<{
+      cardId: string;
+      x: number;
+      y: number;
+      pile: string;
+    }>;
+    participantName: string;
+  };
+}
+
+// Selection unrevealed event
+export interface SelectionUnrevealedEvent extends BaseEvent {
+  type: typeof EVENT_TYPES.SELECTION_UNREVEALED;
+  payload: {
+    revealType: 'top8' | 'top3';
+    participantName: string;
+  };
+}
+
+// Arrangement updated event (for live sync during reveal)
+export interface ArrangementUpdatedEvent extends BaseEvent {
+  type: typeof EVENT_TYPES.ARRANGEMENT_UPDATED;
+  payload: {
+    revealType: 'top8' | 'top3';
+    cardPositions: Array<{
+      cardId: string;
+      x: number;
+      y: number;
+      pile: string;
+    }>;
+    participantName: string;
+  };
+}
+
+// Viewer joined event
+export interface ViewerJoinedEvent extends BaseEvent {
+  type: typeof EVENT_TYPES.VIEWER_JOINED;
+  payload: {
+    targetParticipantId: string;
+    viewerName: string;
+  };
+}
+
+// Viewer left event
+export interface ViewerLeftEvent extends BaseEvent {
+  type: typeof EVENT_TYPES.VIEWER_LEFT;
+  payload: {
+    targetParticipantId: string;
+    viewerName: string;
+  };
+}
+
 // Union type for all events
-export type Event = BaseEvent | StepTransitionedEvent | ParticipantJoinedEvent | ParticipantLeftEvent;
+export type Event = BaseEvent | StepTransitionedEvent | ParticipantJoinedEvent | ParticipantLeftEvent | 
+  SelectionRevealedEvent | SelectionUnrevealedEvent | ArrangementUpdatedEvent | 
+  ViewerJoinedEvent | ViewerLeftEvent;
 
 // Event creation parameters
 export interface CreateEventParams {
@@ -123,6 +186,21 @@ export function validateEvent(event: unknown): void {
       case EVENT_TYPES.PARTICIPANT_JOINED:
         validateParticipantJoinedEvent(event);
         break;
+      case EVENT_TYPES.SELECTION_REVEALED:
+        validateSelectionRevealedEvent(event);
+        break;
+      case EVENT_TYPES.SELECTION_UNREVEALED:
+        validateSelectionUnrevealedEvent(event);
+        break;
+      case EVENT_TYPES.ARRANGEMENT_UPDATED:
+        validateArrangementUpdatedEvent(event);
+        break;
+      case EVENT_TYPES.VIEWER_JOINED:
+        validateViewerJoinedEvent(event);
+        break;
+      case EVENT_TYPES.VIEWER_LEFT:
+        validateViewerLeftEvent(event);
+        break;
     }
   } catch (error) {
     if (error instanceof EventValidationError) {
@@ -151,4 +229,74 @@ function validateParticipantJoinedEvent(event: ParticipantJoinedEvent): void {
   const participant = event.payload.participant;
   validateRequiredString(participant.name, 'participant.name');
   validateRequiredString(participant.id, 'participant.id');
+}
+
+function validateSelectionRevealedEvent(event: SelectionRevealedEvent): void {
+  if (!event.payload) {
+    throw new EventValidationError('Missing payload', 'payload');
+  }
+
+  const { revealType, cardPositions, participantName } = event.payload;
+  
+  if (revealType !== 'top8' && revealType !== 'top3') {
+    throw new EventValidationError('Invalid revealType, must be "top8" or "top3"', 'revealType');
+  }
+  
+  validateRequiredString(participantName, 'participantName');
+  
+  if (!Array.isArray(cardPositions)) {
+    throw new EventValidationError('cardPositions must be an array', 'cardPositions');
+  }
+  
+  cardPositions.forEach((position, index) => {
+    validateRequiredString(position.cardId, `cardPositions[${index}].cardId`);
+    validateRequiredString(position.pile, `cardPositions[${index}].pile`);
+    if (typeof position.x !== 'number') {
+      throw new EventValidationError(`cardPositions[${index}].x must be a number`, `cardPositions[${index}].x`);
+    }
+    if (typeof position.y !== 'number') {
+      throw new EventValidationError(`cardPositions[${index}].y must be a number`, `cardPositions[${index}].y`);
+    }
+  });
+}
+
+function validateSelectionUnrevealedEvent(event: SelectionUnrevealedEvent): void {
+  if (!event.payload) {
+    throw new EventValidationError('Missing payload', 'payload');
+  }
+
+  const { revealType, participantName } = event.payload;
+  
+  if (revealType !== 'top8' && revealType !== 'top3') {
+    throw new EventValidationError('Invalid revealType, must be "top8" or "top3"', 'revealType');
+  }
+  
+  validateRequiredString(participantName, 'participantName');
+}
+
+function validateArrangementUpdatedEvent(event: ArrangementUpdatedEvent): void {
+  // Same validation as SelectionRevealedEvent
+  validateSelectionRevealedEvent(event as SelectionRevealedEvent);
+}
+
+function validateViewerJoinedEvent(event: ViewerJoinedEvent): void {
+  if (!event.payload) {
+    throw new EventValidationError('Missing payload', 'payload');
+  }
+
+  const { targetParticipantId, viewerName } = event.payload;
+  
+  validateRequiredString(targetParticipantId, 'targetParticipantId');
+  validateRequiredString(viewerName, 'viewerName');
+}
+
+function validateViewerLeftEvent(event: ViewerLeftEvent): void {
+  if (!event.payload) {
+    throw new EventValidationError('Missing payload', 'payload');
+  }
+
+  const { targetParticipantId, viewerName } = event.payload;
+  
+  validateRequiredString(targetParticipantId, 'targetParticipantId');
+  validateRequiredString(viewerName, 'viewerName');
 }

@@ -179,14 +179,22 @@ describe('Event Store Integration', () => {
         }),
         payload: {
           participant: {
-            participantId: participantId1,
+            id: participantId1,
             name: 'Alice',
             emoji: '🎯',
             color: 'blue',
-            joinedAt: new Date(),
+            joinedAt: new Date().toISOString(),
             currentStep: 1,
             isActive: true,
-            lastActivity: new Date()
+            lastActivity: new Date().toISOString(),
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null
           }
         }
       };
@@ -207,14 +215,22 @@ describe('Event Store Integration', () => {
         }),
         payload: {
           participant: {
-            participantId: participantId1,
+            id: participantId1,
             name: 'Alice',
             emoji: '🎯',
             color: 'blue',
-            joinedAt: new Date(),
+            joinedAt: new Date().toISOString(),
             currentStep: 1,
             isActive: true,
-            lastActivity: new Date()
+            lastActivity: new Date().toISOString(),
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null
           }
         }
       };
@@ -227,14 +243,22 @@ describe('Event Store Integration', () => {
         }),
         payload: {
           participant: {
-            participantId: participantId2,
+            id: participantId2,
             name: 'Bob',
             emoji: '⚡',
             color: 'red',
-            joinedAt: new Date(),
+            joinedAt: new Date().toISOString(),
             currentStep: 1,
             isActive: true,
-            lastActivity: new Date()
+            lastActivity: new Date().toISOString(),
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null
           }
         }
       };
@@ -333,14 +357,22 @@ describe('Event Store Integration', () => {
         }),
         payload: {
           participant: {
-            participantId: participantId1,
+            id: participantId1,
             name: 'Alice',
             emoji: '🎯',
             color: 'blue',
-            joinedAt: new Date(),
+            joinedAt: new Date().toISOString(),
             currentStep: 1,
             isActive: true,
-            lastActivity: new Date()
+            lastActivity: new Date().toISOString(),
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null
           }
         }
       };

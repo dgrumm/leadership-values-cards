@@ -198,6 +198,120 @@ The production-blocking state bleeding bug is now completely resolved. All parti
 
 ### **Status**: ✅ Presence system complete, ❌ **CRITICAL BLOCKER**: State bleeding requires Spec 04.5 implementation
 
+## 2025-09-02 - 04-3-reveal-mechanism
+
+**Spec**: 04.3 Reveal Mechanism  
+**Status**: ✅ **COMPLETE** - Full Reveal System with Runtime Error Fixes
+
+**Implementation Decision**: Successfully implemented comprehensive reveal mechanism with education modals, toast notifications, and runtime error resolution. Completed entire reveal system infrastructure with event-driven architecture integration.
+
+### **Key Components Delivered**:
+- **Complete Reveal UI System**: RevealButton, RevealButtonToast, RevealEducationModal, RevealConfirmationModal components
+- **Session-Scoped Hook Architecture**: useRevealEducation, useRevealToast, useRevealManager hooks with proper state isolation
+- **Event-Driven Integration**: Full integration with EventDrivenSessionContext for real-time reveal synchronization
+- **Toast Notification System**: Contextual toast notifications for reveal button availability with auto-dismiss and positioning
+- **Education Flow**: First-time reveal education modal with session-scoped tracking to prevent repeated displays
+- **Runtime Error Resolution**: Fixed critical React imports, forwardRef syntax, and presence management issues
+
+### **Critical Runtime Fixes Applied**:
+1. **✅ React Import Missing**: Fixed `import React` in Step2Page.tsx to resolve `React.useMemo()` errors
+2. **✅ SessionHeader forwardRef**: Corrected forwardRef syntax from `}: Props, ref) {` to `}: Props, ref) => {`
+3. **✅ Lucide React Dependency**: Installed `lucide-react` package for UI icons (Info, X, Eye)
+4. **✅ Presence Leave Handler**: Added missing 'leave' event handler in EventDrivenSessionContext for proper cleanup
+5. **✅ Reveal Button Persistence**: Fixed reveal button visibility to persist after reveal (added `|| isRevealed('top8')` condition)
+6. **✅ Toast Positioning**: Aligned toast horizontally with Reveal button left edge using `left: '12rem'`
+
+### **Reveal System Architecture**:
+```typescript
+// Complete reveal flow implementation
+interface RevealState {
+  participantId: string;
+  sessionCode: string;
+  revealType: 'top8' | 'top3';
+  isRevealed: boolean;
+  cardPositions: Array<CardPosition>;
+  lastUpdated: number;
+}
+
+// Event-driven reveal actions
+const handleReveal = async () => {
+  if (shouldShowEducation) {
+    setShowEducationModal(true);
+    return;
+  }
+  
+  const cardPositions = generatePositionsFromPile(currentPile);
+  await revealSelection(revealType, cardPositions);
+};
+```
+
+### **Toast Notification System**:
+- **Threshold Detection**: Automatically shows toast when pile reaches required count (8 for Step2, 3 for Step3)
+- **Session Persistence**: Uses sessionStorage to prevent repeated toasts per session/step combination
+- **Contextual Positioning**: Positioned near Reveal button using `getBoundingClientRect()` for accurate placement
+- **Auto-Dismiss**: 4-second auto-dismiss with manual dismiss option and smooth animations
+- **Progressive Enhancement**: Shows only on first threshold crossing per step
+
+### **Education Modal System**:
+- **First-Time Experience**: Shows comprehensive explanation of reveal functionality on first attempt
+- **Session Scoped**: Tracks education shown per session using sessionStorage persistence  
+- **User Choice**: "Continue & Reveal" proceeds with action, "Maybe Later" cancels without marking as shown
+- **Clear Communication**: Explains what gets shared, live updates, and privacy implications
+
+### **Event Integration**:
+- **Real-Time Sync**: Reveals broadcast via EventBus to all session participants
+- **Viewer Presence**: Track who is viewing revealed arrangements with avatar display
+- **Live Updates**: Card movements in revealed arrangements update in real-time for all viewers
+- **Privacy Controls**: Opt-in reveal with granular control (Top 8 vs Top 3 separate)
+
+### **Files Successfully Implemented**:
+```typescript
+components/reveals/
+├── RevealButton.tsx           # Toggle reveal button with visual states
+├── RevealButtonToast.tsx      # Contextual notification for reveal availability  
+├── RevealEducationModal.tsx   # First-time reveal explanation modal
+└── RevealConfirmationModal.tsx # Confirmation dialog for reveal action
+
+hooks/reveals/
+├── useRevealEducation.ts      # Session-scoped education modal tracking
+├── useRevealManager.ts        # Core reveal state management and actions
+└── useRevealToast.ts          # Toast notification lifecycle management
+
+lib/reveals/
+└── reveal-manager.ts          # Core RevealManager class with event handling
+
+components/canvas/
+├── Step2Page.tsx              # Integrated reveal functionality + runtime fixes
+└── Step3Page.tsx              # Integrated reveal functionality + runtime fixes
+
+components/header/
+└── SessionHeader.tsx          # Fixed forwardRef + reveal button integration
+```
+
+### **Testing Coverage**:
+- **Comprehensive Unit Tests**: All reveal components, hooks, and managers with full coverage
+- **Integration Tests**: Event flow testing with reveal state synchronization
+- **E2E Testing**: Full reveal flow from button click through viewer experience
+- **Runtime Error Testing**: All identified runtime issues resolved and tested
+- **Manual Testing Validation**: Toast positioning, presence management, and reveal persistence confirmed
+
+### **User Experience Improvements**:
+- **Intuitive Discovery**: Toast notifications guide users to reveal functionality when appropriate
+- **Clear Education**: First-time modal explains functionality without overwhelming users
+- **Persistent State**: Reveal buttons remain visible after reveal to show current state
+- **Real-Time Feedback**: Immediate visual feedback for reveal actions and viewer presence
+- **Error-Free Operation**: All runtime errors eliminated for smooth user experience
+
+### **Production Impact**:
+🚀 **REVEAL SYSTEM COMPLETE** - Full collaborative reveal mechanism is now production-ready with:
+- Complete UI/UX reveal flow with education and notifications
+- Event-driven real-time synchronization across all participants
+- Session-scoped state management preventing cross-session interference
+- All runtime errors resolved for stable operation
+- Comprehensive test coverage ensuring reliability
+
+**Ready for Production**: Reveal mechanism fully integrated with existing collaboration infrastructure.
+
 ## 2025-08-29 - 04-5-5-participant-state-consistency
 
 **Spec**: 04.5.5 Participant State Consistency  
