@@ -1,5 +1,6 @@
 'use client';
 
+import { forwardRef } from 'react';
 import { LeaveSessionButton } from './LeaveSessionButton';
 import { ParticipantsButton } from './ParticipantsButton';
 import { StepCounter } from './StepCounter';
@@ -19,7 +20,7 @@ interface SessionHeaderProps {
   onParticipantsClick?: () => void;
 }
 
-export function SessionHeader({ 
+export const SessionHeader = forwardRef<HTMLDivElement, SessionHeaderProps>(({ 
   currentStep, 
   totalSteps, 
   participantCount,
@@ -28,9 +29,9 @@ export function SessionHeader({
   isRevealed,
   showRevealButton,
   onParticipantsClick
-}: SessionHeaderProps) {
+}: SessionHeaderProps, ref: React.Ref<HTMLDivElement>) => {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <header ref={ref} className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Left side - Navigation */}
         <div className="flex items-center space-x-3">
@@ -59,4 +60,6 @@ export function SessionHeader({
       </div>
     </header>
   );
-}
+});
+
+SessionHeader.displayName = 'SessionHeader';

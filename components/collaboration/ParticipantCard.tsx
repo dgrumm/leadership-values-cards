@@ -33,8 +33,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
   // Backward compatibility (remove after migration complete)
   const isCurrentUserComputed = currentUserId ? (participantId === currentUserId) : isCurrentUser;
   
-  // Check if participant has revealed content that can be viewed
-  const canViewReveal = status === 'revealed-8' || status === 'revealed-3';
+  // Check if participant has revealed content that can be viewed (exclude current user)
+  const canViewReveal = (status === 'revealed-8' || status === 'revealed-3') && !isCurrentUserComputed;
   
   // Determine activity status based on lastActive timestamp
   const getActivityStatus = () => {

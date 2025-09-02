@@ -14,7 +14,13 @@ import { useSessionStep1Store } from '@/hooks/stores/useSessionStores';
 const mockAblyService = {
   getChannel: jest.fn(() => ({
     subscribe: jest.fn(() => jest.fn()),
-    publish: jest.fn()
+    publish: jest.fn(() => Promise.resolve()),
+    presence: {
+      get: jest.fn(() => Promise.resolve([])),
+      enter: jest.fn(() => Promise.resolve()),
+      leave: jest.fn(() => Promise.resolve()),
+      update: jest.fn(() => Promise.resolve())
+    }
   })),
   subscribe: jest.fn(() => jest.fn()),
   isReady: jest.fn(() => true),
@@ -32,12 +38,20 @@ jest.mock('@/hooks/collaboration/useAbly', () => ({
 
 // Test component that uses session stores
 function TestComponent() {
-  const { deck, flipCard } = useSessionStep1Store();
+  const storeHook = useSessionStep1Store();
+  const { deck, flipNextCard, initializeDeck } = storeHook;
+  
+  // Initialize deck if empty (this might be needed for the stores to work properly)
+  React.useEffect(() => {
+    if (deck.length === 0) {
+      initializeDeck();
+    }
+  }, [deck.length, initializeDeck]);
   
   return (
     <div>
       <div data-testid="deck-length">{deck.length}</div>
-      <div data-testid="flip-card-available">{typeof flipCard === 'function' ? 'yes' : 'no'}</div>
+      <div data-testid="flip-card-available">{typeof flipNextCard === 'function' ? 'yes' : 'no'}</div>
     </div>
   );
 }

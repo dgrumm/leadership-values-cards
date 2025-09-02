@@ -201,14 +201,22 @@ describe('Event Types', () => {
         version: 1,
         payload: {
           participant: {
-            participantId: 'user-123',
+            id: 'user-123',
             name: 'Alice',
             emoji: '🎯',
             color: 'blue',
-            joinedAt: new Date(),
+            joinedAt: new Date().toISOString(),
             currentStep: 1,
             isActive: true,
-            lastActivity: new Date()
+            lastActivity: new Date().toISOString(),
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null
           }
         }
       };
@@ -270,14 +278,22 @@ describe('Event Types', () => {
         }),
         payload: {
           participant: {
-            participantId: 'user-123',
+            id: 'user-123',
             name: 'Alice',
             emoji: '🎯',
             color: 'blue',
-            joinedAt: new Date(),
+            joinedAt: new Date().toISOString(),
             currentStep: 1,
             isActive: true,
-            lastActivity: new Date()
+            lastActivity: new Date().toISOString(),
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null
           }
         }
       };
