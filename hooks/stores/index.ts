@@ -15,7 +15,5 @@ export {
 
 // Re-export context hooks for convenience
 export {
-  useSessionStoreContext,
-  useSessionManager,
-  useSessionInfo
-} from '@/contexts/SessionStoreContext';
+  useSessionStoreContext
+} from '@/contexts/EventDrivenSessionContext';

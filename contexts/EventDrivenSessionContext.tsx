@@ -1,0 +1,631 @@
+/**
+ * Event-Driven Session Context - Integrates event system with Zustand stores
+ * Replaces the hybrid Session API + Presence Events with pure event architecture
+ */
+
+'use client';
+
+import React, { createContext, useContext, useMemo, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { SessionStoreManager } from '@/lib/stores/session-store-manager';
+import { EventBus } from '@/lib/events/event-bus';
+import { 
+  createBaseEvent, 
+  EVENT_TYPES, 
+  type StepTransitionedEvent, 
+  type ParticipantJoinedEvent,
+  type ParticipantLeftEvent
+} from '@/lib/events/types';
+import { useAbly } from '@/hooks/collaboration/useAbly';
+
+// Import the old context interface for backward compatibility
+interface SessionStoreContextValue {
+  sessionManager: SessionStoreManager;
+  sessionCode: string;
+  participantId: string;
+}
+
+const SessionStoreContext = createContext<SessionStoreContextValue | null>(null);
+
+interface EventDrivenSessionContextValue {
+  sessionManager: SessionStoreManager;
+  eventBus: EventBus;
+  sessionCode: string;
+  participantId: string;
+  participantName: string;
+  // Event publishing functions
+  publishStepTransition: (fromStep: 1 | 2 | 3, toStep: 1 | 2 | 3) => Promise<void>;
+  publishParticipantJoined: () => Promise<void>;
+  publishParticipantLeft: () => Promise<void>;
+  // Session cleanup
+  leaveSession: () => Promise<void>;
+  // Connection status
+  isConnected: boolean;
+  connectionError: string | null;
+  // Participant state (replaces old presence system)
+  participantSteps: Map<string, { currentStep: 1 | 2 | 3; participantName: string }>;
+  participantCount: number;
+  // For UI compatibility with old usePresence
+  participantsForDisplay: Map<string, any>;
+  currentUser: { participantId: string; name: string } | null;
+  onViewReveal: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
+}
+
+const EventDrivenSessionContext = createContext<EventDrivenSessionContextValue | null>(null);
+
+interface EventDrivenSessionProviderProps {
+  sessionCode: string;
+  participantId: string;
+  participantName: string;
+  children: ReactNode;
+  config?: {
+    autoCleanupDelayMs?: number;
+    maxStoresPerSession?: number;
+    enableMemoryTracking?: boolean;
+    enableDebugLogging?: boolean;
+  };
+}
+
+/**
+ * EventDrivenSessionProvider - Provides event-driven session management
+ * 
+ * Replaces the old hybrid architecture with deterministic event-driven approach
+ * to eliminate race conditions in step transitions and participant updates
+ */
+export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProps> = ({
+  sessionCode,
+  participantId,
+  participantName,
+  children,
+  config = {}
+}) => {
+  // Validate required props
+  if (!sessionCode || typeof sessionCode !== 'string') {
+    throw new Error('EventDrivenSessionProvider: sessionCode is required and must be a non-empty string');
+  }
+  
+  if (!participantId || typeof participantId !== 'string') {
+    throw new Error('EventDrivenSessionProvider: participantId is required and must be a non-empty string');
+  }
+
+  if (!participantName || typeof participantName !== 'string') {
+    throw new Error('EventDrivenSessionProvider: participantName is required and must be a non-empty string');
+  }
+
+  // Get Ably service from existing hook
+  const { service: ably, isConnected, error: connectionError } = useAbly({ autoInit: true });
+
+  // Participant state tracking (replaces old presence system)
+  const [participantSteps, setParticipantSteps] = useState<Map<string, { currentStep: 1 | 2 | 3; participantName: string }>>(new Map());
+  
+  // Compute participant count from actual participants
+  const participantCount = useMemo(() => participantSteps.size, [participantSteps]);
+
+  // Create core services (memoized)
+  const sessionManager = useMemo(() => {
+    const managerConfig = {
+      autoCleanupDelayMs: config.autoCleanupDelayMs,
+      maxStoresPerSession: config.maxStoresPerSession,
+      enableMemoryTracking: config.enableMemoryTracking,
+      enableDebugLogging: config.enableDebugLogging
+    };
+    
+    return new SessionStoreManager(managerConfig);
+  }, []); // Empty deps - manager is singleton per provider instance
+
+  const eventBus = useMemo(() => {
+    if (!ably) return null;
+    return new EventBus(ably, sessionCode);
+  }, [ably, sessionCode]);
+
+  // Remove EventStoreIntegration - no longer needed
+
+  // Initialize event system when ready
+  useEffect(() => {
+    if (!eventBus || !isConnected) return;
+
+    try {
+      if (config.enableDebugLogging !== false) {
+        console.log(`🚀 [EventDrivenSession] Initialized for ${sessionCode}:${participantId}`);
+      }
+
+      // Subscribe to step transition events
+      console.log(`👂 [EventListener] Setting up event listener for ${sessionCode}:${participantId}`);
+      const unsubscribe = eventBus.subscribeToEvents((event) => {
+        console.log(`📥 [EventListener] Received event:`, event);
+        
+        if (event.type === EVENT_TYPES.STEP_TRANSITIONED) {
+          const stepEvent = event as StepTransitionedEvent;
+          console.log(`🎯 [EventListener] Processing step transition: ${stepEvent.payload.participantName} ${stepEvent.payload.fromStep} → ${stepEvent.payload.toStep}`);
+          
+          // Update participant step state
+          setParticipantSteps(prev => {
+            const newSteps = new Map(prev);
+            newSteps.set(stepEvent.participantId, {
+              currentStep: stepEvent.payload.toStep,
+              participantName: stepEvent.payload.participantName
+            });
+            console.log(`📊 [EventListener] Updated participant steps:`, Array.from(newSteps.entries()));
+            return newSteps;
+          });
+          
+          console.log(`✅ [EventListener] Step transition event processed successfully`);
+        } else if (event.type === EVENT_TYPES.PARTICIPANT_JOINED) {
+          const joinEvent = event as ParticipantJoinedEvent;
+          console.log(`👋 [EventListener] Processing participant joined: ${joinEvent.payload.participant.name}`);
+          
+          // Update participant count and steps
+          setParticipantSteps(prev => {
+            const newSteps = new Map(prev);
+            newSteps.set(joinEvent.participantId, {
+              currentStep: joinEvent.payload.participant.currentStep,
+              participantName: joinEvent.payload.participant.name
+            });
+            return newSteps;
+          });
+          
+          // Participant count is computed from participantSteps size
+          
+          console.log(`✅ [EventListener] Participant joined event processed successfully`);
+        } else if (event.type === EVENT_TYPES.PARTICIPANT_LEFT) {
+          const leftEvent = event as ParticipantLeftEvent;
+          console.log(`👋 [EventListener] Processing participant left: ${leftEvent.payload.participantName}`);
+          
+          // Remove participant from local state
+          setParticipantSteps(prev => {
+            const newSteps = new Map(prev);
+            newSteps.delete(leftEvent.participantId);
+            console.log(`📊 [EventListener] Removed participant from steps. Remaining:`, Array.from(newSteps.entries()));
+            return newSteps;
+          });
+          
+          console.log(`✅ [EventListener] Participant left event processed successfully`);
+        } else {
+          console.log(`📋 [EventListener] Ignoring event type: ${event.type}`);
+        }
+      });
+
+      return () => {
+        if (config.enableDebugLogging !== false) {
+          console.log(`🧹 [EventDrivenSession] Cleaned up for ${sessionCode}:${participantId}`);
+        }
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error('❌ [EventDrivenSession] Failed to initialize:', error);
+    }
+  }, [eventBus, isConnected, sessionCode, participantId, config.enableDebugLogging]);
+
+  // Event publishing functions
+  const publishStepTransition = async (fromStep: 1 | 2 | 3, toStep: 1 | 2 | 3) => {
+    console.log(`🔥 [PublishStepTransition] Starting ${participantName}: ${fromStep} → ${toStep}`);
+    
+    if (!eventBus || !ably) {
+      console.error('❌ [PublishStepTransition] EventBus or Ably not ready!');
+      return;
+    }
+
+    try {
+      // Update presence state for persistence
+      const sessionChannel = ably.getChannel(sessionCode, 'presence');
+      await sessionChannel.presence.update({
+        participantId,
+        name: participantName,
+        currentStep: toStep,
+        emoji: '🎯',
+        color: 'blue',
+        status: 'sorting',
+        joinedAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString()
+      });
+      console.log(`📍 [PresenceSync] Updated presence step to ${toStep}`);
+
+      // Publish step transition event
+      const baseEvent = createBaseEvent({
+        type: EVENT_TYPES.STEP_TRANSITIONED,
+        sessionCode,
+        participantId
+      });
+      
+      const event: StepTransitionedEvent = {
+        ...baseEvent,
+        type: EVENT_TYPES.STEP_TRANSITIONED as typeof EVENT_TYPES.STEP_TRANSITIONED,
+        payload: {
+          fromStep,
+          toStep,
+          participantName
+        }
+      };
+
+      console.log(`📤 [PublishStepTransition] Publishing event:`, event);
+      await eventBus.publishEvent(event);
+      console.log(`✅ [PublishStepTransition] Event published successfully`);
+      
+    } catch (error) {
+      console.error('❌ [PublishStepTransition] Failed to publish event:', error);
+      throw error;
+    }
+  };
+
+  const publishParticipantJoined = useCallback(async () => {
+    if (!eventBus || !ably) {
+      console.warn('⚠️ EventBus or Ably not ready, cannot publish participant joined');
+      return;
+    }
+
+    try {
+      // First enter Ably presence for state persistence
+      const sessionChannel = ably.getChannel(sessionCode, 'presence');
+      const presenceData = {
+        participantId,
+        name: participantName,
+        currentStep: 1,
+        emoji: '🎯',
+        color: 'blue',
+        status: 'sorting',
+        joinedAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString()
+      };
+      
+      console.log(`📍 [PresenceSync] Entering presence for ${participantName}...`);
+      await sessionChannel.presence.enter(presenceData);
+      console.log(`✅ [PresenceSync] Entered presence successfully`);
+
+      // Then publish the join event for real-time notification
+      const baseEvent = createBaseEvent({
+        type: EVENT_TYPES.PARTICIPANT_JOINED,
+        sessionCode,
+        participantId
+      });
+      
+      const event: ParticipantJoinedEvent = {
+        ...baseEvent,
+        type: EVENT_TYPES.PARTICIPANT_JOINED as typeof EVENT_TYPES.PARTICIPANT_JOINED,
+        payload: {
+          participant: {
+            id: participantId,
+            name: participantName,
+            emoji: '🎯', // Default emoji, could be customizable
+            color: 'blue', // Default color, could be customizable
+            joinedAt: new Date().toISOString(),
+            currentStep: 1,
+            status: 'sorting',
+            cardStates: {
+              step1: { more: [], less: [] },
+              step2: { top8: [], less: [] },
+              step3: { top3: [], less: [] }
+            },
+            revealed: { top8: false, top3: false },
+            isViewing: null,
+            isActive: true,
+            lastActivity: new Date().toISOString()
+          }
+        }
+      };
+
+      await eventBus.publishEvent(event);
+      
+      if (config.enableDebugLogging !== false) {
+        console.log(`📤 [EventDrivenSession] Published participant joined: ${participantName}`);
+      }
+    } catch (error) {
+      console.error('❌ [EventDrivenSession] Failed to publish participant joined:', error);
+      throw error;
+    }
+  }, [eventBus, ably, sessionCode, participantId, participantName, config.enableDebugLogging]);
+
+  const publishParticipantLeft = useCallback(async () => {
+    if (!eventBus) {
+      console.warn('⚠️ EventBus not ready, cannot publish participant left');
+      return;
+    }
+
+    try {
+      const baseEvent = createBaseEvent({
+        type: EVENT_TYPES.PARTICIPANT_LEFT,
+        sessionCode,
+        participantId
+      });
+      
+      const event: ParticipantLeftEvent = {
+        ...baseEvent,
+        type: EVENT_TYPES.PARTICIPANT_LEFT as typeof EVENT_TYPES.PARTICIPANT_LEFT,
+        payload: {
+          participantName,
+          leftAt: new Date().toISOString()
+        }
+      };
+
+      await eventBus.publishEvent(event);
+      
+      if (config.enableDebugLogging !== false) {
+        console.log(`📤 [EventDrivenSession] Published participant left: ${participantName}`);
+      }
+    } catch (error) {
+      console.error('❌ [EventDrivenSession] Failed to publish participant left:', error);
+      throw error;
+    }
+  }, [eventBus, sessionCode, participantId, participantName, config.enableDebugLogging]);
+
+  const leaveSession = useCallback(async () => {
+    console.log(`🚪 [LeaveSession] Starting cleanup for ${participantName}...`);
+    
+    try {
+      // 1. Publish participant left event
+      console.log(`📤 [LeaveSession] Publishing participant left event...`);
+      await publishParticipantLeft();
+      
+      // 2. Leave Ably presence
+      if (ably) {
+        console.log(`📍 [LeaveSession] Leaving Ably presence...`);
+        const sessionChannel = ably.getChannel(sessionCode, 'presence');
+        await sessionChannel.presence.leave();
+        console.log(`✅ [LeaveSession] Left Ably presence successfully`);
+      }
+      
+      // 3. Clean up session stores
+      console.log(`🧹 [LeaveSession] Cleaning up session stores...`);
+      sessionManager.cleanup();
+      
+      // 4. Clear participant localStorage
+      if (typeof window !== 'undefined') {
+        const storageKey = `participant-id-${sessionCode}-${participantName}`;
+        localStorage.removeItem(storageKey);
+        console.log(`🗑️ [LeaveSession] Cleared participant localStorage`);
+      }
+      
+      console.log(`✅ [LeaveSession] Session cleanup completed successfully`);
+    } catch (error) {
+      console.error('❌ [LeaveSession] Failed to leave session cleanly:', error);
+      // Continue with cleanup even if some steps fail
+    }
+  }, [publishParticipantLeft, ably, sessionCode, participantName, sessionManager]);
+
+  // Auto-sync session state and publish participant joined on connection
+  useEffect(() => {
+    if (isConnected && eventBus && participantName && ably) {
+      const initializeSession = async () => {
+        try {
+          console.log(`🔄 [SessionSync] Synchronizing session state for ${participantName}...`);
+          
+          // Get the session channel for presence state
+          const sessionChannel = ably.getChannel(sessionCode, 'presence');
+          
+          // Get current presence members to populate initial state
+          const presenceMembers = await sessionChannel.presence.get();
+          console.log(`📊 [SessionSync] Found ${presenceMembers.length} existing participants:`, presenceMembers.map(m => m.data?.name || 'Unknown'));
+          
+          // Populate participant steps from existing presence (filter out stale data)
+          if (presenceMembers.length > 0) {
+            const now = Date.now();
+            const staleThreshold = 5 * 60 * 1000; // 5 minutes
+            
+            setParticipantSteps(prev => {
+              const newSteps = new Map(prev);
+              
+              presenceMembers.forEach(member => {
+                if (member.data && member.data.participantId && member.data.name) {
+                  // Check for stale data
+                  const lastActivity = member.data.lastActivity ? new Date(member.data.lastActivity).getTime() : 0;
+                  const isStale = (now - lastActivity) > staleThreshold;
+                  
+                  if (isStale) {
+                    console.log(`⚠️ [SessionSync] Skipping stale participant: ${member.data.name} (${Math.round((now - lastActivity) / 1000 / 60)}m old)`);
+                    return;
+                  }
+                  
+                  // Only add if not already present to prevent duplicates
+                  if (!newSteps.has(member.data.participantId)) {
+                    newSteps.set(member.data.participantId, {
+                      currentStep: member.data.currentStep || 1,
+                      participantName: member.data.name
+                    });
+                    console.log(`👤 [SessionSync] Added existing participant: ${member.data.name} (Step ${member.data.currentStep || 1})`);
+                  } else {
+                    console.log(`🔄 [SessionSync] Participant already synced: ${member.data.name}`);
+                  }
+                }
+              });
+              
+              console.log(`📊 [SessionSync] Total participants after sync: ${newSteps.size}`);
+              return newSteps;
+            });
+          }
+          
+          // Now publish our own join event
+          console.log(`📤 [SessionSync] Publishing join event for ${participantName}...`);
+          await publishParticipantJoined();
+          console.log(`✅ [SessionSync] Session synchronization complete for ${participantName}`);
+          
+        } catch (error) {
+          console.error('❌ [SessionSync] Failed to sync session state:', error);
+          // Still try to publish join event even if sync fails
+          publishParticipantJoined().catch(console.error);
+        }
+      };
+
+      // Small delay to ensure event system is ready
+      const timer = setTimeout(initializeSession, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, eventBus, participantName, ably, sessionCode, publishParticipantJoined]);
+
+  // Create participant display data compatible with old usePresence interface
+  const participantsForDisplay = useMemo(() => {
+    const display = new Map();
+    participantSteps.forEach((stepData, pid) => {
+      display.set(pid, {
+        participantId: pid,
+        name: stepData.participantName,
+        currentStep: stepData.currentStep,
+        emoji: '🎯', // Default emoji
+        color: 'blue', // Default color
+        status: 'sorting',
+        isActive: true,
+        lastActive: Date.now()
+      });
+    });
+    return display;
+  }, [participantSteps]);
+
+  const currentUser = useMemo(() => ({
+    participantId,
+    name: participantName
+  }), [participantId, participantName]);
+
+  const onViewReveal = useCallback((participantId: string, revealType: 'revealed-8' | 'revealed-3') => {
+    console.log(`👁️ Viewing ${revealType} for participant: ${participantId}`);
+    // TODO: Implement reveal viewing functionality
+  }, []);
+
+  // Create context value (memoized to prevent unnecessary re-renders)
+  const contextValue = useMemo(() => {
+    if (!eventBus) {
+      // Return minimal context while services are initializing
+      return {
+        sessionManager,
+        eventBus: null as any,
+        sessionCode,
+        participantId,
+        participantName,
+        publishStepTransition: async () => {},
+        publishParticipantJoined: async () => {},
+        publishParticipantLeft: async () => {},
+        leaveSession: async () => {},
+        isConnected: false,
+        connectionError: 'Initializing event system...',
+        participantSteps: new Map(),
+        participantCount: 0, // No participants during initialization
+        participantsForDisplay: new Map(),
+        currentUser,
+        onViewReveal
+      };
+    }
+
+    return {
+      sessionManager,
+      eventBus,
+      sessionCode,
+      participantId,
+      participantName,
+      publishStepTransition,
+      publishParticipantJoined,
+      publishParticipantLeft,
+      leaveSession,
+      isConnected,
+      connectionError,
+      participantSteps,
+      participantCount,
+      participantsForDisplay,
+      currentUser,
+      onViewReveal
+    };
+  }, [
+    sessionManager, 
+    eventBus, 
+    sessionCode, 
+    participantId, 
+    participantName,
+    publishStepTransition,
+    publishParticipantJoined,
+    publishParticipantLeft,
+    leaveSession,
+    isConnected, 
+    connectionError,
+    participantSteps,
+    participantCount,
+    participantsForDisplay,
+    currentUser,
+    onViewReveal
+  ]);
+
+  // Development debugging
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    React.useEffect(() => {
+      // Add debug tools to window in development
+      if (typeof window !== 'undefined') {
+        (window as any).debugEventDrivenSession = {
+          sessionManager,
+          eventBus,
+          sessionCode,
+          participantId,
+          participantName,
+          logState: () => sessionManager.debugLogState(),
+          getStats: () => sessionManager.getMemoryStats(),
+          publishStepTransition,
+          publishParticipantJoined
+        };
+      }
+      
+      return () => {
+        if (typeof window !== 'undefined') {
+          delete (window as any).debugEventDrivenSession;
+        }
+      };
+    }, [sessionManager, eventBus]);
+  }
+
+  // Create the old SessionStore context value for backward compatibility
+  const sessionStoreContextValue = useMemo(() => ({
+    sessionManager,
+    sessionCode,
+    participantId
+  }), [sessionManager, sessionCode, participantId]);
+
+  return (
+    <EventDrivenSessionContext.Provider value={contextValue}>
+      <SessionStoreContext.Provider value={sessionStoreContextValue}>
+        {children}
+      </SessionStoreContext.Provider>
+    </EventDrivenSessionContext.Provider>
+  );
+};
+
+/**
+ * useEventDrivenSession - Hook to access event-driven session context
+ */
+export function useEventDrivenSession(): EventDrivenSessionContextValue {
+  const context = useContext(EventDrivenSessionContext);
+  
+  if (!context) {
+    throw new Error(
+      'useEventDrivenSession must be used within EventDrivenSessionProvider. ' +
+      'Wrap your app with <EventDrivenSessionProvider sessionCode="..." participantId="..." participantName="...">.'
+    );
+  }
+  
+  return context;
+}
+
+/**
+ * useEventPublisher - Hook for publishing events
+ */
+export function useEventPublisher() {
+  const { publishStepTransition, publishParticipantJoined, isConnected } = useEventDrivenSession();
+  
+  return {
+    publishStepTransition,
+    publishParticipantJoined,
+    isConnected
+  };
+}
+
+/**
+ * useSessionStoreContext - Backward compatibility hook for existing session store hooks
+ * 
+ * This ensures existing hooks like useSessionStep1Store continue to work with the new
+ * event-driven provider without modification.
+ */
+export function useSessionStoreContext(): SessionStoreContextValue {
+  const context = useContext(SessionStoreContext);
+  
+  if (!context) {
+    throw new Error(
+      'useSessionStoreContext must be used within SessionStoreProvider. ' +
+      'Wrap your app with <SessionStoreProvider sessionCode="..." participantId="...">. ' +
+      'This is required to prevent state bleeding between participants.'
+    );
+  }
+  
+  return context;
+}

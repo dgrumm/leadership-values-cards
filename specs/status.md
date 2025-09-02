@@ -3,7 +3,7 @@
 ## Overview
 This document tracks the development status of all feature specifications for the Leadership Values Card Sort application.
 
-**Last Updated**: 2025-08-29  
+**Last Updated**: 2025-09-02  
 **Total Specifications**: 17 (16 MVP + 1 v2.0)  
 **Status Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⏸️ Blocked | ⚠️ Needs Review
 
@@ -52,7 +52,7 @@ This document tracks the development status of all feature specifications for th
 |------|---------|--------|----------|----------|--------|
 | 04.1 | [Ably Setup](04-collaboration/04.1-ably-setup.md) | 🟢 Complete | Medium | - | Real-time infrastructure with production-ready error handling |
 | 04.2 | [Participants Overview](04-collaboration/04.2-participants-overview.md) | 🟢 Complete | Medium | - | Real-time participant tracking with identity system |
-| 04.3 | [Reveal Mechanism](04-collaboration/04.3-reveal-mechanism.md) | 🔴 Not Started | Medium | - | Share card selections |
+| 04.3.1 | [Participant Lifecycle Events](04-collaboration/04.3.1-participant-lifecycle-events.md) | 🟢 Complete | Critical | - | Join/leave events with stable identity & cleanup |
 | 04.4 | [Viewer Mode](04-collaboration/04.4-viewer-mode.md) | 🔴 Not Started | Low | - | View others' selections |
 | 04.5.1 | [Store Manager & Factory](04-collaboration/04.5.1-store-manager-factory.md) | 🟢 Complete | High | - | Session-scoped store architecture foundation |
 | 04.5.2 | [Store Factory Architecture](04-collaboration/04.5.2-store-factory-architecture.md) | 🟢 Complete | High | - | Per-participant state isolation system |
@@ -60,7 +60,7 @@ This document tracks the development status of all feature specifications for th
 | 04.5.4 | [Component Integration](04-collaboration/04.5.4-component-integration.md) | 🟢 Complete | High | - | All components migrated to session-scoped stores |
 | 04.5.5 | [Participant State Consistency](04-collaboration/04.5.5-participant-state-consistency.md) | 🟢 Complete | Critical | - | Hybrid display data architecture resolves emoji/color & step consistency |
 
-**Collaboration Progress**: 78% (7/9 complete)
+**Collaboration Progress**: 89% (8/9 complete)
 
 ---
 
@@ -120,10 +120,10 @@ This document tracks the development status of all feature specifications for th
 - 04.5.3 Session-Scoped Hooks ✅
 - 04.5.4 Component Integration ✅
 - 04.5.5 Participant State Consistency ✅
-- 04.3 Reveal Mechanism
+- 04.3.1 Participant Lifecycle Events ✅
 - 04.4 Viewer Mode
 
-**Phase 3 Progress**: 78% (7/9 complete) - **All critical state consistency issues RESOLVED!**
+**Phase 3 Progress**: 89% (8/9 complete) - **All critical participant lifecycle issues RESOLVED!**
 
 ### Phase 4: Advanced Features (Nice-to-have)
 **Priority: Low**
@@ -201,6 +201,7 @@ To update this status document:
 | 2025-08-29 | 04.5.1-04.5.4 | 🔴 Not Started | 🟢 Complete | State Architecture Migration: Fixed critical production-blocking state bleeding bug |
 | 2025-08-29 | 04.5.5 | 🔴 Not Started | 🟢 Complete | Hybrid display data architecture resolves critical emoji/color & step status consistency issues |
 | 2025-08-29 | 04.5 | 🔴 Not Started | 🟢 Complete | Local vs Shared State Architecture: All critical production-blocking state issues resolved |
+| 2025-09-02 | 04.3.1 | 🔴 Not Started | 🟢 Complete | Participant Lifecycle Events: Stable identity, join/leave events, proper cleanup - all sync issues resolved |
 
 ---
 
@@ -215,7 +216,7 @@ To update this status document:
 **v2.0 Status**: Deferred - comprehensive analysis complete
 
 **MVP Ready**: 100% (10/10 core specs complete) - Core functionality E2E tested! 🎉  
-**Collaboration Ready**: 78% (7/9 collaboration specs complete) - **ALL critical state issues RESOLVED!** ✅  
+**Collaboration Ready**: 89% (8/9 collaboration specs complete) - **ALL critical participant lifecycle issues RESOLVED!** ✅  
 **No Production Blockers**: All critical functionality working correctly  
 **v2.0 Layout Ready**: Planning complete - implementation deferred
 

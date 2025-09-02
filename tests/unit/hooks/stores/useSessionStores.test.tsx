@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { renderHook, act } from '@testing-library/react';
-import { SessionStoreProvider } from '@/contexts/SessionStoreContext';
+import { EventDrivenSessionProvider } from '@/contexts/EventDrivenSessionContext';
 import { 
   useSessionStep1Store,
   useSessionStep2Store,
@@ -25,16 +25,22 @@ const mockCards: Card[] = Array.from({ length: 10 }, (_, i) => ({
 }));
 
 describe('Session-Scoped Store Hooks', () => {
-  // Helper to create wrapper with SessionStoreProvider
+  // Helper to create wrapper with EventDrivenSessionProvider
   const createWrapper = (sessionCode: string, participantId: string) => {
     return ({ children }: { children: React.ReactNode }) => (
-      <SessionStoreProvider 
+      <EventDrivenSessionProvider 
         sessionCode={sessionCode} 
         participantId={participantId}
-        config={{ enableDebugLogging: false, enableMemoryTracking: false }}
+        participantName={`TestUser-${participantId}`}
+        config={{ 
+          enableDebugLogging: false, 
+          enableMemoryTracking: false,
+          autoCleanupDelayMs: 300000,
+          maxStoresPerSession: 50
+        }}
       >
         {children}
-      </SessionStoreProvider>
+      </EventDrivenSessionProvider>
     );
   };
 

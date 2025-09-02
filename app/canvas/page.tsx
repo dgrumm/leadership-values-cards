@@ -5,10 +5,10 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Step1Page } from '@/components/canvas/Step1Page';
 import { Step2Page } from '@/components/canvas/Step2Page';
 import { Step3Page } from '@/components/canvas/Step3Page';
-import { SessionStoreProvider } from '@/contexts/SessionStoreContext';
+import { EventDrivenSessionProvider, useEventPublisher } from '@/contexts/EventDrivenSessionContext';
 import { useSessionStep1Store, useSessionStep2Store } from '@/hooks/stores/useSessionStores';
 
-// StepRouter component that uses session-scoped hooks (must be inside provider)
+// StepRouter component that uses event-driven session-scoped hooks (must be inside provider)
 function StepRouter({ 
   currentStep, 
   sessionData, 
@@ -20,6 +20,7 @@ function StepRouter({
 }) {
   const { moreImportantPile, lessImportantPile } = useSessionStep1Store();
   const { top8Pile, lessImportantPile: step2LessImportant, discardedPile: step2Discarded } = useSessionStep2Store();
+  const { publishStepTransition } = useEventPublisher();
   
   // Expose session stores globally for E2E testing
   useEffect(() => {
@@ -44,7 +45,21 @@ function StepRouter({
         participantName={sessionData.participantName}
         sessionCode={sessionData.sessionCode}
         currentStep={currentStep}
-        onStepComplete={() => onStepChange(2)}
+        onStepComplete={async () => {
+          // Publish step transition event before UI update
+          console.log('🎯 [Step1→2] Starting step transition...');
+          try {
+            console.log('📤 [Step1→2] Publishing step transition event...');
+            await publishStepTransition(1, 2);
+            console.log('✅ [Step1→2] Published step transition event successfully');
+          } catch (error) {
+            console.error('❌ [Step1→2] Failed to publish step transition event:', error);
+          }
+          
+          console.log('🔄 [Step1→2] Updating local UI state...');
+          onStepChange(2);
+          console.log('✅ [Step1→2] Local UI updated to Step 2');
+        }}
       />
     );
   }
@@ -70,7 +85,20 @@ function StepRouter({
           moreImportantPile,
           lessImportantPile
         }}
-        onStepComplete={() => onStepChange(3)}
+        onStepComplete={async () => {
+          console.log('🎯 [Step2→3] Starting step transition...');
+          try {
+            console.log('📤 [Step2→3] Publishing step transition event...');
+            await publishStepTransition(2, 3);
+            console.log('✅ [Step2→3] Published step transition event successfully');
+          } catch (error) {
+            console.error('❌ [Step2→3] Failed to publish step transition event:', error);
+          }
+          
+          console.log('🔄 [Step2→3] Updating local UI state...');
+          onStepChange(3);
+          console.log('✅ [Step2→3] Local UI updated to Step 3');
+        }}
       />
     );
   }
@@ -88,7 +116,15 @@ function StepRouter({
             moreImportantPile,
             lessImportantPile
           }}
-          onStepComplete={() => onStepChange(3)}
+          onStepComplete={async () => {
+            try {
+              await publishStepTransition(2, 3);
+              console.log('✅ Published step 2→3 transition event (from redirect)');
+            } catch (error) {
+              console.warn('⚠️ Failed to publish step transition, proceeding with local update:', error);
+            }
+            onStepChange(3);
+          }}
         />
       );
     }
@@ -107,7 +143,7 @@ function StepRouter({
           lessImportantPile
         }}
         onStepComplete={() => {
-          console.log('Exercise completed!');
+          console.log('✅ Exercise completed! Final step reached.');
           // TODO: Navigate to results/review page
         }}
       />
@@ -174,34 +210,17 @@ export default function CanvasPage() {
       // 1. Update local UI state immediately for responsiveness
       setCurrentStep(step);
       
-      // 2. Update session participant data for observers
-      if (sessionData) {
-        const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
-        
-        // Call the backend API to update session participant step
-        const response = await fetch(`/api/sessions/${sessionData.sessionCode}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            participantId,
-            currentStep: step
-          })
-        });
-        
-        if (!response.ok) {
-          console.warn(`⚠️ Failed to update participant step in session: ${response.status}`);
-        } else {
-          console.log(`✅ Updated participant step to ${step} in session ${sessionData.sessionCode}`);
-        }
-      }
-      
-      // 3. Update URL to reflect the current step
+      // 2. Update URL to reflect the current step
       const params = new URLSearchParams(searchParams);
       params.set('step', step.toString());
       router.replace(`/canvas?${params.toString()}`);
+      
+      console.log(`🎯 Local step navigation updated to step ${step}`);
+      
+      // Note: Step transition events are published by the step components
+      // when onStepComplete is called, eliminating race conditions
     } catch (error) {
       console.error('❌ Failed to update step navigation:', error);
-      // Continue with local update even if session update fails
     }
   };
 
@@ -220,13 +239,32 @@ export default function CanvasPage() {
     return null; // Will redirect to login
   }
 
-  // Generate a unique participant ID from session + name
-  const participantId = `${sessionData.sessionCode}-${sessionData.participantName}`;
+  // Generate a stable participant ID using browser localStorage
+  const participantId = (() => {
+    if (typeof window === 'undefined') return `${sessionData.sessionCode}-${sessionData.participantName}`;
+    
+    const storageKey = `participant-id-${sessionData.sessionCode}-${sessionData.participantName}`;
+    let storedId = localStorage.getItem(storageKey);
+    
+    if (!storedId) {
+      // Generate new stable ID: sessionCode + name + timestamp + random
+      const timestamp = Date.now().toString(36);
+      const random = Math.random().toString(36).substring(2, 8);
+      storedId = `${sessionData.sessionCode}-${sessionData.participantName}-${timestamp}-${random}`;
+      localStorage.setItem(storageKey, storedId);
+      console.log(`🆔 [ParticipantID] Generated new stable ID: ${storedId}`);
+    } else {
+      console.log(`🔄 [ParticipantID] Reusing existing stable ID: ${storedId}`);
+    }
+    
+    return storedId;
+  })();
 
   return (
-    <SessionStoreProvider 
+    <EventDrivenSessionProvider 
       sessionCode={sessionData.sessionCode} 
       participantId={participantId}
+      participantName={sessionData.participantName}
       config={{
         enableDebugLogging: process.env.NODE_ENV === 'development',
         enableMemoryTracking: process.env.NODE_ENV === 'development'
@@ -237,6 +275,6 @@ export default function CanvasPage() {
         sessionData={sessionData}
         onStepChange={handleStepNavigation}
       />
-    </SessionStoreProvider>
+    </EventDrivenSessionProvider>
   );
 }
