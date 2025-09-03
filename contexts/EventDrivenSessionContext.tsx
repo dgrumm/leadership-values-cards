@@ -639,10 +639,18 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     return false;
   }, []);
 
-  const onViewReveal = useCallback((participantId: string, revealType: 'revealed-8' | 'revealed-3') => {
-    console.log(`👁️ Viewing ${revealType} for participant: ${participantId}`);
-    // TODO: Implement reveal viewing functionality
-  }, []);
+  const onViewReveal = useCallback((targetParticipantId: string, revealType: 'revealed-8' | 'revealed-3') => {
+    console.log(`👁️ Viewing ${revealType} for participant: ${targetParticipantId}`);
+    
+    // Navigate to viewer mode page with current user context
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams({
+        viewerId: participantId,
+        viewerName: encodeURIComponent(participantName)
+      });
+      window.location.href = `/canvas/${sessionCode}/view/${targetParticipantId}?${params.toString()}`;
+    }
+  }, [sessionCode, participantId, participantName]);
 
   // Create context value (memoized to prevent unnecessary re-renders)
   const contextValue = useMemo(() => {

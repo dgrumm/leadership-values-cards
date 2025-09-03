@@ -176,3 +176,21 @@ export class EventBus {
     }
   }
 }
+
+// Singleton instance management
+let eventBusInstance: EventBus | null = null;
+
+export function getEventBus(): EventBus {
+  if (!eventBusInstance) {
+    throw new Error('EventBus not initialized. Create an EventBus instance first.');
+  }
+  return eventBusInstance;
+}
+
+// For testing - reset singleton
+export function resetEventBus(): void {
+  if (eventBusInstance) {
+    eventBusInstance.cleanup();
+    eventBusInstance = null;
+  }
+}
