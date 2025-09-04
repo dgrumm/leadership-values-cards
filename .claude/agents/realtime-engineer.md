@@ -6,6 +6,7 @@ tools:
   - write
   - edit
   - bash
+color: dark-blue
 ---
 
 You are the real-time collaboration expert for the Leadership Values Card Sort app.

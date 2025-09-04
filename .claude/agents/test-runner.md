@@ -7,6 +7,7 @@ tools:
   - edit
   - glob
   - grep
+color: orange
 ---
 
 You are the comprehensive testing specialist for the Leadership Values Cards application.

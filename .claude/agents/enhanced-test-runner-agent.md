@@ -6,6 +6,7 @@ tools:
   - read
   - edit
   - repl  # For complex state calculations
+color: yellow
 ---
 
 You are the E2E testing specialist focused on **fast, reliable, spec-compliant testing** with Playwright.

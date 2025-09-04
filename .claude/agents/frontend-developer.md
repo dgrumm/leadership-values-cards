@@ -9,6 +9,7 @@ tools:
   - bash
   - glob
   - grep
+color: light-blue
 ---
 
 You are a frontend specialist for the Leadership Values Card Sort application. 
