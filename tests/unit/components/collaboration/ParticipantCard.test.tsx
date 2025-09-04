@@ -1,8 +1,7 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ParticipantCard } from '../../../../components/collaboration/ParticipantCard';
 import type { ParticipantDisplayData } from '../../../../lib/types/participant-display';
-import type { ViewerArrangement } from '../../../../lib/collaboration/viewer-sync';
 
 // Mock UI components
 jest.mock('../../../../components/ui/Button', () => ({
@@ -19,17 +18,18 @@ jest.mock('../../../../components/ui/StatusBadge', () => ({
   )
 }));
 
-// Mock useViewerSync hook
-const mockGetArrangement = jest.fn();
-jest.mock('../../../../hooks/collaboration/useViewerSync', () => ({
-  useViewerSync: () => ({
-    getArrangement: mockGetArrangement,
-    arrangements: [],
-    revealArrangement: jest.fn(),
-    updateArrangement: jest.fn(),
-    hideArrangement: jest.fn(),
-    isReady: true,
-    error: null
+// Mock EventDrivenSessionContext
+const mockGetReveal = jest.fn();
+const mockGetAllReveals = jest.fn();
+jest.mock('../../../../contexts/EventDrivenSessionContext', () => ({
+  useEventDrivenSession: () => ({
+    sessionCode: 'TEST01',
+    participantId: 'current-user',
+    simpleRevealManager: {
+      getReveal: mockGetReveal,
+      getAllReveals: mockGetAllReveals
+    },
+    onViewReveal: jest.fn()
   })
 }));
 
@@ -52,7 +52,8 @@ describe('ParticipantCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetArrangement.mockReturnValue(null); // Default: no arrangement
+    mockGetReveal.mockResolvedValue(null); // Default: no reveal for this participant
+    mockGetAllReveals.mockResolvedValue([]); // Default: no reveals
   });
 
   describe('Self-view exclusion', () => {
@@ -63,16 +64,13 @@ describe('ParticipantCard', () => {
         isCurrentUser: true
       });
 
-      // Mock arrangement for current user
-      const arrangement: ViewerArrangement = {
-        participantId: 'current-user-123',
+      // Mock reveal for current user
+      mockGetReveal.mockResolvedValue({
+        type: 'top8',
         participantName: 'Test User',
-        step: 'step2',
-        cards: [],
-        isRevealed: true,
-        lastUpdated: Date.now()
-      };
-      mockGetArrangement.mockReturnValue(arrangement);
+        revealedAt: new Date().toISOString(),
+        cards: []
+      });
 
       render(
         <ParticipantCard
@@ -94,23 +92,20 @@ describe('ParticipantCard', () => {
       expect(screen.queryByText('👁️')).not.toBeInTheDocument();
     });
 
-    test('should show view button for OTHER user with revealed status', () => {
+    test('should show view button for OTHER user with revealed status', async () => {
       const participant = createMockParticipant({
         participantId: 'other-user-123',
         status: 'revealed-8',
         isCurrentUser: false
       });
 
-      // Mock arrangement for other user
-      const arrangement: ViewerArrangement = {
-        participantId: 'other-user-123',
+      // Mock reveal for other user
+      mockGetReveal.mockResolvedValue({
+        type: 'top8',
         participantName: 'Test User',
-        step: 'step2',
-        cards: [],
-        isRevealed: true,
-        lastUpdated: Date.now()
-      };
-      mockGetArrangement.mockReturnValue(arrangement);
+        revealedAt: new Date().toISOString(),
+        cards: []
+      });
 
       render(
         <ParticipantCard
@@ -123,11 +118,14 @@ describe('ParticipantCard', () => {
       // Should show status badge
       expect(screen.getByTestId('status-badge')).toHaveTextContent('revealed-8');
 
-      // Should show view button for other user - check for the text content
-      const viewButtonText = screen.getByText(/See Top 8/);
-      expect(viewButtonText).toBeInTheDocument();
+      // Wait for async reveal check to complete
+      await waitFor(() => {
+        const viewButtonText = screen.getByText(/See Top 8/);
+        expect(viewButtonText).toBeInTheDocument();
+      });
       
       // Check for emoji within the button
+      const viewButtonText = screen.getByText(/See Top 8/);
       const viewButton = viewButtonText.closest('button');
       expect(viewButton).toBeInTheDocument();
       expect(viewButton).toHaveTextContent('👁️');
@@ -141,16 +139,13 @@ describe('ParticipantCard', () => {
         isCurrentUser: true
       });
 
-      // Mock arrangement for current user (step 3)
-      const arrangement: ViewerArrangement = {
-        participantId: 'current-user-123',
+      // Mock reveal for current user (step 3)
+      mockGetReveal.mockResolvedValue({
+        type: 'top3',
         participantName: 'Test User',
-        step: 'step3',
-        cards: [],
-        isRevealed: true,
-        lastUpdated: Date.now()
-      };
-      mockGetArrangement.mockReturnValue(arrangement);
+        revealedAt: new Date().toISOString(),
+        cards: []
+      });
 
       render(
         <ParticipantCard
@@ -167,7 +162,7 @@ describe('ParticipantCard', () => {
       expect(screen.queryByRole('button', { name: /See Top 3/i })).not.toBeInTheDocument();
     });
 
-    test('should handle revealed-3 status for other user', () => {
+    test('should handle revealed-3 status for other user', async () => {
       const participant = createMockParticipant({
         participantId: 'other-user-123',
         status: 'revealed-3',
@@ -175,16 +170,13 @@ describe('ParticipantCard', () => {
         isCurrentUser: false
       });
 
-      // Mock arrangement for other user (step 3)
-      const arrangement: ViewerArrangement = {
-        participantId: 'other-user-123',
+      // Mock reveal for other user (step 3)
+      mockGetReveal.mockResolvedValue({
+        type: 'top3',
         participantName: 'Test User',
-        step: 'step3',
-        cards: [],
-        isRevealed: true,
-        lastUpdated: Date.now()
-      };
-      mockGetArrangement.mockReturnValue(arrangement);
+        revealedAt: new Date().toISOString(),
+        cards: []
+      });
 
       render(
         <ParticipantCard
@@ -194,11 +186,14 @@ describe('ParticipantCard', () => {
         />
       );
 
-      // Should show view button for other user - use more specific selector
-      const viewButton = screen.getByText(/See Top 3/);
-      expect(viewButton).toBeInTheDocument();
+      // Wait for async reveal check to complete
+      await waitFor(() => {
+        const viewButton = screen.getByText(/See Top 3/);
+        expect(viewButton).toBeInTheDocument();
+      });
       
       // Test click functionality - click the parent button
+      const viewButton = screen.getByText(/See Top 3/);
       const buttonElement = viewButton.closest('button');
       expect(buttonElement).toBeInTheDocument();
       
