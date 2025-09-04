@@ -38,6 +38,21 @@ Interactive card-sorting exercise for identifying core leadership values through
   /csv              # Values card definitions
 ```
 
+## Architectural Decisions
+
+**ADR Process**: For significant technical decisions:
+1. Check `.claude/decisions/` for existing ADRs
+2. Use `.claude/templates/adr-template.md` for new decisions  
+3. Always document rationale and alternatives considered
+4. Reference ADRs in commit messages and PRs
+
+**Decision Triggers**: Create ADR for:
+- New architectural patterns or frameworks
+- Significant refactoring approaches  
+- Technology choices (libraries, services, patterns)
+- State management strategy changes
+- Performance optimization strategies
+
 ## Critical Patterns
 
 ### Real-time Sync
@@ -73,8 +88,33 @@ sharedCardPositions: { cardId: { pile, index, owner } }
 1. Generate 6-char code (ABC123 format)
 2. First user creates Ably room
 3. Participants join via code + name
-4. 60min timeout with warning at 55min
+4. 5min timeout with warning at 4min
 5. Cleanup on last participant leave
+
+## Visual Development
+
+### Design Principles
+- Comprehensive design checklist in `.claude/context/design-principles.md`
+- Brand style guide in `.claude/context/style-guide.md`
+- When making visual (front-end, UI/UX) changes, always refer to these files for guidance
+
+### Quick Visual Check
+IMMEDIATELY after implementing any front-end change:
+1. **Identify what changed** - Review the modified components/pages
+2. **Navigate to affected pages** - Use `mcp__playwright__browser_navigate` to visit each changed view
+3. **Verify design compliance** - Compare against `/context/design-principles.md` and `/context/style-guide.md`
+4. **Validate feature implementation** - Ensure the change fulfills the user's specific request
+5. **Check acceptance criteria** - Review any provided context files or requirements
+6. **Capture evidence** - Take full page screenshot at desktop viewport (1440px) of each changed view
+7. **Check for errors** - Run `mcp__playwright__browser_console_messages`
+
+This verification ensures changes meet design standards and user requirements.
+
+### Comprehensive Design Review
+Invoke the `@agent-design-review` subagent for thorough design validation when:
+- Completing significant UI/UX features
+- Before finalizing PRs with visual changes
+- Needing comprehensive accessibility and responsiveness testing
 
 ### Animation Timings
 - Card flip: 200-300ms ease-in-out
@@ -109,6 +149,7 @@ npm run test:e2e        # Playwright E2E tests
 npm run test:all        # All tests (unit + E2E)
 npm run test:coverage   # Unit tests with coverage report
 ```
+
 
 ## Development Process
 1. Use `/data/csv/development.csv` as local seed data for dev/test runs.
@@ -153,22 +194,32 @@ npm run test:coverage   # Unit tests with coverage report
 - ❌ "Fixing" symptoms without understanding root cause
 - ❌ Continuing when tests break (STOP and revert)
 
+## Multi-Agent Workflows
+
+**Workflow Directory**: `.claude/workflows/` contains coordination processes for complex tasks
+
+**Available Workflows**:
+- `test-creation-workflow.md`: Test development across agents
+- `architecture-review-workflow.md`: Architectural decision making
+- `debugging-workflow.md`: Systematic bug investigation  
+- `feature-development-workflow.md`: Complete feature implementation
+
+**Usage**: Check workflows directory when users request complex tasks requiring multiple agents.
+
+### Workflow Selection
+User request pattern → Workflow to use
+"Create tests for..." → test-creation-workflow.md
+"How should we architect..." → architecture-review-workflow.md  
+"Fix..." → debugging-workflow.md
+"Implement [feature]" → feature-development-workflow.md
+
+**PRODUCTION BLOCKER**
+- ALWAYS verify changes by running tests successfully; don't move on when tests are failing without a VERY good reason
+
 ## Spec Status Key
 - 🔴 Not Started
 - 🟡 In Progress  
 - 🟢 Complete
 - 🔵 Tested
 
-## Current Focus  
-🚨 **CRITICAL PRIORITY**: Spec 04.5 Local vs Shared State Architecture - Fix production-blocking state bleeding bug
-
-**ARCHITECTURE MIGRATION REQUIRED**: 
-- Current Zustand stores are global singletons causing user1 actions to affect user2 UI
-- Must implement session-scoped store manager with `${sessionCode}:${participantId}` isolation
-- 4-week phased migration: Foundation → Hook Migration → Component Integration → Production Polish
-- All collaboration features depend on fixing this critical architectural flaw
-
-**PRODUCTION BLOCKER**
-- ALWAYS verify changes by running tests successfully; don't move on when tests are failing without a VERY good reason
-  
 **Status**: Presence system ✅ complete, reveal card viewer ❌ 

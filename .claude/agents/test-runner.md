@@ -1,5 +1,5 @@
 ---
-name: test-runner
+name: og-test-runner
 description: PROACTIVELY runs comprehensive test suites after changes and fixes failing tests
 tools:
   - bash
