@@ -4,10 +4,12 @@ import * as React from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useSharedViewerSync } from '@/hooks/collaboration/useSharedViewerSync';
 import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 
 export interface ParticipantCardProps {
   participant: ParticipantDisplayData;
+  sessionCode: string; // Added for ViewerSync integration
   onViewReveal?: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
   currentUserId?: string; // DEPRECATED: Use participant.isCurrentUser instead
   className?: string;
@@ -15,6 +17,7 @@ export interface ParticipantCardProps {
 
 const ParticipantCard: React.FC<ParticipantCardProps> = ({
   participant,
+  sessionCode,
   onViewReveal,
   currentUserId,
   className
@@ -33,8 +36,13 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
   // Backward compatibility (remove after migration complete)
   const isCurrentUserComputed = currentUserId ? (participantId === currentUserId) : isCurrentUser;
   
-  // Check if participant has revealed content that can be viewed (exclude current user)
-  const canViewReveal = (status === 'revealed-8' || status === 'revealed-3') && !isCurrentUserComputed;
+  // Get viewer sync to check for revealed arrangements
+  const { getArrangement } = useSharedViewerSync();
+  const arrangement = getArrangement(participantId);
+  
+  // Determine if this participant has a revealed arrangement that can be viewed
+  const hasRevealedArrangement = Boolean(arrangement?.isRevealed);
+  const canViewReveal = hasRevealedArrangement && !isCurrentUserComputed;
   
   // Determine activity status based on lastActive timestamp
   const getActivityStatus = () => {
@@ -53,8 +61,9 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
   const activityStatus = getActivityStatus();
 
   const handleViewClick = () => {
-    if (canViewReveal && onViewReveal) {
-      const revealType = status as 'revealed-8' | 'revealed-3';
+    if (canViewReveal && onViewReveal && arrangement) {
+      // Determine reveal type based on the arrangement step
+      const revealType = arrangement.step === 'step3' ? 'revealed-3' : 'revealed-8';
       onViewReveal(participantId, revealType);
     }
   };
@@ -109,7 +118,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
       {/* Status badge */}
       <div className="mb-3">
         <StatusBadge 
-          status={status} 
+          status={hasRevealedArrangement ? (arrangement?.step === 'step3' ? 'revealed-3' : 'revealed-8') : status} 
           currentStep={currentStep}
         />
       </div>
@@ -121,10 +130,11 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
           size="sm"
           onClick={handleViewClick}
           className="w-full text-xs"
-          aria-label={`View ${name}'s ${status === 'revealed-8' ? 'Top 8' : 'Top 3'} values`}
+          data-testid="view-reveal-button"
+          aria-label={`View ${name}'s ${arrangement?.step === 'step3' ? 'Top 3' : 'Top 8'} values`}
         >
           <span className="mr-1.5" aria-hidden="true">👁️</span>
-          See {status === 'revealed-8' ? 'Top 8' : 'Top 3'}
+          See {arrangement?.step === 'step3' ? 'Top 3' : 'Top 8'}
         </Button>
       )}
 

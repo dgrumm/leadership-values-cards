@@ -44,6 +44,36 @@
   transition: all 150ms ease-out;
 }
 
+/* Viewer Mode Highlight Effects */
+.viewer-highlight {
+  position: relative;
+}
+
+.viewer-highlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.75rem; /* rounded-xl */
+  background: linear-gradient(45deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+  animation: viewer-glow 300ms ease-out;
+  pointer-events: none;
+}
+
+@keyframes viewer-glow {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
 /* Touch support enhancements */
 .touch-drag-handle {
   touch-action: none;

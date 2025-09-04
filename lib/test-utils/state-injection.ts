@@ -417,5 +417,57 @@ export const PlaywrightStateHelpers = {
         });
       }, { pileCount, nearLimit });
     }
+  },
+
+  /**
+   * Quick reveal state injection for viewer mode testing
+   */
+  injectRevealedParticipant: (participantName = 'Dave', revealType: 'top8' | 'top3' = 'top8') => {
+    console.log(`🧪 [StateInjection] Setting up revealed ${revealType} for ${participantName}...`);
+    
+    // First ensure we have step completion state
+    const step1Data = StateInjectionUtils.injectStep1Completion();
+    const step2Data = StateInjectionUtils.injectStep2Completion();
+    
+    // Create card positions for the revealed arrangement
+    const revealedCards = revealType === 'top8' ? step2Data.top8Cards : step2Data.top8Cards.slice(0, 3);
+    const cardPositions = revealedCards.map((card: any, index: number) => ({
+      cardId: card.value_name.toLowerCase().replace(/\s+/g, '_'),
+      x: 100 + (index % 4) * 200,
+      y: 100 + Math.floor(index / 4) * 150,
+      pile: revealType
+    }));
+
+    // Store revealed state for viewer mode
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`revealed-${participantName}`, JSON.stringify({
+        participantName,
+        revealType,
+        cardPositions,
+        lastUpdated: Date.now()
+      }));
+    }
+
+    console.log(`✅ [StateInjection] ${participantName} now has revealed ${revealType}:`, cardPositions);
+    console.log(`🔗 [StateInjection] Ready for viewer mode testing!`);
+    
+    return { step1Data, step2Data, cardPositions, participantName, revealType };
+  },
+
+  /**
+   * Quick viewer mode test setup
+   */
+  setupViewerModeTest: () => {
+    console.log('🚀 [StateInjection] Setting up complete viewer mode test scenario...');
+    
+    StateInjectionUtils.injectRevealedParticipant('Dave', 'top8');
+    
+    console.log('✅ [StateInjection] Test ready! Dave has revealed Top 8');
+    console.log('📋 [StateInjection] Next steps:');
+    console.log('   1. Open ParticipantList modal');
+    console.log('   2. Click "View Top 8" button for Dave');
+    console.log('   3. View Dave\'s arrangement in full-screen mode');
+    
+    return 'Viewer mode test scenario ready!';
   }
 };

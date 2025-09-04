@@ -57,6 +57,9 @@ export interface Step2State {
   isTransitioning: boolean;
   transitionPhase: 'clearing' | 'complete' | null;
   
+  // Reveal state
+  isRevealed: boolean;
+  
   // Actions
   initializeFromStep1: (moreImportantCards: Card[], lessImportantCards: Card[]) => void;
   startTransition: (moreImportantCards: Card[], lessImportantCards: Card[]) => Promise<void>;
@@ -66,6 +69,8 @@ export interface Step2State {
   setDragging: (isDragging: boolean, cardId?: string) => void;
   showOverflowWarningMessage: () => void;
   hideOverflowWarningMessage: () => void;
+  revealTop8: () => Promise<void>;
+  hideReveal: () => Promise<void>;
   resetStep2: () => void;
   cleanup: () => void;
 }
@@ -93,6 +98,9 @@ export interface Step3State {
   isTransitioning: boolean;
   transitionPhase: 'clearing' | 'complete' | null;
   
+  // Reveal state
+  isRevealed: boolean;
+  
   // Actions
   initializeFromStep2: (top8Cards: Card[], step2DiscardedCards: Card[], step1DiscardedCards: Card[]) => void;
   startTransition: (top8Cards: Card[], step2DiscardedCards: Card[], step1DiscardedCards: Card[]) => Promise<void>;
@@ -102,6 +110,8 @@ export interface Step3State {
   setDragging: (isDragging: boolean, cardId?: string) => void;
   showOverflowWarningMessage: () => void;
   hideOverflowWarningMessage: () => void;
+  revealTop3: () => Promise<void>;
+  hideReveal: () => Promise<void>;
   resetStep3: () => void;
   cleanup: () => void;
 }

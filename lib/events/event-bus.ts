@@ -50,10 +50,28 @@ export class EventBus {
       throw new Error('Event session code does not match EventBus session');
     }
 
+    console.log(`📤 [EventBus] Publishing event:`, {
+      type: event.type,
+      sessionCode: event.sessionCode,
+      participantId: event.participantId,
+      timestamp: event.timestamp,
+      channelKey: `${this.sessionCode}-events`
+    });
+
     try {
-      await (this.channel as { publish: (type: string, data: BaseEvent) => Promise<void> }).publish(event.type, event);
+      const result = await (this.channel as { publish: (type: string, data: BaseEvent) => Promise<void> }).publish(event.type, event);
+      console.log(`✅ [EventBus] Event published successfully:`, { 
+        type: event.type, 
+        participantId: event.participantId,
+        result: result ? 'success' : 'no-result'
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error(`❌ [EventBus] Failed to publish event:`, {
+        type: event.type,
+        participantId: event.participantId,
+        error: message
+      });
       throw new Error(`Failed to publish event: ${message}`);
     }
   }
@@ -174,5 +192,23 @@ export class EventBus {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this._triggerError(new Error(`Invalid event received: ${errorMessage}`));
     }
+  }
+}
+
+// Singleton instance management
+let eventBusInstance: EventBus | null = null;
+
+export function getEventBus(): EventBus {
+  if (!eventBusInstance) {
+    throw new Error('EventBus not initialized. Create an EventBus instance first.');
+  }
+  return eventBusInstance;
+}
+
+// For testing - reset singleton
+export function resetEventBus(): void {
+  if (eventBusInstance) {
+    eventBusInstance.cleanup();
+    eventBusInstance = null;
   }
 }

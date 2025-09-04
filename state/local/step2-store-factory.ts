@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { Card } from '@/lib/types/card';
 import { Step2State } from './store-types';
+import type { ViewerSync, ViewerArrangement } from '@/lib/collaboration/viewer-sync';
 
 // Helper function (copied from original store)
 function shuffleArray<T>(array: T[]): T[] {
@@ -24,7 +25,12 @@ function shuffleArray<T>(array: T[]): T[] {
  * CRITICAL: This factory function enables participant isolation,
  * fixing the production-blocking state bleeding bug
  */
-export function createStep2Store() {
+export function createStep2Store(
+  sessionCode: string,
+  participantId: string,
+  participantName: string,
+  viewerSync: ViewerSync | null = null
+) {
   return create<Step2State>((set, get) => ({
     // Initial state
     deck: [],
@@ -38,6 +44,7 @@ export function createStep2Store() {
     showOverflowWarning: false,
     isTransitioning: false,
     transitionPhase: null,
+    isRevealed: false,
     
     // Initialize Step 2 with cards from Step 1 (used for direct initialization without transition)
     initializeFromStep1: (moreImportantCards: Card[], lessImportantCards: Card[]) => {
@@ -223,6 +230,60 @@ export function createStep2Store() {
     hideOverflowWarningMessage: () => {
       set({ showOverflowWarning: false });
     },
+
+    // Reveal Top 8 arrangement to other participants
+    revealTop8: async () => {
+      const state = get();
+      if (state.top8Pile.length !== 8) {
+        throw new Error('Must have exactly 8 cards in Top 8 pile to reveal');
+      }
+
+      if (!viewerSync) {
+        console.warn('ViewerSync not available - reveal functionality disabled');
+        return;
+      }
+
+      try {
+        // Create arrangement data
+        const arrangement: ViewerArrangement = {
+          participantId,
+          participantName,
+          step: 'step2' as const,
+          cards: state.top8Pile,
+          isRevealed: true,
+          lastUpdated: Date.now()
+        };
+
+        // Broadcast reveal
+        await viewerSync.revealArrangement(arrangement);
+        
+        // Update local state
+        set({ isRevealed: true });
+        
+        console.log(`🎉 [Step2Store] Top 8 revealed for participant ${participantId}`);
+      } catch (error) {
+        console.error('[Step2Store] Failed to reveal arrangement:', error);
+        throw new Error('Failed to reveal arrangement');
+      }
+    },
+
+    // Hide revealed arrangement
+    hideReveal: async () => {
+      if (!viewerSync) {
+        console.warn('ViewerSync not available - hide functionality disabled');
+        return;
+      }
+
+      try {
+        await viewerSync.hideArrangement(participantId);
+        set({ isRevealed: false });
+        
+        console.log(`👁️‍🗨️ [Step2Store] Arrangement hidden for participant ${participantId}`);
+      } catch (error) {
+        console.error('[Step2Store] Failed to hide arrangement:', error);
+        throw new Error('Failed to hide arrangement');
+      }
+    },
     
     // Reset to initial state
     resetStep2: () => {
@@ -238,6 +299,7 @@ export function createStep2Store() {
         showOverflowWarning: false,
         isTransitioning: false,
         transitionPhase: null,
+        isRevealed: false,
       });
     },
     
@@ -259,6 +321,7 @@ export function createStep2Store() {
         showOverflowWarning: false,
         isTransitioning: false,
         transitionPhase: null,
+        isRevealed: false,
       });
       
       // Clean up any event listeners or subscriptions would go here

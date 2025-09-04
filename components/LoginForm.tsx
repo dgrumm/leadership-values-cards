@@ -138,7 +138,7 @@ export function LoginForm() {
               isLoading={isLoading}
               loadingText={isSuccess ? "Success! Redirecting..." : "Joining Session..."}
               disabled={!validation.isFormValid || isLoading}
-              data-testid="submit-button"
+              data-testid="create-session-button"
             >
               {isSuccess ? "✓ Success!" : "Join Session ➜"}
             </Button>

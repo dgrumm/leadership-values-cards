@@ -63,10 +63,6 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     participantCount,
     isConnected,
     onViewReveal,
-    // Reveal functionality
-    revealSelection,
-    unrevealSelection,
-    isRevealed,
     canReveal
   } = useEventDrivenSession();
   
@@ -92,6 +88,10 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     moveCardBetweenPiles,
     showOverflowWarningMessage,
     hideOverflowWarningMessage,
+    // ViewerSync reveal methods
+    revealTop3,
+    hideReveal,
+    isRevealed: storeIsRevealed
   } = useSessionStep3Store();
 
   // Comprehensive drag state clearing function
@@ -346,45 +346,41 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
   }, [onStepComplete]);
 
   const handleReveal = useCallback(async () => {
-    if (isRevealed('top3')) {
-      // Unreveal if already revealed
-      await unrevealSelection('top3');
-      console.log('Top 3 unrevealed');
+    console.log('🔥 [Step3] handleReveal Button clicked! Current state:', {
+      storeIsRevealed,
+      top3PileLength: top3Pile.length,
+      shouldShowEducation,
+      revealTop3Available: !!revealTop3,
+      hideRevealAvailable: !!hideReveal
+    });
+    
+    if (storeIsRevealed) {
+      console.log('🔄 [Step3] handleReveal Unrevealing...');
+      await hideReveal();
+      console.log('✅ [Step3] handleReveal Top 3 unrevealed via ViewerSync');
     } else {
       // Show education modal on first reveal attempt
       if (shouldShowEducation) {
+        console.log('📚 [Step3] handleReveal Showing education modal...');
         setShowEducationModal(true);
         return;
       }
       
-      // Generate card positions from current top3Pile
-      const cardPositions = top3Pile.map((card, index) => ({
-        cardId: card.id,
-        x: 100 + index * 80, // 3 cards in a row
-        y: 200,
-        pile: 'top3' as const
-      }));
-      
-      await revealSelection('top3', cardPositions);
-      console.log('Top 3 revealed with positions:', cardPositions);
+      console.log('🎉 [Step3] handleReveal Revealing...');
+      await revealTop3();
+      console.log('✅ [Step3] handleReveal Top 3 revealed via ViewerSync');
     }
-  }, [isRevealed, unrevealSelection, revealSelection, top3Pile, shouldShowEducation]);
+  }, [storeIsRevealed, hideReveal, revealTop3, top3Pile.length, shouldShowEducation]);
 
   // Handle education modal actions
   const handleEducationContinue = useCallback(async () => {
     setShowEducationModal(false);
     markEducationShown();
-    // Now proceed with the actual reveal
-    const cardPositions = top3Pile.map((card, index) => ({
-      cardId: card.id,
-      x: 100 + index * 80,
-      y: 200,
-      pile: 'top3' as const
-    }));
-    
-    await revealSelection('top3', cardPositions);
-    console.log('Top 3 revealed after education modal');
-  }, [markEducationShown, top3Pile, revealSelection]);
+    // Now proceed with the actual reveal via ViewerSync
+    console.log('🎓 [Step3] Education modal continue - revealing Top 3 via ViewerSync');
+    await revealTop3();
+    console.log('✅ [Step3] Top 3 revealed after education modal via ViewerSync');
+  }, [markEducationShown, revealTop3]);
 
   const handleEducationCancel = useCallback(() => {
     setShowEducationModal(false);
@@ -464,8 +460,8 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
         participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
         onReveal={handleReveal}
-        isRevealed={isRevealed('top3')}
-        showRevealButton={canReveal('top3', top3Pile.length) || isRevealed('top3')}
+        isRevealed={storeIsRevealed}
+        showRevealButton={canReveal('top3', top3Pile.length) || storeIsRevealed}
         onParticipantsClick={handleShowParticipants}
       />
       
