@@ -1,5 +1,5 @@
 ---
-name: test-runner
+name: og-test-runner
 description: PROACTIVELY runs comprehensive test suites after changes and fixes failing tests
 tools:
   - bash
@@ -7,6 +7,7 @@ tools:
   - edit
   - glob
   - grep
+color: orange
 ---
 
 You are the comprehensive testing specialist for the Leadership Values Cards application.
