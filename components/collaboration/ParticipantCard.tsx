@@ -4,7 +4,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { useSharedViewerSync } from '@/hooks/collaboration/useSharedViewerSync';
+import { useEventDrivenSession } from '@/contexts/EventDrivenSessionContext';
 import type { ParticipantDisplayData } from '@/lib/types/participant-display';
 
 export interface ParticipantCardProps {
@@ -36,13 +36,49 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
   // Backward compatibility (remove after migration complete)
   const isCurrentUserComputed = currentUserId ? (participantId === currentUserId) : isCurrentUser;
   
-  // Get viewer sync to check for revealed arrangements
-  const { getArrangement } = useSharedViewerSync();
-  const arrangement = getArrangement(participantId);
+  // Get SimpleRevealManager from EventDrivenSession to check for reveals
+  const { simpleRevealManager } = useEventDrivenSession();
+  const [hasReveal, setHasReveal] = React.useState<{ hasReveal: boolean; type?: 'top8' | 'top3' } | null>(null);
   
-  // Determine if this participant has a revealed arrangement that can be viewed
-  const hasRevealedArrangement = Boolean(arrangement?.isRevealed);
+  // Check if this participant has a reveal (using presence data)
+  React.useEffect(() => {
+    if (!simpleRevealManager) return;
+    
+    const checkReveal = async () => {
+      try {
+        console.log(`🔍 [ParticipantCard] Checking reveal for ${name} (${participantId})`);
+        const reveal = await simpleRevealManager.getReveal(participantId);
+        console.log(`🔍 [ParticipantCard] Reveal result for ${name}:`, reveal);
+        if (reveal) {
+          setHasReveal({ hasReveal: true, type: reveal.type });
+          console.log(`✅ [ParticipantCard] ${name} has reveal: ${reveal.type}`);
+        } else {
+          setHasReveal({ hasReveal: false });
+          console.log(`❌ [ParticipantCard] ${name} has no reveal`);
+        }
+      } catch (error) {
+        console.error('Failed to check participant reveal:', error);
+        setHasReveal({ hasReveal: false });
+      }
+    };
+    
+    checkReveal();
+    
+    // CRITICAL FIX: Also re-check when status changes (indicates presence update)
+    // The status prop changes when presence data updates (e.g., "sorting" -> "revealed-8")
+  }, [simpleRevealManager, participantId, status]);
+  
+  // Determine if this participant's reveal can be viewed
+  const hasRevealedArrangement = hasReveal?.hasReveal ?? false;
   const canViewReveal = hasRevealedArrangement && !isCurrentUserComputed;
+  
+  console.log(`🎯 [ParticipantCard] View button logic for ${name}:`, {
+    hasReveal: hasReveal,
+    hasRevealedArrangement,
+    isCurrentUserComputed,
+    canViewReveal,
+    status
+  });
   
   // Determine activity status based on lastActive timestamp
   const getActivityStatus = () => {
@@ -61,9 +97,9 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
   const activityStatus = getActivityStatus();
 
   const handleViewClick = () => {
-    if (canViewReveal && onViewReveal && arrangement) {
-      // Determine reveal type based on the arrangement step
-      const revealType = arrangement.step === 'step3' ? 'revealed-3' : 'revealed-8';
+    if (canViewReveal && onViewReveal && hasReveal?.type) {
+      // Determine reveal type based on the reveal snapshot
+      const revealType = hasReveal.type === 'top3' ? 'revealed-3' : 'revealed-8';
       onViewReveal(participantId, revealType);
     }
   };
@@ -118,7 +154,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
       {/* Status badge */}
       <div className="mb-3">
         <StatusBadge 
-          status={hasRevealedArrangement ? (arrangement?.step === 'step3' ? 'revealed-3' : 'revealed-8') : status} 
+          status={hasRevealedArrangement ? (hasReveal?.type === 'top3' ? 'revealed-3' : 'revealed-8') : status} 
           currentStep={currentStep}
         />
       </div>
@@ -131,10 +167,10 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
           onClick={handleViewClick}
           className="w-full text-xs"
           data-testid="view-reveal-button"
-          aria-label={`View ${name}'s ${arrangement?.step === 'step3' ? 'Top 3' : 'Top 8'} values`}
+          aria-label={`View ${name}'s ${hasReveal?.type === 'top3' ? 'Top 3' : 'Top 8'} values`}
         >
           <span className="mr-1.5" aria-hidden="true">👁️</span>
-          See {arrangement?.step === 'step3' ? 'Top 3' : 'Top 8'}
+          See {hasReveal?.type === 'top3' ? 'Top 3' : 'Top 8'}
         </Button>
       )}
 

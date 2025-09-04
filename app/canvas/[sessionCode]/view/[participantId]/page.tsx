@@ -2,8 +2,8 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ViewerMode } from '@/components/viewer/ViewerMode';
-import { ViewerSessionProvider } from '@/contexts/ViewerSessionContext';
+import { StaticViewerMode } from '@/components/viewer/StaticViewerMode';
+import { EventDrivenSessionProvider } from '@/contexts/EventDrivenSessionContext';
 
 interface ViewerPageProps {
   params: Promise<{
@@ -71,21 +71,16 @@ export default function ViewerPage({ params }: ViewerPageProps) {
   }
 
   return (
-    <ViewerSessionProvider 
+    <EventDrivenSessionProvider
       sessionCode={sessionCode}
-      targetParticipantId={targetParticipantId}
-      viewerIdentity={{
-        participantId: sessionData.participantId,
-        name: sessionData.participantName,
-        emoji: '👀', // Default viewer emoji
-        color: 'indigo' // Default viewer color
-      }}
-      config={{
-        enableDebugLogging: process.env.NODE_ENV === 'development',
-        enableMemoryTracking: process.env.NODE_ENV === 'development'
-      }}
+      participantId={sessionData.participantId}
+      participantName={sessionData.participantName}
     >
-      <ViewerMode />
-    </ViewerSessionProvider>
+      <StaticViewerMode 
+        sessionCode={sessionCode}
+        targetParticipantId={targetParticipantId}
+        viewerName={sessionData.participantName}
+      />
+    </EventDrivenSessionProvider>
   );
 }

@@ -63,7 +63,11 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
     participantCount,
     isConnected,
     onViewReveal,
-    canReveal
+    canReveal,
+    // Reveal functionality
+    revealSelection,
+    unrevealSelection,
+    isRevealed
   } = useEventDrivenSession();
   
   // Refs for focus management
@@ -350,14 +354,22 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
       storeIsRevealed,
       top3PileLength: top3Pile.length,
       shouldShowEducation,
-      revealTop3Available: !!revealTop3,
-      hideRevealAvailable: !!hideReveal
+      canRevealTop3: canReveal('top3', top3Pile.length)
     });
     
     if (storeIsRevealed) {
+      // Unreveal if already revealed - use simplified unreveal
       console.log('🔄 [Step3] handleReveal Unrevealing...');
-      await hideReveal();
-      console.log('✅ [Step3] handleReveal Top 3 unrevealed via ViewerSync');
+      try {
+        await unrevealSelection('top3');
+        // Also clear the local store state for UI consistency
+        if (hideReveal) {
+          await hideReveal();
+        }
+        console.log('✅ [Step3] Top 3 unrevealed via SimpleRevealManager');
+      } catch (error) {
+        console.error('❌ [Step3] Failed to unreveal:', error);
+      }
     } else {
       // Show education modal on first reveal attempt
       if (shouldShowEducation) {
@@ -366,21 +378,50 @@ export function Step3Page({ sessionCode, participantName, currentStep = 3, step2
         return;
       }
       
-      console.log('🎉 [Step3] handleReveal Revealing...');
-      await revealTop3();
-      console.log('✅ [Step3] handleReveal Top 3 revealed via ViewerSync');
+      // Use simplified reveal with current top3 cards
+      console.log('🎉 [Step3] handleReveal Revealing via SimpleRevealManager...');
+      try {
+        await revealSelection('top3', top3Pile);
+        // Also update the local store state for UI consistency
+        if (revealTop3) {
+          await revealTop3();
+        }
+        console.log('✅ [Step3] Top 3 revealed via SimpleRevealManager');
+        
+        // Show toast notification after successful reveal
+        if (shouldShowToast) {
+          setShowRevealToast(true);
+          markToastShown();
+        }
+      } catch (error) {
+        console.error('❌ [Step3] Failed to reveal:', error);
+      }
     }
-  }, [storeIsRevealed, hideReveal, revealTop3, top3Pile.length, shouldShowEducation]);
+  }, [storeIsRevealed, hideReveal, revealTop3, top3Pile, shouldShowEducation, canReveal, shouldShowToast, markToastShown, revealSelection, unrevealSelection]);
 
   // Handle education modal actions
   const handleEducationContinue = useCallback(async () => {
     setShowEducationModal(false);
     markEducationShown();
-    // Now proceed with the actual reveal via ViewerSync
-    console.log('🎓 [Step3] Education modal continue - revealing Top 3 via ViewerSync');
-    await revealTop3();
-    console.log('✅ [Step3] Top 3 revealed after education modal via ViewerSync');
-  }, [markEducationShown, revealTop3]);
+    
+    // Use SimpleRevealManager instead of complex ViewerSync
+    try {
+      await revealSelection('top3', top3Pile);
+      // Also update the local store state for UI consistency
+      if (revealTop3) {
+        await revealTop3();
+      }
+      console.log('✅ [Step3] Top 3 revealed after education modal via SimpleRevealManager');
+      
+      // Show toast notification after successful reveal
+      if (shouldShowToast) {
+        setShowRevealToast(true);
+        markToastShown();
+      }
+    } catch (error) {
+      console.error('❌ [Step3] Failed to reveal after education modal:', error);
+    }
+  }, [markEducationShown, revealTop3, revealSelection, top3Pile, shouldShowToast, markToastShown]);
 
   const handleEducationCancel = useCallback(() => {
     setShowEducationModal(false);

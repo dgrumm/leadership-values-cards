@@ -334,15 +334,22 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
       storeIsRevealed,
       top8PileLength: top8Pile.length,
       shouldShowEducation,
-      revealTop8Available: !!revealTop8,
-      hideRevealAvailable: !!hideReveal
+      canRevealTop8: canReveal('top8', top8Pile.length)
     });
 
     if (storeIsRevealed) {
-      // Unreveal if already revealed
+      // Unreveal if already revealed - use simplified unreveal
       console.log('🔄 [handleReveal] Unrevealing...');
-      await hideReveal();
-      console.log('✅ [handleReveal] Top 8 unrevealed via ViewerSync');
+      try {
+        await unrevealSelection('top8');
+        // Also clear the local store state for UI consistency
+        if (hideReveal) {
+          await hideReveal();
+        }
+        console.log('✅ [handleReveal] Top 8 unrevealed via SimpleRevealManager');
+      } catch (error) {
+        console.error('❌ [handleReveal] Failed to unreveal:', error);
+      }
     } else {
       // Show education modal on first reveal attempt
       if (shouldShowEducation) {
@@ -351,10 +358,24 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
         return;
       }
       
-      // Use the store's revealTop8 method which integrates with ViewerSync
-      console.log('🎉 [handleReveal] Revealing...');
-      await revealTop8();
-      console.log('✅ [handleReveal] Top 8 revealed via ViewerSync');
+      // Use simplified reveal with current top8 cards
+      console.log('🎉 [handleReveal] Revealing via SimpleRevealManager...');
+      try {
+        await revealSelection('top8', top8Pile);
+        // Also update the local store state for UI consistency
+        if (revealTop8) {
+          await revealTop8();
+        }
+        console.log('✅ [handleReveal] Top 8 revealed via SimpleRevealManager');
+        
+        // Show toast notification after successful reveal
+        if (shouldShowToast) {
+          setShowRevealToast(true);
+          markToastShown();
+        }
+      } catch (error) {
+        console.error('❌ [handleReveal] Failed to reveal:', error);
+      }
     }
   };
 
@@ -363,9 +384,23 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     setShowEducationModal(false);
     markEducationShown();
     
-    // Use the store's revealTop8 method which integrates with ViewerSync
-    await revealTop8();
-    console.log('Top 8 revealed after education modal via ViewerSync');
+    // Use SimpleRevealManager instead of complex ViewerSync
+    try {
+      await revealSelection('top8', top8Pile);
+      // Also update the local store state for UI consistency
+      if (revealTop8) {
+        await revealTop8();
+      }
+      console.log('✅ Top 8 revealed after education modal via SimpleRevealManager');
+      
+      // Show toast notification after successful reveal
+      if (shouldShowToast) {
+        setShowRevealToast(true);
+        markToastShown();
+      }
+    } catch (error) {
+      console.error('❌ Failed to reveal after education modal:', error);
+    }
   };
 
   const handleEducationCancel = () => {

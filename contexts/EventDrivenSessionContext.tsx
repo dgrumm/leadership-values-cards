@@ -8,7 +8,6 @@
 import React, { createContext, useContext, useMemo, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { SessionStoreManager } from '@/lib/stores/session-store-manager';
 import { EventBus } from '@/lib/events/event-bus';
-import { ViewerSync } from '@/lib/collaboration/viewer-sync';
 import { 
   createBaseEvent, 
   EVENT_TYPES, 
@@ -17,8 +16,7 @@ import {
   type ParticipantLeftEvent
 } from '@/lib/events/types';
 import { useAbly } from '@/hooks/collaboration/useAbly';
-import { RevealManager } from '@/lib/reveals/reveal-manager';
-import { useRevealManager } from '@/hooks/reveals/useRevealManager';
+import { SimpleRevealManager } from '@/lib/reveals/SimpleRevealManager';
 
 // Import the old context interface for backward compatibility
 interface SessionStoreContextValue {
@@ -32,8 +30,6 @@ const SessionStoreContext = createContext<SessionStoreContextValue | null>(null)
 interface EventDrivenSessionContextValue {
   sessionManager: SessionStoreManager;
   eventBus: EventBus;
-  viewerSync: ViewerSync | null; // Added ViewerSync for arrangement sharing
-  viewerSyncArrangements: Map<string, any>; // Reactive state for ViewerSync arrangements
   sessionCode: string;
   participantId: string;
   participantName: string;
@@ -53,11 +49,11 @@ interface EventDrivenSessionContextValue {
   participantsForDisplay: Map<string, any>;
   currentUser: { participantId: string; name: string } | null;
   onViewReveal: (participantId: string, revealType: 'revealed-8' | 'revealed-3') => void;
-  // Reveal functionality
-  revealManager: RevealManager | null;
+  // Reveal functionality - simplified
+  simpleRevealManager: SimpleRevealManager | null;
   revealSelection: (revealType: 'top8' | 'top3', cardPositions: any[]) => Promise<void>;
   unrevealSelection: (revealType: 'top8' | 'top3') => Promise<void>;
-  isRevealed: (revealType: 'top8' | 'top3') => boolean;
+  isRevealed: (revealType: 'top8' | 'top3') => Promise<boolean>;
   canReveal: (revealType: 'top8' | 'top3', cardCount: number) => boolean;
 }
 
@@ -111,30 +107,6 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
   // Compute participant count from actual participants
   const participantCount = useMemo(() => participantSteps.size, [participantSteps]);
 
-  // ViewerSync state for React updates
-  const [viewerSyncArrangements, setViewerSyncArrangements] = useState<Map<string, any>>(new Map());
-
-  // ViewerSync for real-time arrangement sharing
-  const viewerSync = useMemo(() => {
-    if (!ably) return null;
-    
-    return new ViewerSync({
-      sessionCode,
-      ablyService: ably,
-      onArrangementUpdate: (arrangement) => {
-        // Update React state to trigger re-renders
-        setViewerSyncArrangements(prev => new Map(prev.set(arrangement.participantId, arrangement)));
-      },
-      onArrangementRemoved: (participantId) => {
-        // Update React state to trigger re-renders
-        setViewerSyncArrangements(prev => {
-          const next = new Map(prev);
-          next.delete(participantId);
-          return next;
-        });
-      }
-    });
-  }, [ably, sessionCode]);
 
   // Create core services (memoized)
   const sessionManager = useMemo(() => {
@@ -143,36 +115,22 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       maxStoresPerSession: config.maxStoresPerSession,
       enableMemoryTracking: config.enableMemoryTracking,
       enableDebugLogging: config.enableDebugLogging,
-      viewerSyncFactory: (sessionCode: string, participantId: string) => {
-        // Return the shared ViewerSync instance for all participants in this session
-        return viewerSync;
-      }
     };
     
     return new SessionStoreManager(managerConfig);
-  }, [viewerSync]); // Depend on viewerSync to recreate manager when Ably becomes available
+  }, []); // No longer depends on viewerSync
 
   const eventBus = useMemo(() => {
     if (!ably) return null;
     return new EventBus(ably, sessionCode);
   }, [ably, sessionCode]);
 
-  // Initialize ViewerSync when available
-  useEffect(() => {
-    if (viewerSync) {
-      viewerSync.initialize()
-        .then(() => console.log('✅ [ViewerSync] Initialized successfully'))
-        .catch((error) => console.error('❌ [ViewerSync] Failed to initialize:', error));
-    }
-  }, [viewerSync]);
 
-  // Initialize RevealManager when EventBus is ready
-  const { revealManager } = useRevealManager({
-    eventBus,
-    sessionCode,
-    participantId,
-    participantName
-  });
+  // Initialize SimpleRevealManager when Ably and EventBus are ready
+  const simpleRevealManager = useMemo(() => {
+    if (!ably || !eventBus) return null;
+    return new SimpleRevealManager(ably, eventBus, sessionCode, participantId, participantName);
+  }, [ably, eventBus, sessionCode, participantId, participantName]);
 
   // Remove EventStoreIntegration - no longer needed
 
@@ -191,7 +149,7 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       const handlePresenceUpdate = (presenceMessage: any) => {
         console.log(`📍 [PresenceListener] Presence update:`, presenceMessage);
         
-        if (presenceMessage.data && presenceMessage.data.participantId && presenceMessage.data.status) {
+        if (presenceMessage.data && presenceMessage.data.participantId && presenceMessage.data.name) {
           setParticipantSteps(prev => {
             const newSteps = new Map(prev);
             const existing = newSteps.get(presenceMessage.data.participantId);
@@ -200,12 +158,21 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
               // Update existing participant with new status
               newSteps.set(presenceMessage.data.participantId, {
                 ...existing,
-                status: presenceMessage.data.status,
+                status: presenceMessage.data.status || existing.status,
                 currentStep: presenceMessage.data.currentStep || existing.currentStep
               });
               console.log(`📊 [PresenceListener] Updated ${existing.participantName} status to ${presenceMessage.data.status}`);
+            } else {
+              // Add new participant
+              newSteps.set(presenceMessage.data.participantId, {
+                currentStep: presenceMessage.data.currentStep || 1,
+                participantName: presenceMessage.data.name,
+                status: presenceMessage.data.status || 'sorting'
+              });
+              console.log(`👤 [PresenceListener] Added new participant: ${presenceMessage.data.name} (Step ${presenceMessage.data.currentStep || 1})`);
             }
             
+            console.log(`📊 [PresenceListener] Total participants: ${newSteps.size}`);
             return newSteps;
           });
         }
@@ -481,10 +448,9 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
         console.log(`✅ [LeaveSession] Left Ably presence successfully`);
       }
       
-      // 3. Clean up RevealManager
-      if (revealManager) {
-        console.log(`🧹 [LeaveSession] Cleaning up RevealManager...`);
-        revealManager.cleanup();
+      // 3. Clean up SimpleRevealManager (no cleanup needed for stateless manager)
+      if (simpleRevealManager) {
+        console.log(`🧹 [LeaveSession] SimpleRevealManager cleanup (no action needed)`);
       }
       
       // 4. Clean up session stores for this participant
@@ -503,7 +469,7 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       console.error('❌ [LeaveSession] Failed to leave session cleanly:', error);
       // Continue with cleanup even if some steps fail
     }
-  }, [publishParticipantLeft, ably, sessionCode, participantName, sessionManager, revealManager]);
+  }, [publishParticipantLeft, ably, sessionCode, participantName, sessionManager, simpleRevealManager]);
 
   // Auto-sync session state and publish participant joined on connection
   useEffect(() => {
@@ -599,75 +565,48 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
   }), [participantId, participantName]);
 
   // Reveal functions
-  const revealSelection = useCallback(async (revealType: 'top8' | 'top3', cardPositions: any[]) => {
-    if (!revealManager) {
-      console.warn('RevealManager not ready');
+  const revealSelection = useCallback(async (revealType: 'top8' | 'top3', cards: any[]) => {
+    if (!simpleRevealManager) {
+      console.warn('SimpleRevealManager not ready');
       return;
     }
     
     try {
-      await revealManager.revealSelection(revealType, cardPositions);
-      
-      // Update presence status to show reveal state
-      if (ably) {
-        const sessionChannel = ably.getChannel(sessionCode, 'presence');
-        const revealStatus = revealType === 'top8' ? 'revealed-8' : 'revealed-3';
-        
-        await sessionChannel.presence.update({
-          participantId,
-          name: participantName,
-          currentStep: revealType === 'top8' ? 2 : 3, // Step 2 for top8, Step 3 for top3
-          emoji: '🎯',
-          color: 'blue',
-          status: revealStatus,
-          joinedAt: new Date().toISOString(),
-          lastActivity: new Date().toISOString()
-        });
-        
-        console.log(`📍 [PresenceSync] Updated presence status to ${revealStatus} for ${participantName}`);
-      }
+      // SimpleRevealManager handles both Ably Presence storage and event publishing internally
+      await simpleRevealManager.revealSelection(revealType, cards);
+      console.log(`✅ [SimpleRevealManager] Successfully revealed ${revealType} for ${participantName}`);
     } catch (error) {
       console.error('❌ [RevealSelection] Failed to reveal selection:', error);
       throw error;
     }
-  }, [revealManager, ably, sessionCode, participantId, participantName]);
+  }, [simpleRevealManager, participantName]);
 
   const unrevealSelection = useCallback(async (revealType: 'top8' | 'top3') => {
-    if (!revealManager) {
-      console.warn('RevealManager not ready');
+    if (!simpleRevealManager) {
+      console.warn('SimpleRevealManager not ready');
       return;
     }
     
     try {
-      await revealManager.unrevealSelection(revealType);
-      
-      // Update presence status back to sorting
-      if (ably) {
-        const sessionChannel = ably.getChannel(sessionCode, 'presence');
-        
-        await sessionChannel.presence.update({
-          participantId,
-          name: participantName,
-          currentStep: revealType === 'top8' ? 2 : 3, // Step 2 for top8, Step 3 for top3
-          emoji: '🎯',
-          color: 'blue',
-          status: 'sorting',
-          joinedAt: new Date().toISOString(),
-          lastActivity: new Date().toISOString()
-        });
-        
-        console.log(`📍 [PresenceSync] Updated presence status back to sorting for ${participantName}`);
-      }
+      // SimpleRevealManager handles presence data updates internally
+      await simpleRevealManager.unrevealSelection();
+      console.log(`✅ [SimpleRevealManager] Successfully unrevealed ${revealType} for ${participantName}`);
     } catch (error) {
       console.error('❌ [UnrevealSelection] Failed to unreveal selection:', error);
       throw error;
     }
-  }, [revealManager, ably, sessionCode, participantId, participantName]);
+  }, [simpleRevealManager, participantName]);
 
-  const isRevealed = useCallback((revealType: 'top8' | 'top3') => {
-    if (!revealManager) return false;
-    return revealManager.isRevealed(revealType);
-  }, [revealManager]);
+  const isRevealed = useCallback(async (revealType: 'top8' | 'top3') => {
+    if (!simpleRevealManager) return false;
+    try {
+      const hasReveal = await simpleRevealManager.hasReveal();
+      return hasReveal.hasReveal && hasReveal.type === revealType;
+    } catch (error) {
+      console.error('❌ [isRevealed] Failed to check reveal status:', error);
+      return false;
+    }
+  }, [simpleRevealManager]);
 
   const canReveal = useCallback((revealType: 'top8' | 'top3', cardCount: number) => {
     // Constraint logic: Step2 needs 8 cards for top8, Step3 needs 3 cards for top3
@@ -700,8 +639,6 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       return {
         sessionManager,
         eventBus: null as any,
-        viewerSync: null, // Not available during initialization
-        viewerSyncArrangements: new Map(), // Empty during initialization
         sessionCode,
         participantId,
         participantName,
@@ -717,10 +654,10 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
         currentUser,
         onViewReveal,
         // Reveal functionality (disabled during initialization)
-        revealManager: null,
+        simpleRevealManager: null,
         revealSelection: async () => {},
         unrevealSelection: async () => {},
-        isRevealed: () => false,
+        isRevealed: async () => false,
         canReveal: () => false
       };
     }
@@ -728,8 +665,6 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     return {
       sessionManager,
       eventBus,
-      viewerSync, // Expose ViewerSync instance
-      viewerSyncArrangements, // Expose reactive arrangements state
       sessionCode,
       participantId,
       participantName,
@@ -744,8 +679,8 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       participantsForDisplay,
       currentUser,
       onViewReveal,
-      // Reveal functionality
-      revealManager,
+      // Reveal functionality - simplified
+      simpleRevealManager,
       revealSelection,
       unrevealSelection,
       isRevealed,
@@ -754,8 +689,6 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
   }, [
     sessionManager, 
     eventBus, 
-    viewerSync,
-    viewerSyncArrangements,
     sessionCode, 
     participantId, 
     participantName,
@@ -770,7 +703,7 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     participantsForDisplay,
     currentUser,
     onViewReveal,
-    revealManager,
+    simpleRevealManager,
     revealSelection,
     unrevealSelection,
     isRevealed,
