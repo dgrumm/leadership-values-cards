@@ -87,6 +87,9 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
     moveCardBetweenPiles,
     showOverflowWarningMessage,
     hideOverflowWarningMessage,
+    revealTop8,
+    hideReveal,
+    isRevealed: storeIsRevealed
   } = useSessionStep2Store();
 
   // Comprehensive drag state clearing function
@@ -327,27 +330,31 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
   };
 
   const handleReveal = async () => {
-    if (isRevealed('top8')) {
+    console.log('🔥 [handleReveal] Button clicked! Current state:', {
+      storeIsRevealed,
+      top8PileLength: top8Pile.length,
+      shouldShowEducation,
+      revealTop8Available: !!revealTop8,
+      hideRevealAvailable: !!hideReveal
+    });
+
+    if (storeIsRevealed) {
       // Unreveal if already revealed
-      await unrevealSelection('top8');
-      console.log('Top 8 unrevealed');
+      console.log('🔄 [handleReveal] Unrevealing...');
+      await hideReveal();
+      console.log('✅ [handleReveal] Top 8 unrevealed via ViewerSync');
     } else {
       // Show education modal on first reveal attempt
       if (shouldShowEducation) {
+        console.log('📚 [handleReveal] Showing education modal...');
         setShowEducationModal(true);
         return;
       }
       
-      // Generate card positions from current top8Pile
-      const cardPositions = top8Pile.map((card, index) => ({
-        cardId: card.id,
-        x: 100 + (index % 4) * 60, // 4 cards per row
-        y: 200 + Math.floor(index / 4) * 80, // 2 rows
-        pile: 'top8' as const
-      }));
-      
-      await revealSelection('top8', cardPositions);
-      console.log('Top 8 revealed with positions:', cardPositions);
+      // Use the store's revealTop8 method which integrates with ViewerSync
+      console.log('🎉 [handleReveal] Revealing...');
+      await revealTop8();
+      console.log('✅ [handleReveal] Top 8 revealed via ViewerSync');
     }
   };
 
@@ -355,16 +362,10 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
   const handleEducationContinue = async () => {
     setShowEducationModal(false);
     markEducationShown();
-    // Now proceed with the actual reveal
-    const cardPositions = top8Pile.map((card, index) => ({
-      cardId: card.id,
-      x: 100 + (index % 4) * 60,
-      y: 200 + Math.floor(index / 4) * 80,
-      pile: 'top8' as const
-    }));
     
-    await revealSelection('top8', cardPositions);
-    console.log('Top 8 revealed after education modal');
+    // Use the store's revealTop8 method which integrates with ViewerSync
+    await revealTop8();
+    console.log('Top 8 revealed after education modal via ViewerSync');
   };
 
   const handleEducationCancel = () => {
@@ -445,8 +446,8 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
         participantCount={participantCount}
         onStepClick={() => setShowModal(true)}
         onReveal={handleReveal}
-        isRevealed={isRevealed('top8')}
-        showRevealButton={canReveal('top8', top8Pile.length) || isRevealed('top8')}
+        isRevealed={storeIsRevealed}
+        showRevealButton={canReveal('top8', top8Pile.length) || storeIsRevealed}
         onParticipantsClick={handleShowParticipants}
       />
       
@@ -718,7 +719,7 @@ export function Step2Page({ sessionCode, participantName, currentStep = 2, step1
                       className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg"
                       disabled={top8Pile.length === 0}
                     >
-                      {isRevealed('top8') ? 'Unrevealed' : 'Reveal My Choices'}
+                      {storeIsRevealed ? 'Unrevealed' : 'Reveal My Choices'}
                     </Button>
                   )}
                 </>

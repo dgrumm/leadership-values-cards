@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ParticipantCard } from '../../../../components/collaboration/ParticipantCard';
 import type { ParticipantDisplayData } from '../../../../lib/types/participant-display';
+import type { ViewerArrangement } from '../../../../lib/collaboration/viewer-sync';
 
 // Mock UI components
 jest.mock('../../../../components/ui/Button', () => ({
@@ -16,6 +17,20 @@ jest.mock('../../../../components/ui/StatusBadge', () => ({
   StatusBadge: ({ status, currentStep }: any) => (
     <span data-testid="status-badge">{status} (Step {currentStep})</span>
   )
+}));
+
+// Mock useViewerSync hook
+const mockGetArrangement = jest.fn();
+jest.mock('../../../../hooks/collaboration/useViewerSync', () => ({
+  useViewerSync: () => ({
+    getArrangement: mockGetArrangement,
+    arrangements: [],
+    revealArrangement: jest.fn(),
+    updateArrangement: jest.fn(),
+    hideArrangement: jest.fn(),
+    isReady: true,
+    error: null
+  })
 }));
 
 describe('ParticipantCard', () => {
@@ -37,6 +52,7 @@ describe('ParticipantCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetArrangement.mockReturnValue(null); // Default: no arrangement
   });
 
   describe('Self-view exclusion', () => {
@@ -47,9 +63,21 @@ describe('ParticipantCard', () => {
         isCurrentUser: true
       });
 
+      // Mock arrangement for current user
+      const arrangement: ViewerArrangement = {
+        participantId: 'current-user-123',
+        participantName: 'Test User',
+        step: 'step2',
+        cards: [],
+        isRevealed: true,
+        lastUpdated: Date.now()
+      };
+      mockGetArrangement.mockReturnValue(arrangement);
+
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -73,9 +101,21 @@ describe('ParticipantCard', () => {
         isCurrentUser: false
       });
 
+      // Mock arrangement for other user
+      const arrangement: ViewerArrangement = {
+        participantId: 'other-user-123',
+        participantName: 'Test User',
+        step: 'step2',
+        cards: [],
+        isRevealed: true,
+        lastUpdated: Date.now()
+      };
+      mockGetArrangement.mockReturnValue(arrangement);
+
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -101,9 +141,21 @@ describe('ParticipantCard', () => {
         isCurrentUser: true
       });
 
+      // Mock arrangement for current user (step 3)
+      const arrangement: ViewerArrangement = {
+        participantId: 'current-user-123',
+        participantName: 'Test User',
+        step: 'step3',
+        cards: [],
+        isRevealed: true,
+        lastUpdated: Date.now()
+      };
+      mockGetArrangement.mockReturnValue(arrangement);
+
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -123,9 +175,21 @@ describe('ParticipantCard', () => {
         isCurrentUser: false
       });
 
+      // Mock arrangement for other user (step 3)
+      const arrangement: ViewerArrangement = {
+        participantId: 'other-user-123',
+        participantName: 'Test User',
+        step: 'step3',
+        cards: [],
+        isRevealed: true,
+        lastUpdated: Date.now()
+      };
+      mockGetArrangement.mockReturnValue(arrangement);
+
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -151,6 +215,7 @@ describe('ParticipantCard', () => {
       render(
         <ParticipantCard
           participant={participantSorting}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -169,6 +234,7 @@ describe('ParticipantCard', () => {
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -189,6 +255,7 @@ describe('ParticipantCard', () => {
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           currentUserId="legacy-user-123" // Legacy prop indicating current user
           onViewReveal={mockOnViewReveal}
         />
@@ -212,6 +279,7 @@ describe('ParticipantCard', () => {
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -228,6 +296,7 @@ describe('ParticipantCard', () => {
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );
@@ -244,6 +313,7 @@ describe('ParticipantCard', () => {
       render(
         <ParticipantCard
           participant={participant}
+          sessionCode="TEST01"
           onViewReveal={mockOnViewReveal}
         />
       );

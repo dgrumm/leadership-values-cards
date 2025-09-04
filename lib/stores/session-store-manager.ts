@@ -17,6 +17,7 @@ import {
   type Step2Store,
   type Step3Store
 } from '@/state/local';
+import type { ViewerSync } from '@/lib/collaboration/viewer-sync';
 
 // Store bundle interface - contains all store types for a participant
 export interface StoreBundle {
@@ -33,6 +34,7 @@ export interface SessionStoreManagerConfig {
   maxStoresPerSession?: number; // Default: 50 participants
   enableMemoryTracking?: boolean; // Default: true in development
   enableDebugLogging?: boolean; // Default: true in development
+  viewerSyncFactory?: (sessionCode: string, participantId: string) => ViewerSync | null; // Factory for ViewerSync
 }
 
 export class SessionStoreManager {
@@ -46,7 +48,8 @@ export class SessionStoreManager {
       autoCleanupDelayMs: config.autoCleanupDelayMs ?? 300000, // 5 minutes
       maxStoresPerSession: config.maxStoresPerSession ?? 50,
       enableMemoryTracking: config.enableMemoryTracking ?? (process.env.NODE_ENV === 'development'),
-      enableDebugLogging: config.enableDebugLogging ?? (process.env.NODE_ENV === 'development')
+      enableDebugLogging: config.enableDebugLogging ?? (process.env.NODE_ENV === 'development'),
+      viewerSyncFactory: config.viewerSyncFactory ?? (() => null)
     };
 
     this.memoryTracker = new MemoryTracker();
@@ -222,11 +225,17 @@ export class SessionStoreManager {
         );
       }
 
-      // Create new store bundle
+      // Get ViewerSync instance for Step2 and Step3 stores
+      const viewerSync = this.config.viewerSyncFactory(sessionCode, participantId);
+      
+      // Extract participant name from participantId (format: sessionCode-name-id)
+      const participantName = participantId.split('-')[1] || 'Unknown';
+
+      // Create new store bundle with proper parameters
       const bundle: StoreBundle = {
         step1: createStep1Store(),
-        step2: createStep2Store(),  
-        step3: createStep3Store(),
+        step2: createStep2Store(sessionCode, participantId, participantName, viewerSync),  
+        step3: createStep3Store(sessionCode, participantId, participantName, viewerSync),
         createdAt: Date.now(),
         lastAccessed: Date.now()
       };
@@ -236,7 +245,7 @@ export class SessionStoreManager {
       this.scheduleAutoCleanup(key);
 
       if (this.config.enableDebugLogging) {
-        console.log(`[SessionStoreManager] Created store bundle: ${key}`);
+        console.log(`[SessionStoreManager] Created store bundle: ${key} with ViewerSync:`, !!viewerSync);
       }
     }
 

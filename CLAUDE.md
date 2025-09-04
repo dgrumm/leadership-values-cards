@@ -168,4 +168,7 @@ npm run test:coverage   # Unit tests with coverage report
 - 4-week phased migration: Foundation → Hook Migration → Component Integration → Production Polish
 - All collaboration features depend on fixing this critical architectural flaw
 
-**Status**: Presence system ✅ complete, state isolation ❌ **PRODUCTION BLOCKER**
+**PRODUCTION BLOCKER**
+- ALWAYS verify changes by running tests successfully; don't move on when tests are failing without a VERY good reason
+  
+**Status**: Presence system ✅ complete, reveal card viewer ❌ 

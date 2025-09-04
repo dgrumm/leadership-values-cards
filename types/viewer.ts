@@ -22,6 +22,13 @@ export interface ArrangementViewData {
     x: number;
     y: number;
     pile: string;
+    card?: {
+      id: string;
+      value_name: string;
+      description: string;
+      position: { x: number; y: number };
+      pile: string;
+    };
   }>;
   lastUpdated: number;
 }

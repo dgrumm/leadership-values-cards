@@ -50,10 +50,28 @@ export class EventBus {
       throw new Error('Event session code does not match EventBus session');
     }
 
+    console.log(`📤 [EventBus] Publishing event:`, {
+      type: event.type,
+      sessionCode: event.sessionCode,
+      participantId: event.participantId,
+      timestamp: event.timestamp,
+      channelKey: `${this.sessionCode}-events`
+    });
+
     try {
-      await (this.channel as { publish: (type: string, data: BaseEvent) => Promise<void> }).publish(event.type, event);
+      const result = await (this.channel as { publish: (type: string, data: BaseEvent) => Promise<void> }).publish(event.type, event);
+      console.log(`✅ [EventBus] Event published successfully:`, { 
+        type: event.type, 
+        participantId: event.participantId,
+        result: result ? 'success' : 'no-result'
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error(`❌ [EventBus] Failed to publish event:`, {
+        type: event.type,
+        participantId: event.participantId,
+        error: message
+      });
       throw new Error(`Failed to publish event: ${message}`);
     }
   }

@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useMemo, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { SessionStoreManager } from '@/lib/stores/session-store-manager';
 import { EventBus } from '@/lib/events/event-bus';
+import { ViewerSync } from '@/lib/collaboration/viewer-sync';
 import { 
   createBaseEvent, 
   EVENT_TYPES, 
@@ -31,6 +32,8 @@ const SessionStoreContext = createContext<SessionStoreContextValue | null>(null)
 interface EventDrivenSessionContextValue {
   sessionManager: SessionStoreManager;
   eventBus: EventBus;
+  viewerSync: ViewerSync | null; // Added ViewerSync for arrangement sharing
+  viewerSyncArrangements: Map<string, any>; // Reactive state for ViewerSync arrangements
   sessionCode: string;
   participantId: string;
   participantName: string;
@@ -108,22 +111,60 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
   // Compute participant count from actual participants
   const participantCount = useMemo(() => participantSteps.size, [participantSteps]);
 
+  // ViewerSync state for React updates
+  const [viewerSyncArrangements, setViewerSyncArrangements] = useState<Map<string, any>>(new Map());
+
+  // ViewerSync for real-time arrangement sharing
+  const viewerSync = useMemo(() => {
+    if (!ably) return null;
+    
+    return new ViewerSync({
+      sessionCode,
+      ablyService: ably,
+      onArrangementUpdate: (arrangement) => {
+        // Update React state to trigger re-renders
+        setViewerSyncArrangements(prev => new Map(prev.set(arrangement.participantId, arrangement)));
+      },
+      onArrangementRemoved: (participantId) => {
+        // Update React state to trigger re-renders
+        setViewerSyncArrangements(prev => {
+          const next = new Map(prev);
+          next.delete(participantId);
+          return next;
+        });
+      }
+    });
+  }, [ably, sessionCode]);
+
   // Create core services (memoized)
   const sessionManager = useMemo(() => {
     const managerConfig = {
       autoCleanupDelayMs: config.autoCleanupDelayMs,
       maxStoresPerSession: config.maxStoresPerSession,
       enableMemoryTracking: config.enableMemoryTracking,
-      enableDebugLogging: config.enableDebugLogging
+      enableDebugLogging: config.enableDebugLogging,
+      viewerSyncFactory: (sessionCode: string, participantId: string) => {
+        // Return the shared ViewerSync instance for all participants in this session
+        return viewerSync;
+      }
     };
     
     return new SessionStoreManager(managerConfig);
-  }, []); // Empty deps - manager is singleton per provider instance
+  }, [viewerSync]); // Depend on viewerSync to recreate manager when Ably becomes available
 
   const eventBus = useMemo(() => {
     if (!ably) return null;
     return new EventBus(ably, sessionCode);
   }, [ably, sessionCode]);
+
+  // Initialize ViewerSync when available
+  useEffect(() => {
+    if (viewerSync) {
+      viewerSync.initialize()
+        .then(() => console.log('✅ [ViewerSync] Initialized successfully'))
+        .catch((error) => console.error('❌ [ViewerSync] Failed to initialize:', error));
+    }
+  }, [viewerSync]);
 
   // Initialize RevealManager when EventBus is ready
   const { revealManager } = useRevealManager({
@@ -659,6 +700,8 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
       return {
         sessionManager,
         eventBus: null as any,
+        viewerSync: null, // Not available during initialization
+        viewerSyncArrangements: new Map(), // Empty during initialization
         sessionCode,
         participantId,
         participantName,
@@ -685,6 +728,8 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
     return {
       sessionManager,
       eventBus,
+      viewerSync, // Expose ViewerSync instance
+      viewerSyncArrangements, // Expose reactive arrangements state
       sessionCode,
       participantId,
       participantName,
@@ -709,6 +754,8 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
   }, [
     sessionManager, 
     eventBus, 
+    viewerSync,
+    viewerSyncArrangements,
     sessionCode, 
     participantId, 
     participantName,
@@ -747,14 +794,119 @@ export const EventDrivenSessionProvider: React.FC<EventDrivenSessionProviderProp
           publishStepTransition,
           publishParticipantJoined
         };
+
+        // Simple E2E test utilities - directly integrated with session-scoped stores
+        (window as any).StateInjectionUtils = {
+          injectRevealedParticipant: (participantName: string = 'Dave', revealType: 'top8' | 'top3' = 'top8') => {
+            console.log(`🧪 [StateInjection] Setting up revealed ${revealType} for ${participantName}...`);
+            
+            // Use the session-scoped Step2 store to trigger a reveal
+            const step2Store = sessionManager.getStep2Store(sessionCode, participantId);
+            const state = step2Store.getState();
+            
+            // Ensure we have 8 cards in top8 pile for reveal to work
+            if (state.top8Pile.length < 8) {
+              // Create 8 test cards
+              const testCards = Array.from({ length: 8 }, (_, i) => ({
+                id: `test-card-${i}`,
+                value_name: `Test Value ${i + 1}`,
+                description: `Test description ${i + 1}`,
+                position: { x: 0, y: 0 },
+                pile: 'top8' as const
+              }));
+
+              step2Store.setState({
+                top8Pile: testCards,
+                deck: [],
+                deckPosition: 8,
+                stagingCard: null,
+                lessImportantPile: []
+              });
+            }
+
+            // Trigger reveal using the store's revealTop8 method
+            setTimeout(async () => {
+              try {
+                await state.revealTop8();
+                console.log(`✅ [StateInjection] ${participantName} now has revealed ${revealType}`);
+              } catch (error) {
+                console.error(`❌ [StateInjection] Failed to reveal for ${participantName}:`, error);
+              }
+            }, 100);
+
+            return { participantName, revealType };
+          },
+
+          injectStep1Completion: () => {
+            const step1Store = sessionManager.getStep1Store(sessionCode, participantId);
+            
+            // Create 8 more important and 8 less important cards
+            const moreImportantCards = Array.from({ length: 8 }, (_, i) => ({
+              id: `more-${i}`,
+              value_name: `Important ${i + 1}`,
+              description: `Important value ${i + 1}`,
+              position: { x: 0, y: 0 },
+              pile: 'more' as const
+            }));
+
+            const lessImportantCards = Array.from({ length: 8 }, (_, i) => ({
+              id: `less-${i}`,
+              value_name: `Less Important ${i + 1}`,
+              description: `Less important value ${i + 1}`,
+              position: { x: 0, y: 0 },
+              pile: 'less' as const
+            }));
+
+            step1Store.setState({
+              deck: [...moreImportantCards, ...lessImportantCards],
+              deckPosition: 16, // All cards processed
+              stagingCard: null,
+              moreImportantPile: moreImportantCards,
+              lessImportantPile: lessImportantCards,
+              isDragging: false,
+              draggedCardId: null,
+              showOverflowWarning: false,
+            });
+
+            console.log('✅ [StateInjection] Step 1 completion state injected');
+            return { moreImportantCards, lessImportantCards };
+          },
+
+          injectStep2Completion: () => {
+            const step2Store = sessionManager.getStep2Store(sessionCode, participantId);
+            
+            const top8Cards = Array.from({ length: 8 }, (_, i) => ({
+              id: `top8-${i}`,
+              value_name: `Top ${i + 1}`,
+              description: `Top value ${i + 1}`,
+              position: { x: 0, y: 0 },
+              pile: 'top8' as const
+            }));
+
+            step2Store.setState({
+              deck: [],
+              deckPosition: 8,
+              stagingCard: null,
+              top8Pile: top8Cards,
+              lessImportantPile: [],
+              isDragging: false,
+              draggedCardId: null,
+              showOverflowWarning: false,
+            });
+
+            console.log('✅ [StateInjection] Step 2 completion state injected');
+            return { top8Cards };
+          }
+        };
       }
       
       return () => {
         if (typeof window !== 'undefined') {
           delete (window as any).debugEventDrivenSession;
+          delete (window as any).StateInjectionUtils;
         }
       };
-    }, [sessionManager, eventBus]);
+    }, [sessionManager, eventBus, sessionCode, participantId]);
   }
 
   // Create the old SessionStore context value for backward compatibility

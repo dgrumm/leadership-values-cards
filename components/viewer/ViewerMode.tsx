@@ -1,70 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ViewerHeader } from './ViewerHeader';
 import { ViewerArrangement } from './ViewerArrangement';
-import { useViewerMode } from '@/hooks/viewer/useViewerMode';
-import { useViewerPresence } from '@/hooks/viewer/useViewerPresence';
-import { useEventDrivenSession } from '@/contexts/EventDrivenSessionContext';
-import { DEVELOPMENT_DECK } from '@/lib/generated/card-decks';
-import type { ViewerModeProps } from '@/types/viewer';
+import { useViewerSession } from '@/contexts/ViewerSessionContext';
 
-export function ViewerMode({ sessionCode, participantId }: ViewerModeProps) {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function ViewerMode() {
+  // Get viewer session state and methods
+  const {
+    targetParticipantId,
+    isConnected,
+    connectionError,
+    arrangement,
+    isArrangementLoading,
+    arrangementError,
+    otherViewers,
+    exitViewer,
+    refreshArrangement
+  } = useViewerSession();
 
-  // Get current user context for navigation
-  const { currentUser } = useEventDrivenSession();
-
-  // For now, create a simplified viewer that shows the target participant info
-  // The real-time sync will be added once the session is fully initialized
-  const { participantsForDisplay } = useEventDrivenSession();
-  const participant = participantsForDisplay.get(participantId) || null;
-  const isValidTarget = participant !== null && participant.participantId !== currentUser?.id;
-  const isRevealed = participant ? 
-    (participant.status === 'revealed-8' || participant.status === 'revealed-3') : false;
-
-  // Simple loading control - no complex async initialization for now
-  useEffect(() => {
-    // Simple delay to allow context to initialize
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleBack = () => {
-    // Navigate back to canvas with proper session parameters
-    if (currentUser) {
-      const params = new URLSearchParams({
-        session: sessionCode,
-        name: currentUser.name,
-        step: '2' // Default to step 2 where reveals happen
-      });
-      router.push(`/canvas?${params.toString()}`);
-    } else {
-      // Fallback navigation
-      router.push('/');
-    }
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading arrangement...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error || !isValidTarget) {
+  // Handle connection errors
+  if (connectionError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
@@ -74,13 +29,13 @@ export function ViewerMode({ sessionCode, participantId }: ViewerModeProps) {
             </svg>
           </div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            {error || 'Participant not found'}
+            Connection Error
           </h1>
           <p className="text-gray-600 mb-6">
-            {error ? 'There was an error loading the arrangement.' : 'This participant doesn\'t exist or hasn\'t revealed their selection yet.'}
+            {connectionError}
           </p>
           <button
-            onClick={handleBack}
+            onClick={exitViewer}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             ← Back to Participants
@@ -90,8 +45,57 @@ export function ViewerMode({ sessionCode, participantId }: ViewerModeProps) {
     );
   }
 
-  // Not revealed state
-  if (!isRevealed) {
+  // Loading state - waiting for connection or arrangement
+  if (!isConnected || isArrangementLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">
+            {!isConnected ? 'Connecting to session...' : 'Loading arrangement...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Arrangement error state
+  if (arrangementError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">
+            Arrangement Error
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {arrangementError}
+          </p>
+          <div className="space-x-3">
+            <button
+              onClick={refreshArrangement}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={exitViewer}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              ← Back to Participants
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No arrangement available (not revealed or empty)
+  if (!arrangement) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
@@ -105,10 +109,10 @@ export function ViewerMode({ sessionCode, participantId }: ViewerModeProps) {
             No arrangement to view
           </h1>
           <p className="text-gray-600 mb-6">
-            {participant?.name} hasn&apos;t revealed their selection yet.
+            This participant hasn&apos;t revealed their selection yet, or their arrangement is empty.
           </p>
           <button
-            onClick={handleBack}
+            onClick={exitViewer}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             ← Back to Participants
@@ -118,49 +122,20 @@ export function ViewerMode({ sessionCode, participantId }: ViewerModeProps) {
     );
   }
 
-  // Check for injected revealed state (for testing) or create realistic arrangement
-  const getArrangementData = () => {
-    // First check if there's injected test state
-    if (typeof window !== 'undefined') {
-      const injectedState = sessionStorage.getItem(`revealed-${participant!.name}`);
-      if (injectedState) {
-        try {
-          const parsedState = JSON.parse(injectedState);
-          console.log(`🧪 [ViewerMode] Using injected revealed state for ${participant!.name}:`, parsedState);
-          return parsedState;
-        } catch (err) {
-          console.warn('Failed to parse injected state:', err);
-        }
-      }
-    }
-
-    // Fallback: Create arrangement with real DEVELOPMENT_DECK cards
-    const revealType = participant!.status === 'revealed-8' ? 'top8' : 'top3';
-    const cardCount = revealType === 'top8' ? 8 : 3;
-    
-    return {
-      participantId: participant!.participantId,
-      participantName: participant!.name,
-      revealType,
-      cardPositions: DEVELOPMENT_DECK.slice(0, cardCount).map((card, index) => ({
-        cardId: card.value_name.toLowerCase().replace(/\s+/g, '_'),
-        x: 100 + (index % 4) * 200,
-        y: 100 + Math.floor(index / 4) * 150,
-        pile: revealType
-      })),
-      lastUpdated: Date.now()
-    };
+  // Success! We have an arrangement to display
+  const participant = {
+    participantId: targetParticipantId,
+    name: arrangement.participantName,
+    status: arrangement.revealType === 'top8' ? 'revealed-8' : 'revealed-3'
   };
-
-  const arrangement = getArrangementData();
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ViewerHeader
-        participant={participant!}
+        participant={participant}
         arrangement={arrangement}
-        viewers={[]} // Empty for now
-        onBack={handleBack}
+        viewers={otherViewers}
+        onBack={exitViewer}
       />
       
       <main className="container mx-auto px-4 py-6">

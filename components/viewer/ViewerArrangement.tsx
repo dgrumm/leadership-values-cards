@@ -124,20 +124,13 @@ export function ViewerArrangement({ arrangement, className }: ViewerArrangementP
               {/* Card component - read-only version with real data */}
               <div className="pointer-events-none select-none">
                 <Card
-                  card={(() => {
-                    // Find real card data from development deck or create fallback
-                    const deckCard = DEVELOPMENT_DECK.find(card => 
-                      card.value_name.toLowerCase().replace(/\s+/g, '_') === position.cardId.toLowerCase()
-                    );
-                    
-                    return {
-                      id: position.cardId,
-                      value_name: deckCard?.value_name || position.cardId.replace(/_/g, ' '),
-                      description: deckCard?.description || 'Leadership value',
-                      position: { x: position.x, y: position.y },
-                      pile: position.pile as CardType['pile']
-                    };
-                  })()}
+                  card={position.card || {
+                    id: position.cardId,
+                    value_name: position.cardId.replace(/_/g, ' '),
+                    description: 'Leadership value',
+                    position: { x: position.x, y: position.y },
+                    pile: position.pile as CardType['pile']
+                  }}
                   isFlipped={true}
                   className={cn(
                     'transition-all duration-300',
