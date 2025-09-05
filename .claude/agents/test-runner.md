@@ -4,6 +4,7 @@ description: PROACTIVELY runs comprehensive test suites after changes and fixes 
 tools:
   - bash
   - read 
+  - write
   - edit
   - glob
   - grep

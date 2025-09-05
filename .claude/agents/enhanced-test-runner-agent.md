@@ -4,6 +4,7 @@ description: PROACTIVELY runs E2E tests with intelligent state injection, fast s
 tools:
   - bash
   - read
+  - write
   - edit
   - repl  # For complex state calculations
 color: yellow
