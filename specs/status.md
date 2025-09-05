@@ -76,15 +76,6 @@ This document tracks the development status of all feature specifications for th
 
 **Export & Polish Progress**: 50% (2/4 complete)
 
----
-
-## 06. Layout Redesign (1/1 specs)
-
-| Spec | Feature | Status | Priority | Assignee | Notes |
-|------|---------|--------|----------|----------|--------|
-| 06.1 | [Revised Layout Specs](06-layout-redesign/01.1-revised-layout-specs.md) | 🔴 Deferred v2.0 | Medium | - | Horizontal layout with fixed positioning - analysis complete |
-
-**Layout Redesign Progress**: 0% (0/1 complete - deferred to v2.0)
 
 ---
 
@@ -196,7 +187,6 @@ To update this status document:
 | 2025-08-21 | 03.1-03.3 | 🔴 Not Started | 🟢 Complete | Interactions integrated into all steps 1-3 |
 | 2025-08-26 | 03.1 | 🔴 Not Started | 🟢 Complete | Core drag-drop verified with E2E tests |
 | 2025-08-26 | 03.2 | 🟡 Partial | 🟢 Complete | Comprehensive animation system implemented with full accessibility support |
-| 2025-08-26 | 06.1 | - | 🔴 Deferred v2.0 | Layout redesign moved to /specs/06-layout-redesign/ with comprehensive analysis |
 | 2025-08-26 | 04.1 | 🔴 Not Started | 🟢 Complete | Ably Setup with production-ready infrastructure, 25 unit tests, comprehensive error handling |
 | 2025-08-28 | 05.4 | 🔴 Not Started | 🟢 Complete | Card Proportions updated to Bridge card dimensions (w-56→w-64), 345 unit tests passing |
 | 2025-08-29 | 04.2 | 🔴 Not Started | 🟢 Complete | Participants Overview with real-time tracking, identity system, ParticipantList modal |
@@ -205,6 +195,7 @@ To update this status document:
 | 2025-08-29 | 04.5 | 🔴 Not Started | 🟢 Complete | Local vs Shared State Architecture: All critical production-blocking state issues resolved |
 | 2025-09-02 | 04.3.1 | 🔴 Not Started | 🟢 Complete | Participant Lifecycle Events: Stable identity, join/leave events, proper cleanup - all sync issues resolved |
 | 2025-09-02 | 04.3 | 🔴 Not Started | 🟢 Complete | Reveal Mechanism: Complete implementation with education modal, toast notifications, runtime error fixes |
+| 2025-09-05 | 06.1 | - | ❌ Removed | Removed /specs/06-layout-redesign/ after design review  analysis |
 
 ---
 
@@ -302,9 +293,7 @@ Comprehensive Differential Analysis Report
   - 05.3 Session Timeout: ❌ 60-minute session management
   - 05.4 Card Proportions: ✅ Enhanced w-64 dimensions implemented
 
-  06. LAYOUT REDESIGN - 🔵 DEFERRED (Major Overhaul)
 
-  - 06.1 Revised Layout: Deferred to v2.0 (7-12 day effort)
 
   KEY EVIDENCE OF COMPLETION
 
