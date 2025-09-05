@@ -46,7 +46,7 @@ function validateSpecStatus() {
         if (declaredStatus === null) {
             issues.push(`📊 ${file}: No status declared`);
         } else if (declaredStatus !== calculatedStatus) {
-            let statusMsg = `� ${file}: Status mismatch - declared "${declaredStatus}" but checkboxes indicate "${calculatedStatus}"`;
+            let statusMsg = `📊 ${file}: Status mismatch - declared "${declaredStatus}" but checkboxes indicate "${calculatedStatus}"`;
             
             // Add helpful context about what's influencing the calculated status
             if (orphanedStatus.checkedCount > 0) {
