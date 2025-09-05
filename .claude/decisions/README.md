@@ -6,16 +6,14 @@ This directory contains all architectural decisions for the Leadership Values Ca
 
 | ADR | Title | Status | Date | Impact |
 |-----|-------|--------|------|--------|
-| [001](001-event-driven-state.md) | Event-Driven State Management | Accepted | 2025-01-XX | High |
-| [002](002-realtime-sync-pattern.md) | Real-time Synchronization Pattern | Proposed | 2025-01-XX | Medium |
-| [003](003-testing-architecture.md) | Testing Architecture Strategy | Draft | 2025-01-XX | Medium |
+| [001](001-multi-user-state-architecture.md) | Multi-User State Architecture for Session Isolation | Proposed | 2025-01-05 | High |
 
 ## Quick Reference
 
 ### By Status
-- **Accepted**: 1 ADR
+- **Accepted**: 0 ADRs
 - **Proposed**: 1 ADR  
-- **Draft**: 1 ADR
+- **Draft**: 0 ADRs
 - **Deprecated**: 0 ADRs
 
 ### By Impact Level
@@ -25,8 +23,8 @@ This directory contains all architectural decisions for the Leadership Values Ca
 
 ### By Category
 - **State Management**: ADR-001
-- **Real-time Features**: ADR-002  
-- **Testing Strategy**: ADR-003
+- **Real-time Features**: (none yet)  
+- **Testing Strategy**: (none yet)
 - **Performance**: (none yet)
 - **Security**: (none yet)
 
@@ -58,5 +56,5 @@ This directory contains all architectural decisions for the Leadership Values Ca
 
 ---
 
-**Last Updated**: 2025-01-XX  
-**Next ADR Number**: 004
+**Last Updated**: 2025-01-05  
+**Next ADR Number**: 002

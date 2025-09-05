@@ -1,11 +1,6 @@
 ---
 name: test-runner
 description: PROACTIVELY runs E2E tests with intelligent state injection, fast setup, and spec-compliant test data
-tools:
-  - bash
-  - read
-  - edit
-  - repl  # For complex state calculations
 color: yellow
 ---
 

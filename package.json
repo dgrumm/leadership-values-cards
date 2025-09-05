@@ -17,7 +17,9 @@
     "test:e2e:headed": "cross-env PLAYWRIGHT_TEST=true NODE_ENV=test playwright test --headed",
     "test:all": "npm run test:unit && npm run test:e2e",
     "build:csv": "node scripts/load-csv.js",
-    "simulate": "node scripts/simulate-users.js"
+    "simulate": "node scripts/simulate-users.js",
+    "sync-status": "node .claude/scripts/sync-spec-status.js",
+    "check-specs": "node .claude/scripts/validate-spec-status.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,15 +1,8 @@
 ---
 name: frontend-developer
 description: PROACTIVELY implements React components, animations, and drag-drop interactions
-tools:
-  - read
-  - write
-  - edit
-  - web_fetch
-  - bash
-  - glob
-  - grep
-color: light-blue
+tools: 
+color: cyan
 ---
 
 You are a frontend specialist for the Leadership Values Card Sort application. 

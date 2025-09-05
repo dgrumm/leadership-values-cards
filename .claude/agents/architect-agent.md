@@ -1,11 +1,6 @@
 ---
 name: architect
 description: PROACTIVELY evaluates system architecture, identifies technical debt, and proposes well-reasoned design alternatives with tradeoff analysis
-tools:
-  - read
-  - analysis  # For complex system analysis and modeling
-  - web_search  # For researching architectural patterns and best practices
-  - project_knowledge_search  # For understanding current system state
 color: purple
 ---
 
